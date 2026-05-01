@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+#
+# zk-init — bootstrap zk in the current project.
+#
+# Idempotent. Run from the project root. Creates `zk/` directory tree,
+# default config, README, empty index, and injects (or refreshes) the
+# zk section in `AGENTS.md` between `<!-- zk:start -->` / `<!-- zk:end -->`
+# markers. Existing notes are never touched.
+
+set -euo pipefail
+
+usage() {
+  cat <<EOF
+Usage: zk-init
+
+Initialize zk in the current directory (\$PWD).
+
+Creates:
+  ./zk/                       (directory tree: notes/{4 types}, MOC/, sources/)
+  ./zk/.zk-config.yaml        (system marker + limits)
+  ./zk/README.md
+  ./zk/index.md               (empty initial index)
+  ./AGENTS.md                 (creates if absent; injects/refreshes zk block
+                               between <!-- zk:start --> and <!-- zk:end -->)
+
+Idempotent: re-running refreshes the AGENTS.md block in place and never
+overwrites notes or already-customized seed files.
+
+Refuses to run if \$PWD is the zk skill's own directory or \$HOME.
+EOF
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
+  exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+TEMPLATES="$SKILL_DIR/templates"
+
+PROJECT="$(pwd -P)"
+HOME_RESOLVED="$(cd "$HOME" && pwd -P)"
+ZK_DIR="$PROJECT/zk"
+
+# Safety: refuse to run inside the zk skill itself (would conflate skill
+# files with end-project files) or in $HOME (likely a mistake).
+if [ "$PROJECT" = "$SKILL_DIR" ]; then
+  echo "zk-init: refusing to run inside the zk skill directory ($PROJECT)." >&2
+  echo "zk-init: cd into your project root first." >&2
+  exit 2
+fi
+if [ "$PROJECT" = "$HOME_RESOLVED" ]; then
+  echo "zk-init: refusing to run in \$HOME ($PROJECT)." >&2
+  echo "zk-init: cd into a specific project root first." >&2
+  exit 2
+fi
+
+if [ -e "$ZK_DIR" ] && [ ! -d "$ZK_DIR" ]; then
+  echo "zk-init: $ZK_DIR exists and is not a directory; aborting." >&2
+  exit 1
+fi
+
+# 1. Directory tree
+mkdir -p \
+  "$ZK_DIR"/notes/concepts \
+  "$ZK_DIR"/notes/decisions \
+  "$ZK_DIR"/notes/gotchas \
+  "$ZK_DIR"/notes/findings \
+  "$ZK_DIR"/MOC \
+  "$ZK_DIR"/sources
+
+# 2. Seed files (do not overwrite if user has edited them)
+seed() {
+  local src="$1" dst="$2"
+  if [ ! -f "$dst" ]; then
+    cp "$src" "$dst"
+    echo "zk-init: created $dst"
+  fi
+}
+seed "$TEMPLATES/zk-README.md"     "$ZK_DIR/README.md"
+seed "$TEMPLATES/zk-config.yaml"   "$ZK_DIR/.zk-config.yaml"
+seed "$TEMPLATES/zk-index.md"      "$ZK_DIR/index.md"
+seed "$TEMPLATES/notes-README.md"  "$ZK_DIR/notes/README.md"
+
+# 3. Inject (or refresh) the AGENTS.md zk-section
+AGENTS_FILE="$PROJECT/AGENTS.md"
+SNIPPET="$TEMPLATES/AGENTS-snippet.md"
+
+# Strip any existing zk block, normalize trailing whitespace, then append fresh.
+TMP="$(mktemp)"
+if [ -f "$AGENTS_FILE" ]; then
+  TMP2="$(mktemp)"
+  awk '
+    /<!-- zk:start -->/ { skip=1; next }
+    /<!-- zk:end -->/   { skip=0; next }
+    !skip               { print }
+  ' "$AGENTS_FILE" > "$TMP2"
+  # Drop trailing blank lines (idempotency).
+  awk '
+    /^[[:space:]]*$/ { buf = buf $0 "\n"; next }
+    { if (printed) printf "%s", buf; print; printed=1; buf="" }
+  ' "$TMP2" > "$TMP"
+  rm "$TMP2"
+  # Exactly one blank line between existing content and our block.
+  # ($TMP already ends with '\n' from awk; one more '\n' makes the visible blank.)
+  [ -s "$TMP" ] && printf '\n' >> "$TMP"
+fi
+cat "$SNIPPET" >> "$TMP"
+mv "$TMP" "$AGENTS_FILE"
+echo "zk-init: refreshed zk section in $AGENTS_FILE"
+
+echo "zk-init: done. project knowledge base at $ZK_DIR"

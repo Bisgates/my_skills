@@ -1,0 +1,26 @@
+version: 1
+
+# Hard upper bound on lines per note (frontmatter included).
+# Notes exceeding this must be split. Exception: type=source (in zk/sources/).
+note_max_lines: 600
+
+# Soft target range; agent should aim within this.
+note_target_lines:
+  min: 50
+  max: 300
+
+# Hard upper bound on summary length.
+summary_max_chars: 80
+
+# Hard upper bound on auto-generated index.md.
+index_max_lines: 200
+
+# Slug pattern — kebab-case, lowercase ASCII letters, digits, hyphens.
+slug_pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+
+# Note types; each maps to a folder under zk/notes/.
+types:
+  - concept
+  - decision
+  - gotcha
+  - finding
