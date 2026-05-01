@@ -29,7 +29,6 @@ description: Task management protocol with file-based traces. Use when the user 
   paused/   done/   abandoned/     # 软链视图（仅这三个状态）
   <id>_<slug>                      # active 状态的软链直接放 arcs/ 根
   index.md                         # 自动生成
-  .gitignore                       # 软链视图与 index 不入 git
 ```
 
 `active` 状态没有专属子目录；active 软链直接位于 `arcs/<id>_<slug>`。
