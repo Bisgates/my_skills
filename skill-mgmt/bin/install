@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# install — create/refresh symlinks from <repo>/<name> to ~/.claude/skills/<name>
+# and ~/.codex/skills/<name>, for every name in <repo>/manifest.txt.
+# Idempotent. Skips conflicts (real dirs / wrong-target symlinks) with a warning.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+MANIFEST="$REPO/manifest.txt"
+TARGETS=("$HOME/.claude/skills" "$HOME/.codex/skills")
+
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "install: manifest not found: $MANIFEST" >&2
+  exit 1
+fi
+
+# Ensure target parent dirs exist
+for t in "${TARGETS[@]}"; do
+  mkdir -p "$t"
+done
+
+linked=0
+skipped=0
+warned=0
+
+while IFS= read -r raw || [[ -n "$raw" ]]; do
+  # strip leading/trailing whitespace
+  name="${raw#"${raw%%[![:space:]]*}"}"
+  name="${name%"${name##*[![:space:]]}"}"
+  [[ -z "$name" ]] && continue
+  [[ "$name" == \#* ]] && continue
+
+  src="$REPO/$name"
+  if [[ ! -d "$src" ]]; then
+    echo "WARN: $name in manifest but $src not a directory; skipping" >&2
+    warned=$((warned + 1))
+    continue
+  fi
+
+  for t in "${TARGETS[@]}"; do
+    link="$t/$name"
+    if [[ -L "$link" ]]; then
+      current="$(readlink "$link")"
+      if [[ "$current" == "$src" ]]; then
+        skipped=$((skipped + 1))
+        continue
+      else
+        echo "WARN: $link is a symlink to $current (expected $src); skipping" >&2
+        warned=$((warned + 1))
+        continue
+      fi
+    elif [[ -e "$link" ]]; then
+      echo "WARN: $link exists and is not a symlink; skipping. Use bin/adopt." >&2
+      warned=$((warned + 1))
+      continue
+    fi
+    ln -s "$src" "$link"
+    echo "linked: $link -> $src"
+    linked=$((linked + 1))
+  done
+done < "$MANIFEST"
+
+echo "install: $linked new, $skipped already-correct, $warned warnings"

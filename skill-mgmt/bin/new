@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# new <name> [<short-description>] — scaffold a new skill from the template.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+MANIFEST="$REPO/manifest.txt"
+TEMPLATE="$REPO/skill-mgmt/templates/SKILL.md.template"
+
+usage() {
+  echo "usage: new <name> [<short-description>]" >&2
+  exit 2
+}
+
+[[ $# -ge 1 ]] || usage
+name="$1"
+desc="${2:-Brief description of capability. Use when [specific triggers].}"
+
+dest="$REPO/$name"
+if [[ -e "$dest" ]]; then
+  echo "new: $dest already exists" >&2
+  exit 1
+fi
+
+if [[ ! -f "$TEMPLATE" ]]; then
+  echo "new: template not found: $TEMPLATE" >&2
+  exit 1
+fi
+
+mkdir -p "$dest"
+
+# Substitute name and description in template
+title="$(echo "$name" | tr '-' ' ' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')"
+sed -e "s|{{NAME}}|$name|g" \
+    -e "s|{{TITLE}}|$title|g" \
+    -e "s|{{DESCRIPTION}}|$desc|g" \
+    "$TEMPLATE" > "$dest/SKILL.md"
+
+echo "new: created $dest/SKILL.md"
+
+if ! grep -qxF "$name" "$MANIFEST" 2>/dev/null; then
+  echo "$name" >> "$MANIFEST"
+  echo "new: appended '$name' to $MANIFEST"
+fi
+
+"$REPO/skill-mgmt/bin/install"
+
+cat <<EOF
+
+✓ scaffolded: $name
+
+Next:
+  - Read $REPO/write-a-skill/SKILL.md for authoring conventions.
+  - Edit $dest/SKILL.md (refine description triggers, fill workflows).
+  - cd $REPO && git add . && git commit -m "add $name" && git push
+EOF

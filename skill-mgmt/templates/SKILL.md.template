@@ -1,0 +1,28 @@
+---
+name: {{NAME}}
+description: {{DESCRIPTION}}
+---
+
+# {{TITLE}}
+
+## Quick start
+
+<!-- Minimal working example: one or two lines so the agent immediately knows what calling this skill looks like. -->
+
+## Workflows
+
+<!-- Step-by-step processes for common cases. Use checklists for non-trivial flows. -->
+
+1. ...
+
+## Gotchas
+
+<!-- Surprising behaviours, edge cases, things to avoid. -->
+
+-
+
+## See also
+
+<!-- Cross-links to related skills or docs. Keep references one level deep. -->
+
+-

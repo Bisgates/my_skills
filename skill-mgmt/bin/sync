@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# sync — pull remote changes, then re-run install to pick up any newly added skills.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$REPO"
+
+echo "sync: git pull --rebase in $REPO"
+git pull --rebase
+
+echo "sync: running install"
+"$REPO/skill-mgmt/bin/install"

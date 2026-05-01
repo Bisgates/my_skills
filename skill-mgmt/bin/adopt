@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# adopt <name> [--from claude|codex] — move an existing real-directory skill at
+# ~/.claude/skills/<name> or ~/.codex/skills/<name> into <repo>/<name>, append to
+# manifest, and create symlinks on both sides via install.
+#
+# Refuses if both sides are real dirs with diverged content unless --from is given.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+MANIFEST="$REPO/manifest.txt"
+
+usage() {
+  echo "usage: adopt <name> [--from claude|codex]" >&2
+  exit 2
+}
+
+[[ $# -ge 1 ]] || usage
+name="$1"
+shift
+from=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --from)
+      from="${2:-}"
+      [[ "$from" == "claude" || "$from" == "codex" ]] || usage
+      shift 2
+      ;;
+    *) usage ;;
+  esac
+done
+
+claude_path="$HOME/.claude/skills/$name"
+codex_path="$HOME/.codex/skills/$name"
+
+is_real_dir() { [[ -d "$1" && ! -L "$1" ]]; }
+
+claude_real="false"; codex_real="false"
+is_real_dir "$claude_path" && claude_real="true"
+is_real_dir "$codex_path"  && codex_real="true"
+
+if [[ "$claude_real" == "false" && "$codex_real" == "false" ]]; then
+  echo "adopt: no real directory found at $claude_path or $codex_path" >&2
+  exit 1
+fi
+
+if [[ -e "$REPO/$name" ]]; then
+  echo "adopt: $REPO/$name already exists; nothing to adopt" >&2
+  exit 1
+fi
+
+# Decide source
+src=""
+if [[ "$claude_real" == "true" && "$codex_real" == "true" ]]; then
+  if [[ -n "$from" ]]; then
+    [[ "$from" == "claude" ]] && src="$claude_path" || src="$codex_path"
+  else
+    if diff -rq "$claude_path" "$codex_path" > /dev/null 2>&1; then
+      echo "adopt: $name identical in both agent dirs; using claude side"
+      src="$claude_path"
+    else
+      echo "adopt: $name differs between $claude_path and $codex_path" >&2
+      echo "       run: diff -rq $claude_path $codex_path" >&2
+      echo "       then re-run with: --from claude|codex" >&2
+      exit 1
+    fi
+  fi
+elif [[ "$claude_real" == "true" ]]; then
+  src="$claude_path"
+else
+  src="$codex_path"
+fi
+
+echo "adopt: moving $src -> $REPO/$name"
+mv "$src" "$REPO/$name"
+
+# If the OTHER side is also a real dir (we picked one with --from), back it up
+other=""
+[[ "$src" == "$claude_path" ]] && other="$codex_path" || other="$claude_path"
+if is_real_dir "$other"; then
+  bak="${other}.adopted-bak-$(date +%Y%m%d_%H%M%S)"
+  echo "adopt: other side $other is also a real dir; renaming to $bak" >&2
+  mv "$other" "$bak"
+fi
+
+# Append to manifest if not already there
+if ! grep -qxF "$name" "$MANIFEST" 2>/dev/null; then
+  echo "$name" >> "$MANIFEST"
+  echo "adopt: appended '$name' to $MANIFEST"
+fi
+
+"$REPO/skill-mgmt/bin/install"
+
+cat <<EOF
+
+✓ adopted: $name
+
+Next:
+  cd $REPO
+  git add .
+  git commit -m "adopt $name"
+  git push
+EOF
