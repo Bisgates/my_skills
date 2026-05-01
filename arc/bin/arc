@@ -1,0 +1,693 @@
+#!/usr/bin/env python3
+"""arc — task management CLI (Arc Protocol).
+
+Single-file Python (stdlib only). Spec: ~/.claude/skills/arc/SKILL.md.
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import os
+import re
+import shutil
+import sys
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+ARCS_DIRNAME = "arcs"
+ALL_DIRNAME = "all"
+STATES = ("active", "paused", "done", "abandoned")
+ID_RE = re.compile(r"^(\d{6})([a-z])$")
+ID_CHARS = "abcdefghijklmnopqrstuvwxyz"
+META_FIELDS = (
+    "id",
+    "brief",
+    "created_at",
+    "last_active_at",
+    "status",
+    "actor",
+    "parent",
+    "abandon_reason",
+)
+
+AGENTS_HOOK = """
+## Arc Protocol
+- 任务管理协议：~/.claude/skills/arc/SKILL.md。
+- agent **不主动**读 arcs/index.md；仅在用户显式触发 /arc-* skill 或 `arc <subcmd>` CLI 时进入任务流程。
+- 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
+- 触发 CLI：arc {new,spawn,pause,resume,status,abandon,touch,log,output,list,cd,rebuild,init}。
+- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/all/<id>_*`；状态权威在 `0_meta.md`。
+- `done` 必须存在 `9_*.md`；`abandoned` 必须有 `--reason`。
+"""
+
+
+# ---------- helpers ----------
+
+def now_iso() -> str:
+    return dt.datetime.now().astimezone().replace(microsecond=0).isoformat()
+
+
+def today_id() -> str:
+    return dt.datetime.now().strftime("%y%m%d")
+
+
+def err(msg: str) -> None:
+    print(f"arc: {msg}", file=sys.stderr)
+
+
+def die(msg: str, code: int = 1) -> None:
+    err(msg)
+    sys.exit(code)
+
+
+def find_project_root(start: Optional[Path] = None) -> Optional[Path]:
+    p = (start or Path.cwd()).resolve()
+    while True:
+        if (p / ARCS_DIRNAME / ALL_DIRNAME).is_dir():
+            return p
+        if p.parent == p:
+            return None
+        p = p.parent
+
+
+def require_root() -> Path:
+    root = find_project_root()
+    if root is None:
+        die("not initialized in this directory tree. Run: arc init")
+    return root
+
+
+def slugify_brief(brief: str, max_words: int = 5) -> str:
+    s = re.sub(r"[^A-Za-z0-9]+", "_", brief.strip().lower()).strip("_")
+    parts = [w for w in s.split("_") if w]
+    if not parts:
+        die("brief is empty after normalization.")
+    if len(parts) > max_words:
+        parts = parts[:max_words]
+    return "_".join(parts)
+
+
+def next_letter(root: Path, day: str) -> str:
+    used = set()
+    base = root / ARCS_DIRNAME / ALL_DIRNAME
+    for child in base.iterdir():
+        head = child.name.split("_", 1)[0]
+        m = ID_RE.match(head)
+        if m and m.group(1) == day:
+            used.add(m.group(2))
+    for c in ID_CHARS:
+        if c not in used:
+            return c
+    die(f"all 26 letters used for day {day}; not handling this case.")
+
+
+def find_arc_dir(root: Path, arg: str) -> Path:
+    """Resolve user input (7-char id, or full <id>_<slug> name) to canonical dir."""
+    base = root / ARCS_DIRNAME / ALL_DIRNAME
+    direct = base / arg
+    if direct.is_dir():
+        return direct
+    if not ID_RE.match(arg):
+        die(f"invalid id {arg!r}. Expected 7 chars: YYMMDDx (6 digits + lowercase letter).")
+    matches = sorted(base.glob(f"{arg}_*"))
+    if len(matches) == 0:
+        die(f"no arc found with id {arg}.")
+    if len(matches) > 1:
+        names = ", ".join(m.name for m in matches)
+        die(f"multiple arcs match {arg}: {names}")
+    return matches[0]
+
+
+def cwd_arc_dir(root: Path) -> Optional[Path]:
+    cwd = Path.cwd().resolve()
+    base = (root / ARCS_DIRNAME / ALL_DIRNAME).resolve()
+    try:
+        rel = cwd.relative_to(base)
+    except ValueError:
+        return None
+    if not rel.parts:
+        return None
+    arc = base / rel.parts[0]
+    if not ID_RE.match(arc.name.split("_", 1)[0]):
+        return None
+    return arc
+
+
+def resolve_arc_dir(root: Path, arc_id: Optional[str]) -> Path:
+    if arc_id:
+        return find_arc_dir(root, arc_id)
+    arc = cwd_arc_dir(root)
+    if arc is None:
+        die("no arc id given and cwd is not inside an arc directory.")
+    return arc
+
+
+# ---------- meta r/w ----------
+
+def parse_meta(arc_dir: Path) -> Tuple[Dict[str, str], List[str]]:
+    p = arc_dir / "0_meta.md"
+    if not p.exists():
+        die(f"missing {p}.")
+    text = p.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        die(f"0_meta.md missing frontmatter: {p}.")
+    try:
+        end = text.index("\n---\n", 4)
+    except ValueError:
+        die(f"0_meta.md frontmatter not closed: {p}.")
+    fm_text = text[4:end]
+    body = text[end + 5:]
+    fm: Dict[str, str] = {}
+    for line in fm_text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if ":" in line:
+            k, _, v = line.partition(":")
+            fm[k.strip()] = v.strip()
+    history: List[str] = []
+    in_hist = False
+    for line in body.splitlines():
+        if line.strip().lower().startswith("## history"):
+            in_hist = True
+            continue
+        if in_hist and line.startswith("- "):
+            history.append(line[2:].strip())
+    return fm, history
+
+
+def write_meta(arc_dir: Path, fm: Dict[str, str], history: List[str]) -> None:
+    lines = ["---"]
+    for k in META_FIELDS:
+        v = fm.get(k)
+        lines.append(f"{k}: {v if v not in (None, '') else 'null'}")
+    lines.append("---")
+    lines.append("")
+    lines.append("## history")
+    for h in history:
+        lines.append(f"- {h}")
+    lines.append("")
+    (arc_dir / "0_meta.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+# ---------- view links + index ----------
+
+def view_link_path(arcs: Path, arc_name: str, status: str) -> Path:
+    """Active view links live at arcs/<name>; others at arcs/<status>/<name>."""
+    if status == "active":
+        return arcs / arc_name
+    return arcs / status / arc_name
+
+
+def update_view_links(root: Path, arc_dir: Path, status: str) -> None:
+    arcs = root / ARCS_DIRNAME
+    name = arc_dir.name
+    for st in STATES:
+        link = view_link_path(arcs, name, st)
+        if link.is_symlink():
+            link.unlink()
+    target = view_link_path(arcs, name, status)
+    target.parent.mkdir(exist_ok=True)
+    if status == "active":
+        rel_target = Path(ALL_DIRNAME) / name
+    else:
+        rel_target = Path("..") / ALL_DIRNAME / name
+    target.symlink_to(rel_target)
+
+
+def list_arcs(root: Path) -> List[Tuple[Path, Dict[str, str]]]:
+    out = []
+    base = root / ARCS_DIRNAME / ALL_DIRNAME
+    for child in sorted(base.iterdir()):
+        if not child.is_dir():
+            continue
+        if not (child / "0_meta.md").exists():
+            continue
+        head = child.name.split("_", 1)[0]
+        if not ID_RE.match(head):
+            continue
+        try:
+            fm, _ = parse_meta(child)
+        except SystemExit:
+            continue
+        out.append((child, fm))
+    return out
+
+
+def hint_for(arc: Path, fm: Dict[str, str]) -> str:
+    if not (arc / "1_objective.md").exists():
+        return "needs 1_objective.md"
+    if not (arc / "2_plan.md").exists():
+        return "needs 2_plan.md"
+    sums = [p for p in arc.glob("9_*.md") if p.is_file()]
+    if any(p.stat().st_size > 0 for p in sums) and fm.get("status") == "active":
+        return "ready to mark done"
+    last = fm.get("last_active_at", "")
+    try:
+        last_dt = dt.datetime.fromisoformat(last)
+        if (dt.datetime.now().astimezone() - last_dt).days > 7:
+            return "stale, consider pause"
+    except Exception:
+        pass
+    return "running"
+
+
+def parent_id_short(parent_field: str) -> Optional[str]:
+    if not parent_field or parent_field == "null":
+        return None
+    head = parent_field.split("_", 1)[0]
+    return head if ID_RE.match(head) else None
+
+
+def rebuild_index(root: Path) -> None:
+    arcs_dir = root / ARCS_DIRNAME
+    arcs = list_arcs(root)
+    by_status: Dict[str, List[Tuple[Path, Dict[str, str]]]] = {s: [] for s in STATES}
+    children_of: Dict[str, List[str]] = {}
+    for arc, fm in arcs:
+        by_status[fm.get("status", "active")].append((arc, fm))
+        pid_short = parent_id_short(fm.get("parent", "null"))
+        if pid_short:
+            arc_id_short = arc.name.split("_", 1)[0]
+            children_of.setdefault(pid_short, []).append(arc_id_short)
+
+    def relations(arc_id_short: str, fm: Dict[str, str]) -> str:
+        parts = []
+        pid = parent_id_short(fm.get("parent", "null"))
+        if pid:
+            parts.append(f"child of {pid}")
+        kids = sorted(children_of.get(arc_id_short, []))
+        if kids:
+            parts.append(f"parent of {', '.join(kids)}")
+        return f" ({'; '.join(parts)})" if parts else ""
+
+    out: List[str] = []
+    out.append("<!-- AUTO-GENERATED by `arc rebuild`. Do not edit. -->")
+    out.append(f"_last refreshed: {now_iso()}_")
+    out.append("")
+
+    def fmt_brief(fm: Dict[str, str], arc_id_short: str) -> str:
+        return (fm.get("brief", "") or "") + relations(arc_id_short, fm)
+
+    # Active
+    rows = sorted(by_status["active"], key=lambda x: x[1].get("last_active_at", ""), reverse=True)
+    out.append(f"## Active ({len(rows)})")
+    if rows:
+        out.append("| id | brief | created | last_active | hint |")
+        out.append("|---|---|---|---|---|")
+        for arc, fm in rows:
+            sid = arc.name.split("_", 1)[0]
+            out.append(
+                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| {fm.get('created_at', '')[:10]} "
+                f"| {fm.get('last_active_at', '')[:16].replace('T', ' ')} "
+                f"| {hint_for(arc, fm)} |"
+            )
+    out.append("")
+
+    # Paused
+    rows = sorted(by_status["paused"], key=lambda x: x[1].get("last_active_at", ""), reverse=True)
+    out.append(f"## Paused ({len(rows)})")
+    if rows:
+        out.append("| id | brief | last_active |")
+        out.append("|---|---|---|")
+        for arc, fm in rows:
+            sid = arc.name.split("_", 1)[0]
+            out.append(
+                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| {fm.get('last_active_at', '')[:16].replace('T', ' ')} |"
+            )
+    out.append("")
+
+    # Done
+    rows = sorted(by_status["done"], key=lambda x: x[1].get("last_active_at", ""), reverse=True)
+    out.append(f"## Done ({len(rows)})")
+    if rows:
+        out.append("| id | brief | done_at |")
+        out.append("|---|---|---|")
+        for arc, fm in rows:
+            sid = arc.name.split("_", 1)[0]
+            out.append(
+                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| {fm.get('last_active_at', '')[:10]} |"
+            )
+    out.append("")
+
+    # Abandoned
+    rows = sorted(by_status["abandoned"], key=lambda x: x[1].get("last_active_at", ""), reverse=True)
+    out.append(f"## Abandoned ({len(rows)})")
+    if rows:
+        out.append("| id | brief | abandoned_at | reason |")
+        out.append("|---|---|---|---|")
+        for arc, fm in rows:
+            sid = arc.name.split("_", 1)[0]
+            out.append(
+                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| {fm.get('last_active_at', '')[:10]} "
+                f"| {fm.get('abandon_reason', '')} |"
+            )
+    out.append("")
+
+    (arcs_dir / "index.md").write_text("\n".join(out), encoding="utf-8")
+
+
+# ---------- status transitions ----------
+
+def update_status(
+    arc_dir: Path,
+    new_status: str,
+    note: Optional[str] = None,
+    reason: Optional[str] = None,
+) -> Dict[str, str]:
+    fm, history = parse_meta(arc_dir)
+    old = fm.get("status", "active")
+    if old == new_status:
+        die(f"arc already in status {new_status}.")
+    if new_status == "done":
+        sums = [p for p in arc_dir.glob("9_*.md") if p.is_file()]
+        if not any(p.stat().st_size > 0 for p in sums):
+            die("cannot mark done: no non-empty 9_*.md found.")
+    if new_status == "abandoned":
+        if not reason:
+            die("--reason required for abandoned.")
+        fm["abandon_reason"] = reason
+    fm["status"] = new_status
+    fm["last_active_at"] = now_iso()
+    suffix_parts = []
+    if note:
+        suffix_parts.append(f"note: {note}")
+    if reason:
+        suffix_parts.append(f"reason: {reason}")
+    suffix = f" ({'; '.join(suffix_parts)})" if suffix_parts else ""
+    history.append(f"{now_iso()} {old} -> {new_status}{suffix}")
+    write_meta(arc_dir, fm, history)
+    return fm
+
+
+# ---------- subcommands ----------
+
+ARCS_GITIGNORE = (
+    "paused/\n"
+    "done/\n"
+    "abandoned/\n"
+    "index.md\n"
+    "/[0-9][0-9][0-9][0-9][0-9][0-9][a-z]_*\n"
+)
+
+
+def cmd_init(args: argparse.Namespace) -> None:
+    root = Path.cwd().resolve()
+    arcs = root / ARCS_DIRNAME
+    fresh = not (arcs / ALL_DIRNAME).is_dir()
+    if fresh:
+        (arcs / ALL_DIRNAME).mkdir(parents=True)
+    for st in ("paused", "done", "abandoned"):
+        (arcs / st).mkdir(exist_ok=True)
+    (arcs / ".gitignore").write_text(ARCS_GITIGNORE, encoding="utf-8")
+    rebuild_index(root)
+    if fresh:
+        err(f"initialized {arcs}.")
+    else:
+        err(f"refreshed {arcs} (already initialized).")
+
+    # AGENTS.md / CLAUDE.md hook (idempotent; symlink-safe)
+    seen_inodes = set()
+    for fname in ("AGENTS.md", "CLAUDE.md"):
+        f = root / fname
+        if not f.exists():
+            continue
+        real = f.resolve()
+        if real in seen_inodes:
+            continue
+        seen_inodes.add(real)
+        content = f.read_text(encoding="utf-8")
+        if "## Arc Protocol" in content:
+            continue
+        if not content.endswith("\n"):
+            content += "\n"
+        f.write_text(content + AGENTS_HOOK, encoding="utf-8")
+        err(f"appended Arc Protocol hook to {f.name}.")
+
+
+def _create_arc(args: argparse.Namespace, parent: Optional[str]) -> None:
+    root = require_root()
+    brief_text = " ".join(args.brief).strip()
+    slug = slugify_brief(brief_text)
+    day = today_id()
+    letter = next_letter(root, day)
+    arc_id = f"{day}{letter}"
+    arc_name = f"{arc_id}_{slug}"
+    arc_dir = root / ARCS_DIRNAME / ALL_DIRNAME / arc_name
+    arc_dir.mkdir()
+
+    fm = {
+        "id": arc_name,
+        "brief": brief_text[:80],
+        "created_at": now_iso(),
+        "last_active_at": now_iso(),
+        "status": "active",
+        "actor": getattr(args, "actor", None) or "agent",
+        "parent": parent or "null",
+        "abandon_reason": "null",
+    }
+    history = [f"{now_iso()} created"]
+    if parent:
+        history.append(f"{now_iso()} parent set to {parent}")
+    write_meta(arc_dir, fm, history)
+    update_view_links(root, arc_dir, "active")
+    rebuild_index(root)
+    print(arc_id)
+    err(f"created {arc_name} at {arc_dir}.")
+
+
+def cmd_new(args: argparse.Namespace) -> None:
+    _create_arc(args, parent=None)
+
+
+def cmd_spawn(args: argparse.Namespace) -> None:
+    root = require_root()
+    if args.parent:
+        parent_dir = find_arc_dir(root, args.parent)
+    else:
+        cwd_arc = cwd_arc_dir(root)
+        if cwd_arc is None:
+            die("arc spawn requires --parent <id> or being run from inside an arc directory.")
+        parent_dir = cwd_arc
+    _create_arc(args, parent=parent_dir.name)
+
+
+def cmd_pause(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    update_status(arc_dir, "paused", note=args.note)
+    update_view_links(root, arc_dir, "paused")
+    rebuild_index(root)
+    print(arc_dir.name.split("_", 1)[0])
+    err(f"paused {arc_dir.name}.")
+
+
+def cmd_resume(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    fm, history = parse_meta(arc_dir)
+    old = fm.get("status", "active")
+    if old != "active":
+        fm["status"] = "active"
+        fm["last_active_at"] = now_iso()
+        history.append(f"{now_iso()} {old} -> active")
+        write_meta(arc_dir, fm, history)
+        update_view_links(root, arc_dir, "active")
+        rebuild_index(root)
+    print(arc_dir)
+    err(f"resumed {arc_dir.name} (was {old}).")
+
+
+def cmd_status(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    update_status(arc_dir, args.new_status, note=args.note, reason=args.reason)
+    update_view_links(root, arc_dir, args.new_status)
+    rebuild_index(root)
+    err(f"{arc_dir.name} -> {args.new_status}.")
+
+
+def cmd_abandon(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    update_status(arc_dir, "abandoned", reason=args.reason)
+    update_view_links(root, arc_dir, "abandoned")
+    rebuild_index(root)
+    err(f"abandoned {arc_dir.name}.")
+
+
+def cmd_touch(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    fm, history = parse_meta(arc_dir)
+    fm["last_active_at"] = now_iso()
+    write_meta(arc_dir, fm, history)
+    rebuild_index(root)
+
+
+def cmd_log(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    text = " ".join(args.text).strip()
+    if not text:
+        die("log message required.")
+    p = arc_dir / "3_process_log.md"
+    if not p.exists():
+        p.write_text(f"# 3_process_log — {arc_dir.name}\n\n", encoding="utf-8")
+    with p.open("a", encoding="utf-8") as f:
+        f.write(f"[{now_iso()}] {text}\n")
+    fm, history = parse_meta(arc_dir)
+    fm["last_active_at"] = now_iso()
+    write_meta(arc_dir, fm, history)
+    rebuild_index(root)
+
+
+def cmd_output(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    name = slugify_brief(args.name, max_words=3)
+    stamp = dt.datetime.now().strftime("%y%m%d_%H%M")
+    out_dir = arc_dir / "output" / f"{stamp}_{name}"
+    if out_dir.exists():
+        stamp = dt.datetime.now().strftime("%y%m%d_%H%M%S")
+        out_dir = arc_dir / "output" / f"{stamp}_{name}"
+    out_dir.mkdir(parents=True)
+    print(out_dir)
+
+
+def cmd_list(args: argparse.Namespace) -> None:
+    root = require_root()
+    idx = root / ARCS_DIRNAME / "index.md"
+    if not idx.exists():
+        rebuild_index(root)
+    sys.stdout.write(idx.read_text(encoding="utf-8"))
+
+
+def cmd_cd(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = find_arc_dir(root, args.id)
+    print(arc_dir)
+
+
+def cmd_rebuild(args: argparse.Namespace) -> None:
+    root = require_root()
+    arcs = root / ARCS_DIRNAME
+    for c in arcs.iterdir():
+        if c.is_symlink():
+            head = c.name.split("_", 1)[0]
+            if ID_RE.match(head):
+                c.unlink()
+    legacy_active = arcs / "active"
+    if legacy_active.is_dir():
+        for c in legacy_active.iterdir():
+            if c.is_symlink():
+                c.unlink()
+        try:
+            legacy_active.rmdir()
+        except OSError:
+            pass
+    for st in ("paused", "done", "abandoned"):
+        d = arcs / st
+        if not d.exists():
+            d.mkdir()
+            continue
+        for c in d.iterdir():
+            if c.is_symlink() or c.is_file():
+                c.unlink()
+            elif c.is_dir():
+                shutil.rmtree(c)
+    for arc, fm in list_arcs(root):
+        update_view_links(root, arc, fm.get("status", "active"))
+    rebuild_index(root)
+    err("rebuilt arcs view symlinks and index.md.")
+
+
+def cmd_resolve(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = find_arc_dir(root, args.id)
+    print(arc_dir)
+
+
+# ---------- main ----------
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="arc", description="Arc — task management protocol")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    sp = sub.add_parser("init", help="Initialize arcs/ in current directory")
+    sp.set_defaults(func=cmd_init)
+
+    sp = sub.add_parser("new", help="Create a new arc")
+    sp.add_argument("brief", nargs="+", help="Brief description (≤5 words after slugify)")
+    sp.add_argument("--actor", default=None)
+    sp.set_defaults(func=cmd_new)
+
+    sp = sub.add_parser("spawn", help="Create a child arc (parent = cwd or --parent)")
+    sp.add_argument("brief", nargs="+")
+    sp.add_argument("--parent", default=None, help="Parent arc id (7-char or full name)")
+    sp.add_argument("--actor", default=None)
+    sp.set_defaults(func=cmd_spawn)
+
+    sp = sub.add_parser("pause", help="Pause an arc")
+    sp.add_argument("id", nargs="?", default=None)
+    sp.add_argument("--note", required=True)
+    sp.set_defaults(func=cmd_pause)
+
+    sp = sub.add_parser("resume", help="Resume an arc (echoes canonical path)")
+    sp.add_argument("id")
+    sp.set_defaults(func=cmd_resume)
+
+    sp = sub.add_parser("status", help="Set arc status")
+    sp.add_argument("id")
+    sp.add_argument("new_status", choices=STATES)
+    sp.add_argument("--note", default=None)
+    sp.add_argument("--reason", default=None)
+    sp.set_defaults(func=cmd_status)
+
+    sp = sub.add_parser("abandon", help="Mark arc abandoned")
+    sp.add_argument("id")
+    sp.add_argument("--reason", required=True)
+    sp.set_defaults(func=cmd_abandon)
+
+    sp = sub.add_parser("touch", help="Update last_active_at and rebuild index")
+    sp.add_argument("id", nargs="?", default=None)
+    sp.set_defaults(func=cmd_touch)
+
+    sp = sub.add_parser("log", help="Append to 3_process_log.md")
+    sp.add_argument("-i", "--id", default=None)
+    sp.add_argument("text", nargs="+")
+    sp.set_defaults(func=cmd_log)
+
+    sp = sub.add_parser("output", help="Create output/<YYMMDD_HHMM>_<name>/ and echo path")
+    sp.add_argument("-i", "--id", default=None)
+    sp.add_argument("name")
+    sp.set_defaults(func=cmd_output)
+
+    sp = sub.add_parser("list", help="Print index.md to stdout")
+    sp.set_defaults(func=cmd_list)
+
+    sp = sub.add_parser("cd", help="Echo canonical path of arc (use: cd $(arc cd <id>))")
+    sp.add_argument("id")
+    sp.set_defaults(func=cmd_cd)
+
+    sp = sub.add_parser("rebuild", help="Rebuild view symlinks and index.md")
+    sp.set_defaults(func=cmd_rebuild)
+
+    sp = sub.add_parser("_resolve", help="Resolve id to canonical path (internal)")
+    sp.add_argument("id")
+    sp.set_defaults(func=cmd_resolve)
+
+    return p
+
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
