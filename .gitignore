@@ -1,0 +1,9 @@
+# arc task tracking is per-machine, not synced across machines
+arcs/
+
+# OS / editor noise
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
