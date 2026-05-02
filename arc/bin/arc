@@ -47,6 +47,15 @@ def now_iso() -> str:
     return dt.datetime.now().astimezone().replace(microsecond=0).isoformat()
 
 
+def now_human() -> str:
+    """Human-readable local timestamp for process_log entries.
+
+    Format: ``YYYY-MM-DD HH:MM:SS`` (no ``T``, no timezone).
+    Used only by ``arc log`` body — frontmatter still uses ISO 8601.
+    """
+    return dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 def today_id() -> str:
     return dt.datetime.now().strftime("%y%m%d")
 
@@ -607,8 +616,13 @@ def cmd_log(args: argparse.Namespace) -> None:
     p = arc_dir / "3_process_log.md"
     if not p.exists():
         p.write_text(f"# 3_process_log — {arc_dir.name}\n\n", encoding="utf-8")
+    else:
+        existing = p.read_text(encoding="utf-8")
+        if existing and not existing.endswith("\n\n"):
+            with p.open("a", encoding="utf-8") as f:
+                f.write("\n" if existing.endswith("\n") else "\n\n")
     with p.open("a", encoding="utf-8") as f:
-        f.write(f"[{now_iso()}] {text}\n")
+        f.write(f"- **[{now_human()}]** {text}\n\n")
     fm, history = parse_meta(arc_dir)
     fm["last_active_at"] = now_iso()
     write_meta(arc_dir, fm, history)
