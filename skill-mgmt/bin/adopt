@@ -10,6 +10,9 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MANIFEST="$REPO/manifest.txt"
+# shellcheck source=/dev/null
+source "$REPO/skill-mgmt/bin/common"
+skill_mgmt_capture_git_state
 
 usage() {
   echo "usage: adopt <name> [--from claude|codex|antigravity]" >&2
@@ -117,15 +120,13 @@ if ! grep -qxF "$name" "$MANIFEST" 2>/dev/null; then
   echo "adopt: appended '$name' to $MANIFEST"
 fi
 
-"$REPO/skill-mgmt/bin/install"
+SKILL_MGMT_AUTOCOMMIT=0 "$REPO/skill-mgmt/bin/install"
+
+skill_mgmt_auto_commit_push "adopt $name"
 
 cat <<EOF
 
 ✓ adopted: $name
 
-Next:
-  cd $REPO
-  git add .
-  git commit -m "adopt $name"
-  git push
+By default this script already auto-committed and pushed the adoption if the repo was clean at start.
 EOF

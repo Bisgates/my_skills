@@ -1,6 +1,9 @@
 ---
 name: {{NAME}}
 description: {{DESCRIPTION}}
+# Optional runtime dependencies. Uncomment only when required.
+# dependencies:
+#   - other-skill
 ---
 
 # {{TITLE}}

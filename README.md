@@ -25,7 +25,7 @@ git clone git@github.com:Bisgates/my_skills.git ~/my_skills   # server: ~/my_ski
 ~/my_skills/skill-mgmt/bin/install
 ```
 
-That's it. Every skill in `manifest.txt` is now symlinked into `~/.claude/skills/`, `~/.codex/skills/`, and `~/.gemini/antigravity/skills/` (Antigravity [global skills](https://antigravity.google/docs/skills)). Edit any `SKILL.md` in the repo → linked runtimes see the change on the next session (no copy step).
+That's it. Every skill in `manifest.txt` plus each skill's recursive dependencies is now symlinked into `~/.claude/skills/`, `~/.codex/skills/`, and `~/.gemini/antigravity/skills/` (Antigravity [global skills](https://antigravity.google/docs/skills)). Edit any `SKILL.md` in the repo → linked runtimes see the change on the next session (no copy step).
 
 ## Daily ops
 
@@ -33,17 +33,20 @@ In any agent session, ask the agent in plain language:
 
 - "新建一个 skill 叫 X" → triggers `skill-mgmt` → scaffolds, links, manifests
 - "同步一下 skills" → triggers `skill-mgmt` → `bin/sync`
+- "安装 skill foo" → triggers `skill-mgmt` → `bin/install foo` (also installs dependencies)
 - "把 ~/.claude/skills/foo 收编进 repo" → triggers `skill-mgmt` → `bin/adopt foo`
 
 Outside an agent session, equivalent shell commands live under `skill-mgmt/bin/`.
 
 ## Iterating
 
-Edit any `SKILL.md` directly in the repo (via cursor / vim / agent session). Then:
+Edit any `SKILL.md` directly in the repo (via cursor / vim / agent session). By default, agents should commit and push after successful edits. The `new` and `adopt` scripts do this automatically when the repo was clean at script start.
+
+Opt out when needed:
 
 ```bash
-cd ~/my_skills
-git add . && git commit -am "..." && git push
+SKILL_MGMT_AUTOCOMMIT=0 ~/my_skills/skill-mgmt/bin/new foo
+SKILL_MGMT_AUTOPUSH=0 ~/my_skills/skill-mgmt/bin/adopt foo
 ```
 
 On the other machine: `~/my_skills/skill-mgmt/bin/sync`.

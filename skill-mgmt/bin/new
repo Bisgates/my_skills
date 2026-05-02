@@ -5,6 +5,9 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MANIFEST="$REPO/manifest.txt"
+# shellcheck source=/dev/null
+source "$REPO/skill-mgmt/bin/common"
+skill_mgmt_capture_git_state
 TEMPLATE="$REPO/skill-mgmt/templates/SKILL.md.template"
 
 usage() {
@@ -43,7 +46,9 @@ if ! grep -qxF "$name" "$MANIFEST" 2>/dev/null; then
   echo "new: appended '$name' to $MANIFEST"
 fi
 
-"$REPO/skill-mgmt/bin/install"
+SKILL_MGMT_AUTOCOMMIT=0 "$REPO/skill-mgmt/bin/install"
+
+skill_mgmt_auto_commit_push "add $name"
 
 cat <<EOF
 
@@ -52,5 +57,5 @@ cat <<EOF
 Next:
   - Read $REPO/write-a-skill/SKILL.md for authoring conventions.
   - Edit $dest/SKILL.md (refine description triggers, fill workflows).
-  - cd $REPO && git add . && git commit -m "add $name" && git push
+  - By default this script already auto-committed and pushed the scaffold if the repo was clean at start.
 EOF

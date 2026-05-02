@@ -4,10 +4,15 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=/dev/null
+source "$REPO/skill-mgmt/bin/common"
+skill_mgmt_capture_git_state
 cd "$REPO"
 
 echo "sync: git pull --rebase in $REPO"
 git pull --rebase
 
 echo "sync: running install"
-"$REPO/skill-mgmt/bin/install"
+SKILL_MGMT_AUTOCOMMIT=0 "$REPO/skill-mgmt/bin/install"
+
+skill_mgmt_auto_commit_push "sync skills"
