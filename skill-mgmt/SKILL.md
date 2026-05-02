@@ -1,6 +1,6 @@
 ---
 name: skill-mgmt
-description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills and ~/.codex/skills). Use ONLY when the user explicitly says install/sync/adopt/new/create a skill, sync skills across machines, or asks how to set up the skills repo on a new machine. Do not trigger for general questions about what a particular skill does.
+description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills, ~/.codex/skills, and ~/.gemini/antigravity/skills). Use ONLY when the user explicitly says install/sync/adopt/new/create a skill, sync skills across machines, or asks how to set up the skills repo on a new machine. Do not trigger for general questions about what a particular skill does.
 ---
 
 # skill-mgmt — Self-managing skill operations
@@ -10,9 +10,9 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 ## Architecture (read this first)
 
 - `<repo>/<name>/SKILL.md` is the **only** physical source of truth for any user-authored skill.
-- `~/.claude/skills/<name>` and `~/.codex/skills/<name>` are **symlinks** pointing into the repo.
+- `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, and `~/.gemini/antigravity/skills/<name>` are **symlinks** pointing into the repo ([Antigravity global skills](https://antigravity.google/docs/skills)).
 - `<repo>/manifest.txt` lists every skill the user owns. **Line 1 must be `skill-mgmt`** (self-management).
-- Editing a `SKILL.md` in the repo is read by both agents on the next session — no copy step.
+- Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
 - Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`.
 
 ## When to invoke (strict triggers)
@@ -37,7 +37,7 @@ Do NOT trigger for:
 <repo>/skill-mgmt/bin/install
 ```
 
-Reads `<repo>/manifest.txt`. For each skill name, ensures both `~/.claude/skills/<name>` and `~/.codex/skills/<name>` are symlinks → `<repo>/<name>`. Idempotent: existing correct symlinks are skipped; conflicts (real dirs at the target) are warned, not overwritten — the user must run `bin/adopt` or manually move them.
+Reads `<repo>/manifest.txt`. For each skill name, ensures `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, and `~/.gemini/antigravity/skills/<name>` are symlinks → `<repo>/<name>`. Idempotent: existing correct symlinks are skipped; conflicts (real dirs at the target) are warned, not overwritten — the user must run `bin/adopt` or manually move them.
 
 ### Op 2 — Sync (pull remote, refresh symlinks)
 
@@ -53,7 +53,7 @@ Equivalent to `git -C <repo> pull --rebase && <repo>/skill-mgmt/bin/install`. Ru
 <repo>/skill-mgmt/bin/adopt <name>
 ```
 
-Looks for a real directory (not symlink) at `~/.claude/skills/<name>` or `~/.codex/skills/<name>`. If both exist and differ, refuses; user must `diff -rq` and rerun with `--from claude` or `--from codex`. Otherwise: `mv` the chosen source into `<repo>/<name>`, append `<name>` to `manifest.txt`, then run `install` to create symlinks on both sides.
+Looks for a real directory (not symlink) at `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, or `~/.gemini/antigravity/skills/<name>`. When several exist and contents differ, refuses until `diff -rq`; rerun with `--from claude`, `--from codex`, or `--from antigravity`. When identical, adopts using preference claude → codex → antigravity. Otherwise: `mv` the chosen source into `<repo>/<name>`, append `<name>` to `manifest.txt`, then run `install` to refresh symlinks everywhere.
 
 After adopt, prompt the user to `git add . && git commit -m "adopt <name>" && git push`.
 
@@ -78,8 +78,9 @@ After scaffolding, **read `<repo>/write-a-skill/SKILL.md` for full authoring gui
 ## Gotchas
 
 - **Do not hardcode paths**: all scripts resolve `<repo>` via `$(cd "$(dirname "$0")/../.." && pwd)`. Mac repo lives at `~/project/agent/skills/`, server at `~/my_skills/` — both work.
-- **Editor atomic-write**: vim/cursor with `write-temp + rename` save mode can replace a symlink with a real file. If `~/.claude/skills/<name>` becomes a real dir unexpectedly, it means an editor wrote through the symlink incorrectly. Recover: `bin/install` will warn; manually `rm` the bad path and re-run install. Set `vim: :set backupcopy=yes` to avoid.
-- **Conflict on adopt**: if `~/.claude/skills/<name>` and `~/.codex/skills/<name>` are both real dirs with diverged content, adopt refuses. Use `diff -rq` to inspect; pick a side with `bin/adopt <name> --from claude|codex`.
+- **Antigravity + symlinks**: some Antigravity builds have been reported not to traverse symlinked skill folders during discovery ([discussion](https://github.com/vercel-labs/skills/issues/633)). If listed skills never appear after `install`, check the app version/docs or keep a copy under project `.agents/skills/` until symlink support is reliable.
+- **Editor atomic-write**: vim/cursor with `write-temp + rename` save mode can replace a symlink with a real file. If `~/.claude/skills/<name>` (or Codex/Antigravity paths) becomes a real dir unexpectedly, an editor wrote through the symlink incorrectly. Recover: `bin/install` will warn; manually `rm` the bad path and re-run install. Set `vim: :set backupcopy=yes` to avoid.
+- **Conflict on adopt**: if multiple agent dirs contain diverged copies, adopt refuses until you pick `bin/adopt <name> --from claude|codex|antigravity`.
 - **arcs/ is not synced**: `arcs/` (arc task tracking) is in `.gitignore`. Per-machine task state, not shared.
 
 ## See also

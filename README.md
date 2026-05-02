@@ -25,7 +25,7 @@ git clone git@github.com:Bisgates/my_skills.git ~/my_skills   # server: ~/my_ski
 ~/my_skills/skill-mgmt/bin/install
 ```
 
-That's it. Every skill in `manifest.txt` is now symlinked into `~/.claude/skills/` and `~/.codex/skills/`. Edit any `SKILL.md` in the repo → both agents see the change immediately on the next session (no copy step).
+That's it. Every skill in `manifest.txt` is now symlinked into `~/.claude/skills/`, `~/.codex/skills/`, and `~/.gemini/antigravity/skills/` (Antigravity [global skills](https://antigravity.google/docs/skills)). Edit any `SKILL.md` in the repo → linked runtimes see the change on the next session (no copy step).
 
 ## Daily ops
 
@@ -52,4 +52,4 @@ On the other machine: `~/my_skills/skill-mgmt/bin/sync`.
 
 - Multi-user / team distribution
 - Plugin-installed skills (e.g. mem0) — managed by their installers, untouched here
-- Cursor / web / cloud agent runtimes — only `~/.claude/skills/` and `~/.codex/skills/` for now
+- Runtimes outside Claude / Codex / Antigravity global skills paths — add another target directory in `skill-mgmt/bin/install` if you adopt another tool later

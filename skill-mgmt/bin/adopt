@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# adopt <name> [--from claude|codex] — move an existing real-directory skill at
-# ~/.claude/skills/<name> or ~/.codex/skills/<name> into <repo>/<name>, append to
-# manifest, and create symlinks on both sides via install.
+# adopt <name> [--from claude|codex|antigravity] — move an existing real-directory
+# skill at ~/.claude/skills/<name>, ~/.codex/skills/<name>, or
+# ~/.gemini/antigravity/skills/<name> into <repo>/<name>, append to manifest,
+# and refresh symlinks via install.
 #
-# Refuses if both sides are real dirs with diverged content unless --from is given.
+# Refuses if multiple agent dirs contain diverged copies unless --from is given.
 
 set -euo pipefail
 
@@ -11,7 +12,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MANIFEST="$REPO/manifest.txt"
 
 usage() {
-  echo "usage: adopt <name> [--from claude|codex]" >&2
+  echo "usage: adopt <name> [--from claude|codex|antigravity]" >&2
   exit 2
 }
 
@@ -23,7 +24,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --from)
       from="${2:-}"
-      [[ "$from" == "claude" || "$from" == "codex" ]] || usage
+      [[ "$from" == "claude" || "$from" == "codex" || "$from" == "antigravity" ]] || usage
       shift 2
       ;;
     *) usage ;;
@@ -32,15 +33,30 @@ done
 
 claude_path="$HOME/.claude/skills/$name"
 codex_path="$HOME/.codex/skills/$name"
+antigravity_path="$HOME/.gemini/antigravity/skills/$name"
 
 is_real_dir() { [[ -d "$1" && ! -L "$1" ]]; }
 
-claude_real="false"; codex_real="false"
-is_real_dir "$claude_path" && claude_real="true"
-is_real_dir "$codex_path"  && codex_real="true"
+all_identical_dirs() {
+  local first="$1"
+  shift
+  local d
+  for d in "$@"; do
+    if ! diff -rq "$first" "$d" > /dev/null 2>&1; then
+      return 1
+    fi
+  done
+  return 0
+}
 
-if [[ "$claude_real" == "false" && "$codex_real" == "false" ]]; then
-  echo "adopt: no real directory found at $claude_path or $codex_path" >&2
+# Collect paths that are real (non-symlink) directories.
+declare -a real_paths=()
+is_real_dir "$claude_path" && real_paths+=("$claude_path")
+is_real_dir "$codex_path" && real_paths+=("$codex_path")
+is_real_dir "$antigravity_path" && real_paths+=("$antigravity_path")
+
+if [[ "${#real_paths[@]}" -eq 0 ]]; then
+  echo "adopt: no real directory found at $claude_path, $codex_path, or $antigravity_path" >&2
   exit 1
 fi
 
@@ -49,39 +65,51 @@ if [[ -e "$REPO/$name" ]]; then
   exit 1
 fi
 
-# Decide source
 src=""
-if [[ "$claude_real" == "true" && "$codex_real" == "true" ]]; then
-  if [[ -n "$from" ]]; then
-    [[ "$from" == "claude" ]] && src="$claude_path" || src="$codex_path"
-  else
-    if diff -rq "$claude_path" "$codex_path" > /dev/null 2>&1; then
-      echo "adopt: $name identical in both agent dirs; using claude side"
-      src="$claude_path"
-    else
-      echo "adopt: $name differs between $claude_path and $codex_path" >&2
-      echo "       run: diff -rq $claude_path $codex_path" >&2
-      echo "       then re-run with: --from claude|codex" >&2
-      exit 1
-    fi
+if [[ -n "$from" ]]; then
+  case "$from" in
+    claude) src="$claude_path" ;;
+    codex) src="$codex_path" ;;
+    antigravity) src="$antigravity_path" ;;
+  esac
+  if ! is_real_dir "$src"; then
+    echo "adopt: expected a real directory for --from $from at $src" >&2
+    exit 1
   fi
-elif [[ "$claude_real" == "true" ]]; then
-  src="$claude_path"
+elif [[ "${#real_paths[@]}" -eq 1 ]]; then
+  src="${real_paths[0]}"
 else
-  src="$codex_path"
+  if all_identical_dirs "${real_paths[@]}"; then
+    echo "adopt: $name identical in all agent dirs; preferring claude > codex > antigravity"
+    if is_real_dir "$claude_path"; then
+      src="$claude_path"
+    elif is_real_dir "$codex_path"; then
+      src="$codex_path"
+    else
+      src="$antigravity_path"
+    fi
+  else
+    echo "adopt: $name differs between agent dirs" >&2
+    echo "       compare with e.g.: diff -rq $claude_path $codex_path" >&2
+    echo "       then re-run with: --from claude|codex|antigravity" >&2
+    exit 1
+  fi
 fi
 
 echo "adopt: moving $src -> $REPO/$name"
 mv "$src" "$REPO/$name"
 
-# If the OTHER side is also a real dir (we picked one with --from), back it up
-other=""
-[[ "$src" == "$claude_path" ]] && other="$codex_path" || other="$claude_path"
-if is_real_dir "$other"; then
-  bak="${other}.adopted-bak-$(date +%Y%m%d_%H%M%S)"
-  echo "adopt: other side $other is also a real dir; renaming to $bak" >&2
-  mv "$other" "$bak"
-fi
+# Any other remaining real dirs at agent paths would shadow install symlinks — back them up.
+for candidate in "$claude_path" "$codex_path" "$antigravity_path"; do
+  if [[ "$candidate" == "$src" ]]; then
+    continue
+  fi
+  if is_real_dir "$candidate"; then
+    bak="${candidate}.adopted-bak-$(date +%Y%m%d_%H%M%S)"
+    echo "adopt: other location $candidate is still a real dir; renaming to $bak" >&2
+    mv "$candidate" "$bak"
+  fi
+done
 
 # Append to manifest if not already there
 if ! grep -qxF "$name" "$MANIFEST" 2>/dev/null; then

@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# install — create/refresh symlinks from <repo>/<name> to ~/.claude/skills/<name>
-# and ~/.codex/skills/<name>, for every name in <repo>/manifest.txt.
+# install — create/refresh symlinks from <repo>/<name> to ~/.claude/skills/<name>,
+# ~/.codex/skills/<name>, and ~/.gemini/antigravity/skills/<name> for every entry
+# in <repo>/manifest.txt.
 # Idempotent. Skips conflicts (real dirs / wrong-target symlinks) with a warning.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MANIFEST="$REPO/manifest.txt"
-TARGETS=("$HOME/.claude/skills" "$HOME/.codex/skills")
+TARGETS=(
+  "$HOME/.claude/skills"
+  "$HOME/.codex/skills"
+  "$HOME/.gemini/antigravity/skills"
+)
 
 if [[ ! -f "$MANIFEST" ]]; then
   echo "install: manifest not found: $MANIFEST" >&2
