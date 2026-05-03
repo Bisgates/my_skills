@@ -35,9 +35,9 @@ AGENTS_HOOK = """
 - 任务管理协议：~/.claude/skills/arc/SKILL.md。
 - agent **不主动**读 arcs/index.md；仅在用户显式触发 /arc-* skill 或 `arc <subcmd>` CLI 时进入任务流程。
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
-- 触发 CLI：arc {new,spawn,pause,resume,status,abandon,touch,log,output,list,cd,rebuild,init}。
+- 触发 CLI：arc {new,spawn,pause,resume,status,abandon,delete,touch,log,output,list,cd,rebuild,init}。
 - ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/all/<id>_*`；状态权威在 `0_meta.md`。
-- `done` 必须存在 `9_*.md`；`abandoned` 必须有 `--reason`。
+- `done` 必须存在 `9_*.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删，对有内容的 arc 需 `--force`。
 """
 
 
@@ -598,6 +598,30 @@ def cmd_abandon(args: argparse.Namespace) -> None:
     err(f"abandoned {arc_dir.name}.")
 
 
+def cmd_delete(args: argparse.Namespace) -> None:
+    root = require_root()
+    arc_dir = resolve_arc_dir(root, args.id)
+    name = arc_dir.name
+
+    extras = sorted(p.name for p in arc_dir.iterdir() if p.name != "0_meta.md")
+    if extras and not args.force:
+        die(
+            f"refusing to delete {name}: contains {', '.join(extras)}. "
+            f"Pass --force to override, or use `arc abandon {args.id} --reason ...` "
+            f"to preserve trace."
+        )
+
+    arcs = root / ARCS_DIRNAME
+    for st in STATES:
+        link = view_link_path(arcs, name, st)
+        if link.is_symlink():
+            link.unlink()
+
+    shutil.rmtree(arc_dir)
+    rebuild_index(root)
+    err(f"deleted {name}.")
+
+
 def cmd_touch(args: argparse.Namespace) -> None:
     root = require_root()
     arc_dir = resolve_arc_dir(root, args.id)
@@ -735,6 +759,18 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("id")
     sp.add_argument("--reason", required=True)
     sp.set_defaults(func=cmd_abandon)
+
+    sp = sub.add_parser(
+        "delete",
+        help="Hard-delete an arc (use abandon to preserve trace)",
+    )
+    sp.add_argument("id")
+    sp.add_argument(
+        "--force",
+        action="store_true",
+        help="Delete even if arc has content beyond 0_meta.md",
+    )
+    sp.set_defaults(func=cmd_delete)
 
     sp = sub.add_parser("touch", help="Update last_active_at and rebuild index")
     sp.add_argument("id", nargs="?", default=None)
