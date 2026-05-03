@@ -37,7 +37,7 @@ AGENTS_HOOK = """
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
 - 触发 CLI：arc {new,spawn,pause,resume,status,abandon,delete,touch,log,output,list,cd,rebuild,init}。
 - ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/all/<id>_*`；状态权威在 `0_meta.md`。
-- `done` 必须存在 `9_*.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删，对有内容的 arc 需 `--force`。
+- `done` 必须存在 `9_*.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删（直接全删，不留 trace）。
 """
 
 
@@ -603,14 +603,6 @@ def cmd_delete(args: argparse.Namespace) -> None:
     arc_dir = resolve_arc_dir(root, args.id)
     name = arc_dir.name
 
-    extras = sorted(p.name for p in arc_dir.iterdir() if p.name != "0_meta.md")
-    if extras and not args.force:
-        die(
-            f"refusing to delete {name}: contains {', '.join(extras)}. "
-            f"Pass --force to override, or use `arc abandon {args.id} --reason ...` "
-            f"to preserve trace."
-        )
-
     arcs = root / ARCS_DIRNAME
     for st in STATES:
         link = view_link_path(arcs, name, st)
@@ -765,11 +757,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Hard-delete an arc (use abandon to preserve trace)",
     )
     sp.add_argument("id")
-    sp.add_argument(
-        "--force",
-        action="store_true",
-        help="Delete even if arc has content beyond 0_meta.md",
-    )
     sp.set_defaults(func=cmd_delete)
 
     sp = sub.add_parser("touch", help="Update last_active_at and rebuild index")

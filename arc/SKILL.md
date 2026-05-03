@@ -18,7 +18,7 @@ description: Task management protocol with file-based traces. Use when the user 
 - **ID 引用**：用户用 7 字符 `YYMMDDx`；CLI 也接受全名 `<id>_<slug>` 用于 tab-completion。
 - **Done 硬门槛**：`arc status <id> done` 要求 `9_*.md` 存在且非空。
 - **Abandoned 硬门槛**：必须给 `--reason "..."`。
-- **Delete 是硬删（不保留 trace）**：仅当 arc 只有 `0_meta.md`（没动过的空骨架）时直接允许；任何额外文件 / 子目录都需 `--force` 强制。"想保留痕迹"用 `arc abandon`，"想彻底清掉"用 `arc delete`。
+- **Delete 是硬删（不保留 trace）**：`arc delete <id>` 直接 `rm -rf` canonical 目录 + 清掉所有 view 软链 + rebuild index，无确认无门槛。"想保留痕迹"用 `arc abandon`；"想彻底清掉"用 `arc delete`。
 - **多 active 允许**：每个 terminal 独立 cwd 表达"焦点"；resume 不自动 pause 别的。
 
 ## File layout
@@ -76,7 +76,7 @@ arc pause <id?> --note "..."
 arc resume <id>                       # echoes canonical path
 arc status <id> {active|paused|done|abandoned} [--note ...] [--reason ...]
 arc abandon <id> --reason "..."
-arc delete <id> [--force]             # 硬删；只有 0_meta.md 时直接允许，否则需 --force
+arc delete <id>                       # 硬删 canonical + 软链 + rebuild index（无门槛）
 arc touch <id?>
 arc log [-i <id>] <text...>
 arc output [-i <id>] <name>           # echoes canonical output dir
