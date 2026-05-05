@@ -37,10 +37,9 @@ description: Task management protocol with file-based traces. Use when the user 
 ### 单个 arc 内部
 ```
 arcs/all/<id>_<slug>/
-  0_meta.md                 # 必选；脚本生成与维护
+  0_meta.md                 # 必选；脚本生成与维护。frontmatter + ## history + ## log
   1_objective.md            # 必选；/arc-objective 生成
   2_plan.md                 # 必选；/arc-plan 生成
-  3_process_log.md          # 可选但强烈建议；arc log 追加
   4_*.md ~ 7_*.md           # 留白，自由命名（pivot/eval/blocker/decision_*）
   8_handoff_plan.md         # 仅 finalize 触发时生成
   9_summary.md              # done 状态硬门槛
@@ -49,6 +48,8 @@ arcs/all/<id>_<slug>/
   scripts/                  # 一次性脚本，不 promote（按需创建）
   output/<YYMMDD_HHMM>_<name>/   # 实验产出（arc output 创建）
 ```
+
+`0_meta.md` 同时承载三件事：frontmatter（id/status/parent/last_active_at/...）、`## history`（状态翻转 trace）、`## log`（执行流水，由 `arc log` 追加）。**`arc log` 只往这里写**，不再单独维护 `3_process_log.md`。旧 arc 残留的 `3_process_log.md` 会在下次 CLI 触碰时自动 migrate 进 `0_meta.md` 并删除原文件。
 
 **子目录全部按需创建**：`arc new` / `arc spawn` 只生成 `0_meta.md`，子目录由 agent 写文件时自己 `mkdir -p`，或由 `arc output` 创建。
 

@@ -27,7 +27,7 @@ description: Spawn a child arc when a separable task is discovered during anothe
    (or /arc-objective 260430b if you want to define its goal first).
    ```
 
-5. 在 parent arc 的 `3_process_log.md` 留一行（保留 trace，让 parent 之后看 log 知道 spawn 过）：
+5. 在 parent arc 留一行 log（保留 trace，让 parent 之后看 log 知道 spawn 过）：
    ```bash
    arc log -i <parent_id> "[spawn] new child arc 260430b: <brief>"
    ```

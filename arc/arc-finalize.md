@@ -14,7 +14,7 @@ description: Two-stage finalization — first draft 8_handoff_plan.md (no projec
    - `utils/*.py`：每个文件评估 promote 价值（值得复用？纯函数？跟主项目代码是否有冲突？）
    - `scripts/*.py`：默认全跳，但要列出来声明跳过
    - `doc/*.md`：判断是否值得提级到主项目 `docs/`
-   - `3_process_log.md` 全文扫读：找到"踩坑 >15 min"、"定下命名约定"、"读了 paper"、"做了重大决策" → 触发 [NEW] 提议（沿用 workspace AGENTS.md 的 New-knowledge triggers）
+   - `0_meta.md` 的 `## log` 段全文扫读：找到"踩坑 >15 min"、"定下命名约定"、"读了 paper"、"做了重大决策" → 触发 [NEW] 提议（沿用 workspace AGENTS.md 的 New-knowledge triggers）
    - `1_objective.md` 的 acceptance 是否达成 → Verification 草稿
 3. 用 `~/.claude/skills/arc/templates/8_handoff_plan.md` 生成 `8_handoff_plan.md`，**四个区块全部填**：
    - Code promote 计划（每个 utils/*.py 必须出现在 promote 表 OR 跳过项里恰好一次）
@@ -59,7 +59,7 @@ description: Two-stage finalization — first draft 8_handoff_plan.md (no projec
 ## On failure mid-stage-2
 - 如果 promote 中途出错：
   - **不要**调 `arc status done`（任务保持 active）。
-  - 在 process_log 写 `[finalize-failed] <什么坏了> <已做到哪>`。
+  - 调 `arc log "[finalize-failed] <什么坏了> <已做到哪>"`。
   - 报告用户，等指令（修 / 回滚 / 略过）。
 
 ## Don't

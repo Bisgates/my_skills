@@ -1,7 +1,7 @@
 # 2_plan — {{ARC_NAME}}
 
 > 由 /arc-plan 生成。自由格式；为 /arc-execute 提供路线图。
-> 每完成一个 step 在 3_process_log.md 留痕；遇到 plan 没预料的情况停下问用户。
+> 每完成一个 step 调 `arc log "..."` 留痕（写入 0_meta.md 的 `## log` 段）；遇到 plan 没预料的情况停下问用户。
 
 ## Strategy
 <!-- 一段话：解决路径的整体形状。 -->

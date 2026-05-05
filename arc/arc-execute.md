@@ -8,14 +8,15 @@ description: Execute the arc's plan from current state, logging progress, until 
 ## Steps for the agent
 
 1. 解析 arc：id 或 cwd。
-2. 读 `0_meta.md`、`1_objective.md`、`2_plan.md`、`3_process_log.md` 末尾约 40 行（grep 末尾即可，不要读全）。
+2. 读 `0_meta.md`（frontmatter + history + `## log` 段；log 段只取末尾约 40 行，不要读全）、`1_objective.md`、`2_plan.md`。
 3. 判断当前进度：
-   - process_log 中最后一个有结论的步骤是哪个？
+   - `## log` 里最后一个有结论的步骤是哪个？
    - 对照 plan，下一步应该做什么？
 4. **默认一口气推到 plan 末尾**。每完成一个有结论的动作（跑了脚本、得了数字、做了决定）调一次：
    ```bash
    arc log "[<phase>] <一行结论>"
    ```
+   （`arc log` 会 append 到 `0_meta.md` 的 `## log` 段，不要手改文件。）
 5. **代码 / 产物归位**（子目录按需创建——首次写入前先 `mkdir -p` 或用支持自动建父目录的 Write tool）：
    - 一次性脚本 → `scripts/`（带 argparse / 入口块）
    - 可能复用 → `utils/`（纯函数 + docstring，不写 `__main__`）
@@ -24,7 +25,7 @@ description: Execute the arc's plan from current state, logging progress, until 
 6. **遇到 plan 没预料的情况**（错误、矛盾、需要决策、要改 objective）：**停下问用户**。例：
    - "step 3 跑出来 RMSE 比基线还高，plan 没规定阈值不达标怎么办，你想怎么处理？"
 7. 推完最后一个 step 后：
-   - 在 process_log 写一行 `[done] all plan steps complete; ready for /arc-finalize`。
+   - 调 `arc log "[done] all plan steps complete; ready for /arc-finalize"`。
    - 提示用户："plan 完成，建议 `/arc-finalize`。"
 
 ## Don't

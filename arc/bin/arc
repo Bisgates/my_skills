@@ -48,7 +48,7 @@ def now_iso() -> str:
 
 
 def now_human() -> str:
-    """Human-readable local timestamp for process_log entries.
+    """Human-readable local timestamp for log entries.
 
     Format: ``YYYY-MM-DD HH:MM:SS`` (no ``T``, no timezone).
     Used only by ``arc log`` body — frontmatter still uses ISO 8601.
@@ -153,7 +153,13 @@ def resolve_arc_dir(root: Path, arc_id: Optional[str]) -> Path:
 
 # ---------- meta r/w ----------
 
-def parse_meta(arc_dir: Path) -> Tuple[Dict[str, str], List[str]]:
+def parse_meta(arc_dir: Path) -> Tuple[Dict[str, str], List[str], str]:
+    """Parse 0_meta.md → (frontmatter, history_lines, log_body).
+
+    log_body is the verbatim contents (without the ``## log`` header) of the
+    optional ``## log`` section, preserving newlines so ``write_meta`` can
+    round-trip it. Returns ``""`` when no log section is present.
+    """
     p = arc_dir / "0_meta.md"
     if not p.exists():
         die(f"missing {p}.")
@@ -173,18 +179,37 @@ def parse_meta(arc_dir: Path) -> Tuple[Dict[str, str], List[str]]:
         if ":" in line:
             k, _, v = line.partition(":")
             fm[k.strip()] = v.strip()
+
     history: List[str] = []
-    in_hist = False
+    log_lines: List[str] = []
+    section: Optional[str] = None
     for line in body.splitlines():
-        if line.strip().lower().startswith("## history"):
-            in_hist = True
+        stripped = line.strip().lower()
+        if stripped.startswith("## history"):
+            section = "history"
             continue
-        if in_hist and line.startswith("- "):
-            history.append(line[2:].strip())
-    return fm, history
+        if stripped.startswith("## log"):
+            section = "log"
+            continue
+        if stripped.startswith("## "):
+            section = None
+            continue
+        if section == "history":
+            if line.startswith("- "):
+                history.append(line[2:].strip())
+        elif section == "log":
+            log_lines.append(line)
+
+    log_body = "\n".join(log_lines).strip("\n")
+    return fm, history, log_body
 
 
-def write_meta(arc_dir: Path, fm: Dict[str, str], history: List[str]) -> None:
+def write_meta(
+    arc_dir: Path,
+    fm: Dict[str, str],
+    history: List[str],
+    log_body: str = "",
+) -> None:
     lines = ["---"]
     for k in META_FIELDS:
         v = fm.get(k)
@@ -195,7 +220,38 @@ def write_meta(arc_dir: Path, fm: Dict[str, str], history: List[str]) -> None:
     for h in history:
         lines.append(f"- {h}")
     lines.append("")
+    lines.append("## log")
+    if log_body.strip():
+        lines.append(log_body.strip("\n"))
+    lines.append("")
     (arc_dir / "0_meta.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def _migrate_legacy_log(arc_dir: Path) -> None:
+    """One-shot migration: fold a legacy ``3_process_log.md`` into ``0_meta.md``.
+
+    Idempotent: when ``3_process_log.md`` is absent, no-op. When present, its
+    body (minus the leading ``# 3_process_log — ...`` header) is appended to
+    the ``## log`` section of ``0_meta.md`` and the legacy file is deleted.
+    """
+    legacy = arc_dir / "3_process_log.md"
+    if not legacy.exists():
+        return
+    raw = legacy.read_text(encoding="utf-8")
+    body_lines: List[str] = []
+    for line in raw.splitlines():
+        if line.startswith("# 3_process_log"):
+            continue
+        body_lines.append(line)
+    legacy_body = "\n".join(body_lines).strip("\n")
+
+    fm, history, existing_log = parse_meta(arc_dir)
+    if existing_log and legacy_body:
+        merged = existing_log.rstrip() + "\n\n" + legacy_body
+    else:
+        merged = existing_log or legacy_body
+    write_meta(arc_dir, fm, history, log_body=merged)
+    legacy.unlink()
 
 
 # ---------- view links + index ----------
@@ -235,7 +291,7 @@ def list_arcs(root: Path) -> List[Tuple[Path, Dict[str, str]]]:
         if not ID_RE.match(head):
             continue
         try:
-            fm, _ = parse_meta(child)
+            fm, _, _ = parse_meta(child)
         except SystemExit:
             continue
         out.append((child, fm))
@@ -367,7 +423,8 @@ def update_status(
     note: Optional[str] = None,
     reason: Optional[str] = None,
 ) -> Dict[str, str]:
-    fm, history = parse_meta(arc_dir)
+    _migrate_legacy_log(arc_dir)
+    fm, history, log_body = parse_meta(arc_dir)
     old = fm.get("status", "active")
     if old == new_status:
         die(f"arc already in status {new_status}.")
@@ -388,7 +445,7 @@ def update_status(
         suffix_parts.append(f"reason: {reason}")
     suffix = f" ({'; '.join(suffix_parts)})" if suffix_parts else ""
     history.append(f"{now_iso()} {old} -> {new_status}{suffix}")
-    write_meta(arc_dir, fm, history)
+    write_meta(arc_dir, fm, history, log_body=log_body)
     return fm
 
 
@@ -567,13 +624,14 @@ def cmd_pause(args: argparse.Namespace) -> None:
 def cmd_resume(args: argparse.Namespace) -> None:
     root = require_root()
     arc_dir = resolve_arc_dir(root, args.id)
-    fm, history = parse_meta(arc_dir)
+    _migrate_legacy_log(arc_dir)
+    fm, history, log_body = parse_meta(arc_dir)
     old = fm.get("status", "active")
     if old != "active":
         fm["status"] = "active"
         fm["last_active_at"] = now_iso()
         history.append(f"{now_iso()} {old} -> active")
-        write_meta(arc_dir, fm, history)
+        write_meta(arc_dir, fm, history, log_body=log_body)
         update_view_links(root, arc_dir, "active")
         rebuild_index(root)
     print(arc_dir)
@@ -617,9 +675,10 @@ def cmd_delete(args: argparse.Namespace) -> None:
 def cmd_touch(args: argparse.Namespace) -> None:
     root = require_root()
     arc_dir = resolve_arc_dir(root, args.id)
-    fm, history = parse_meta(arc_dir)
+    _migrate_legacy_log(arc_dir)
+    fm, history, log_body = parse_meta(arc_dir)
     fm["last_active_at"] = now_iso()
-    write_meta(arc_dir, fm, history)
+    write_meta(arc_dir, fm, history, log_body=log_body)
     rebuild_index(root)
 
 
@@ -629,19 +688,15 @@ def cmd_log(args: argparse.Namespace) -> None:
     text = " ".join(args.text).strip()
     if not text:
         die("log message required.")
-    p = arc_dir / "3_process_log.md"
-    if not p.exists():
-        p.write_text(f"# 3_process_log — {arc_dir.name}\n\n", encoding="utf-8")
+    _migrate_legacy_log(arc_dir)
+    fm, history, log_body = parse_meta(arc_dir)
+    entry = f"- **[{now_human()}]** {text}"
+    if log_body.strip():
+        log_body = log_body.rstrip() + "\n\n" + entry
     else:
-        existing = p.read_text(encoding="utf-8")
-        if existing and not existing.endswith("\n\n"):
-            with p.open("a", encoding="utf-8") as f:
-                f.write("\n" if existing.endswith("\n") else "\n\n")
-    with p.open("a", encoding="utf-8") as f:
-        f.write(f"- **[{now_human()}]** {text}\n\n")
-    fm, history = parse_meta(arc_dir)
+        log_body = entry
     fm["last_active_at"] = now_iso()
-    write_meta(arc_dir, fm, history)
+    write_meta(arc_dir, fm, history, log_body=log_body)
     rebuild_index(root)
 
 
@@ -763,7 +818,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("id", nargs="?", default=None)
     sp.set_defaults(func=cmd_touch)
 
-    sp = sub.add_parser("log", help="Append to 3_process_log.md")
+    sp = sub.add_parser("log", help="Append to ## log section in 0_meta.md")
     sp.add_argument("-i", "--id", default=None)
     sp.add_argument("text", nargs="+")
     sp.set_defaults(func=cmd_log)
