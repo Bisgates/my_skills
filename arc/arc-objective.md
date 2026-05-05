@@ -24,7 +24,7 @@ description: Run grill-me to define the arc objective with crisp boundary and ac
      3. In-scope vs Non-goals（边界）。
      4. 已知约束 / 假设。
      5. 上游依赖（数据 / 上游 arc / 主项目代码）。
-     6. 主要风险。
+     6. 主要风险（如果没有风险，不要硬凑，只输出真正的风险）。
 
 4. 全部锁定后，把对话**压缩**成 `1_objective.md`，用 `~/.claude/skills/arc/templates/1_objective.md` 作为骨架。**只写决议，不抄对话。** 锁定后避免反复修改；目标变化用 4_pivot.md 或新 arc 表达。
 
