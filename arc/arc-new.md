@@ -26,6 +26,6 @@ description: Create a new arc (task) and immediately run /arc-objective. Use whe
 4. 链式触发 `/arc-objective` skill：把 grill-me 流程跑起来，最终落地到 `1_objective.md`（用 `~/.claude/skills/arc/templates/1_objective.md` 作为骨架）。
 
 ## Important
-- 不要在 `arc new` 之后立刻自己写 `1_objective.md`。先进 grill-me。
+- 不要在 `arc new` 之后立刻自己写 `1_objective.md`。链式进入 `/arc-objective`（grill-me 风格；**提问多少随任务复杂度自适应**，见 `arc-objective.md`）。
 - 不要在 `arc new` 之后调 `arc touch` —— `arc new` 已经设了 last_active_at。
 - 用户拒绝继续 grill-me（"先这样，我等会写 objective"）时，停在第 3 步，提醒"`arc list` 会显示 `needs 1_objective.md` 的 hint"。
