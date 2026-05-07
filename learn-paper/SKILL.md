@@ -1,9 +1,11 @@
 ---
 name: learn-paper
-description: 把指定主题文件夹里的 paper PDF 转为同目录、单文件、自含 CDN 的**editorial-grade** 交互式学习 HTML：暖纸面 + 衬线正文 + mono 小标签 + 章节级色码的杂志感长读，按"begin with why"开篇，第一性原理拆解，80% 篇幅给核心 insight，配色码变量、多语义 callout、lab block、timeline。Use when the user runs `/learn-paper <folder>` or asks to "学习 / 讲解 / 拆解 X 文件夹里的 paper" inside the `learn_with_agent` project.
+description: Convert a paper PDF in a target folder into a same-folder, single-file, CDN-self-contained editorial-grade interactive learning HTML — warm paper background, serif body, mono eyebrow labels, chapter-level color coding; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/learn-paper <folder>` or asks to "学习 / 讲解 / 拆解 X 文件夹里的 paper" inside the `learn_with_agent` project.
 ---
 
 # learn-paper
+
+> **Languages.** This skill spec is written in English. The artifact it produces — the interactive HTML — has Chinese natural-language content (chapter titles, prose, callouts, captions). Treat this asymmetry as load-bearing: instructions, comments, and reasoning happen in English; everything the human reader sees in the rendered page is in Chinese.
 
 ## Quick start
 
@@ -12,171 +14,207 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
 /learn-paper "260506_Coding Agents_alphazero" --align
 ```
 
-输出：`<folder>/<paper-name>.html`（与 PDF 同名同级，单文件，所有依赖走 CDN）。
+Output: `<folder>/<paper-name>.html` (same name as the PDF, same folder, single file, all dependencies via CDN).
 
 ## Trigger discipline
 
-只在用户**显式**触发时进入：`/learn-paper <folder>`，或自然语言"学习 / 讲解 / 拆解 X 文件夹里的 paper"。看到 PDF **不要主动**开写。
+Enter this skill **only** on explicit user invocation: `/learn-paper <folder>`, or natural-language "学习 / 讲解 / 拆解 X 文件夹里的 paper". Seeing a PDF in the workspace is **not** a trigger — don't proactively start writing.
 
 ## Workflow
 
-1. **定位输入**
-   - 解析 `<folder>`（相对项目根或绝对路径都接受）。
-   - 在 folder 内找 `*.pdf`；多个 PDF 时**问用户**选哪个，不要默认第一个。
-   - 若 `<folder>/_drafts/paper.md` 存在，**优先读它**；否则直接 Read PDF。
-   - **不读其他主题文件夹**。
+1. **Locate the input.**
+   - Resolve `<folder>` (relative to project root or absolute path).
+   - Find `*.pdf` inside the folder. If multiple PDFs exist, **ask the user** which one — do not silently pick the first.
+   - If `<folder>/_drafts/paper.md` exists, **read it first** (often a richer pre-extracted note); otherwise `Read` the PDF directly.
+   - **Do not read other topic folders.** Strict isolation.
 
-2. **生成模式分支**
-   - 默认（无 `--align`）：跳到第 4 步。
-   - 加 `--align`：执行第 3 步核心对齐 checkpoint。
+2. **Branch on mode.**
+   - Default (no `--align`): jump to step 4.
+   - With `--align`: run the alignment checkpoint in step 3 first.
 
-3. **核心对齐（仅 `--align`）**
-   - 在对话里输出，并写入 `<folder>/_drafts/outline.md`：
-     1. **Begin-with-why 段**：这篇 paper 出现之前领域被什么问题卡住？最显然的做法是什么？为什么不行？这一段是 chapter 0，不是 chapter 1。
-     2. **One-paragraph thesis**：这篇 paper 的关键 insight，与已有方案的根本差异。
-     3. **章节大纲**：每章标题（含一个 `<strong>` 重点词）+ 一句话 italic hook + 篇幅占比。
-     4. **80% 预算分配**：明确点出 1–3 个核心概念吃掉 80%；其他章节为何属于 20%（"读者已熟悉"——见 AGENTS.md 的背景声明）。
-     5. **Color-code 计划**：列出 paper 反复出现的关键变量 / 关键概念（如 score function、加噪点 vs 原点、column vectors、target b…），给每个分配一个固定颜色（红/蓝/绿/紫/橙），后面公式、SVG、段落 inline 都复用同色。
-     6. **Per-topic accent**（可选）：如果 paper 有 2–3 个并列的核心概念（PSNR/SSIM/LPIPS 类的），给每个 section 一个 accent 色条。
-     7. **交互模块清单**：每个 lab block 要揭示的具体洞见 + 用的可视化形式 + 对应 paper 章节。
-   - 等用户口头确认或修订后再进第 4 步。
+3. **Alignment checkpoint (only with `--align`).**
+   Output the following in chat **and** write to `<folder>/_drafts/outline.md`. The natural-language content of these items is **in Chinese** because they preview the HTML's content:
+   1. **Begin-with-why paragraph.** What was the whole field stuck on before this paper? What's the obvious approach? Why doesn't it work? This is chapter 0, not chapter 1.
+   2. **One-paragraph thesis.** The paper's key insight, and what fundamentally separates it from prior solutions.
+   3. **Chapter outline.** Per chapter: title (with one `<strong>` emphasis word), one-line italic hook, percent of page budget.
+   4. **80% allocation.** Name the 1–3 core concepts that consume 80% of the page. Justify why everything else collapses to 20% (cite reader background — see `AGENTS.md`).
+   5. **Color-code plan.** Enumerate the recurring key variables / objects in the paper (e.g. score function, noisy point vs. clean point, column vectors, target b…). Assign a fixed color to each (red / blue / green / purple / orange). Reuse it in every formula, SVG, and inline `<span>`.
+   6. **Per-topic accent (optional).** If the paper has 2–3 parallel core concepts (PSNR/SSIM/LPIPS-style), assign each section an accent stripe color.
+   7. **Worked-example plan.** For each new concept introduced, name the smallest concrete instance you'll walk the reader through (e.g. "score function: 1D standard normal, x=2"). See § Writing principle 3.
+   8. **Interactive module list.** Each lab block: what insight it reveals + the visualization form + the corresponding paper section.
 
-4. **生成 HTML**
-   - 输出文件名 = PDF 文件名替换 `.pdf` → `.html`，与 PDF 同级。
-   - 用下方"HTML 骨架"起步。
-   - 写作时遵循下面的**写作原则**与**硬约束**。
-   - 中间笔记、外部引用资料如需保留，写进 `<folder>/_drafts/`。
+   Wait for user confirmation or revision before proceeding to step 4.
 
-## 写作原则
+4. **Generate the HTML.**
+   - Output filename = PDF filename with `.pdf` → `.html`, same folder.
+   - Start from the HTML skeleton below.
+   - Follow the writing principles and hard constraints below.
+   - Intermediate notes and external references go in `<folder>/_drafts/`.
 
-> 不是写论文综述，是**写一篇编辑级长读**——读者翻开页面就该觉得"有人替我把这件事讲明白了"。
+## Writing principles
 
-### 1 · Begin with why（chapter 0 的硬要求）
+> Not writing a paper digest. Writing a magazine-grade longread. The reader should close the page feeling "someone took the time to make this make sense to me."
 
-读者打开页面看到的**第一章**绝对不是"本文方法概览"。它必须是**领域级困境**：
+### 1 · Begin with why (chapter 0 is non-negotiable)
 
-- 这篇 paper 出现之前，所有人都被什么问题卡住？
-- 最显然的做法是什么？为什么不行？（用 `.danger` 卡片明确标出"致命问题"）
-- 给一个具体场景／物理直觉（"假设你有一万张猫的图片"）把问题翻译成数学。
-- 列一张"前辈如何各自绕开"的对比表（VAE / GAN / Flow / 这篇）。
-- 收尾一句 Feynman 级元洞察："如果不能直接解决，先问我真正需要的是什么——也许我需要的比我以为的少得多。"
+The first chapter the reader sees is **never** "overview of our method." It must be a **field-level predicament**:
 
-第二章再进入 paper 真正的 key insight。Diffusion 范式：`ch0 根本困境 → ch1 天才洞察 (Score Function) → ch2 怎么用 (Langevin) → ch3 怎么学 (Score Matching) → …`。
+- Before this paper landed, what were people stuck on?
+- What's the obvious thing to try? Why does it fail? (Make this explicit with a `.danger` callout titled "致命问题".)
+- Ground the predicament in a concrete physical scenario ("假设你有一万张猫的图片"), then translate it to math.
+- Drop a comparison table of how prior families dodge the issue (VAE / GAN / Flow / this paper).
+- Close with one Feynman-grade meta-line: "如果不能直接解决，先问我真正需要的是什么——也许我需要的比我以为的少得多。"
 
-**反例**："Section 1 介绍 / Section 2 相关工作 / Section 3 方法"——直接 ban。
+Chapter 1 then introduces the paper's actual key insight. Reference template (Diffusion):
+`ch0 根本困境 → ch1 天才洞察 (Score Function) → ch2 怎么用 (Langevin) → ch3 怎么学 (Score Matching) → …`.
 
-### 2 · 第一性原理：naive → 致命问题 → 救场 insight → 设计
+**Banned**: "Section 1 介绍 / Section 2 相关工作 / Section 3 方法" — that's the structure of the source paper, not of pedagogy.
 
-每个核心概念按这个序列展开：先讲"任何聪明人都能想到的做法"，让读者自己感到"这思路应该可以"，**然后**揭穿它的隐藏漏洞，再让 paper 的 insight 自然涌现。**禁止**从 "paper 提出 X" 倒着讲。
+### 2 · First principles: naive → fatal flaw → insight → design
 
-### 3 · 80% 给核心，是预算不是建议
+Each core concept is unfolded in this exact sequence. First describe the obvious idea any smart reader would think of, so they nod along. Then expose the hidden flaw. Then let the paper's insight emerge as the rescue. **Forbidden**: working backward from "the paper proposes X."
 
-1–3 个核心 insight 吃掉 80% 篇幅；其他全部压成一句话或脚注。如果一篇 paper 有 5 个 contribution，挑最深的 1–3 个深讲，剩下两句带过。**不要写完整 ablation table**。
+### 3 · A concrete minimal worked example for every new concept
 
-### 4 · 因材施教（读者档案见 AGENTS.md）
+> Karpathy's lectures live on this pattern. Without it, every formula becomes a ritual symbol.
 
-读者是 CS PhD、视觉 DL 8 年。**一笔带过或省略**的内容：
+Every time you introduce a new concept — a definition, a formula, an algorithm step — pause and walk the reader through the smallest concrete instance that exercises it. Pick numbers a reader can hold in their head. Compute by hand, line by line. Land on a specific result the reader can verify. Then state the takeaway: *what does the example reveal about the abstract form?*
 
-- 标准 backprop / Adam / SGD / Layer Norm
-- 普通 self-attention / multi-head attention
-- ResNet / U-Net / ViT 的基本结构
-- 一般的 cross-entropy / KL divergence
+This is not "here is an illustrative figure." This is "here is the same calculation, with numbers you could redo on a napkin."
 
-**篇幅给真正新的部分**：paper 的 key insight、新机制、为什么只有这种设计能 work。
+**Concrete formats:**
 
-### 5 · 费曼 / Karpathy 风格
+- **Score function.** Don't just write `s(x) = ∇log p(x)`. Take a 1D standard normal: `p(x) = (1/√2π) e^(−x²/2)`. Then `log p(x) = −x²/2 − const`, so `s(x) = −x`. At `x = 2`, score = `−2`: points back toward the origin with magnitude equal to distance. Now the abstract symbol is anchored.
+- **Langevin sampling.** Don't just write the SDE. Take `p(x) = N(0,1)`, `ε = 0.1`, start at `x_0 = 3`. Compute three steps by hand: `x_1 = 3 + 0.1·(−3) + √0.2·z_1`, etc. Show the sequence drifting toward 0 plus jitter. Now "drift + noise" has a shape.
+- **Linear combination of columns.** Don't just write `Ax = x_1·col_1 + x_2·col_2`. Take `A = I_2`, `x = [2,3]`. Compute: `2·[1,0] + 3·[0,1] = [2,3]`. Then change `x = [1,1]`, recompute. Now "linear combination" is not a phrase, it's an act.
+- **Attention.** Don't just write `softmax(QK^T)V`. Take 2 tokens of dim 2, set `Q = K = V = I_2`. Compute `QK^T = I_2`, softmax row-wise, multiply with V. Result: identity attention (each token attends to itself). Then perturb `Q[0]` to `[0.5, 0.5]` and watch the row mix.
 
-- 举例驱动：先给具体例子，再抽象。
-- 预期-验证："如果 X 真的成立，应该看到 Y——然后 paper 的实验确实显示 Y。"
-- 揭示而非陈述：不是"X 等于 Y"，而是"为什么 X 必须等于 Y——因为 Z"。
-- 物理直觉锚点：score function = "上山方向"，加噪 = "把山岭抹平"，归一化常数 Z = "全空间的体积积分"。
+The skeleton ships a `.worked-example` block. Format:
+- `we-label` — one-line setup tag in mono caps, e.g. "Worked example · 1D 标准正态".
+- `we-setup` — italic one-liner with the concrete inputs.
+- `we-steps` — numbered `<ol>`, one operation per line.
+- `we-takeaway` — `📌` punchline that names what the example reveals about the general form.
 
-### 6 · 语言自然流畅，**反论文腔**
+**Constraints on the example:**
+- Smallest dimension that's not degenerate (1D or 2D, not 7D).
+- Numbers that make arithmetic trivial (`1, 2, 0, ½, π/4` — not `0.7234`).
+- One step per line; never make the reader factor what you just did.
+- End with a punchline, not "and so on." If you can't extract a punchline, the example was too large.
+- Show the example **before** generalizing. Concrete first, abstract second.
 
-- **禁用模板词**：本文提出 / 综上所述 / 基于以上分析 / 不失一般性 / 值得注意的是 / 显然地 / 与此同时 / 据此可知 / 由上可见。
-- **节奏感**：长短句交替，允许短句、反问、比喻、口语化转折（"换句话说""问题来了""听起来很玄, 其实……""注意一个微妙的点"）。一段不要超过 5–6 行。密集推理段之间要给读者一口气。
-- **直觉先于形式**：每个新术语第一次出现，先一句"它大致是 X"的直觉，再上定义 / 公式。
-- **第一/第二人称**："我们""你会发现""试着想一下"比通篇被动语态更有人味。
-- **不要凑词**：宁可一句话讲清，不要为了显得严谨堆三个从句。
+### 4 · 80% to the core, as a budget
 
-### 7 · Color-coded variables（一处定义，全文复用）
+1–3 core insights consume 80% of the page; everything else collapses to a single sentence or a footnote. If a paper has 5 contributions, pick the deepest 1–3 and go deep. **Do not** transcribe full ablation tables.
 
-凡是数学 / SVG / 段落里反复出现的关键变量／对象，**给每个一个固定颜色**：
+### 5 · Audience-aware (reader profile lives in `AGENTS.md`)
+
+The reader is a CS PhD with 8 years in vision/DL. **Mention briefly or skip:**
+
+- Standard backprop / Adam / SGD / LayerNorm
+- Vanilla self-attention / multi-head attention
+- ResNet / U-Net / ViT basics
+- Plain cross-entropy / KL divergence
+
+**Spend the page budget on what's actually new**: the paper's key insight, the new mechanism, why only this design works.
+
+### 6 · Feynman / Karpathy voice
+
+- **Example-driven.** Concrete first, abstract second. (See principle 3.)
+- **Predict-then-verify.** "If X were really true, we should see Y — and the experiments do show Y."
+- **Reveal, don't state.** Not "X equals Y" but "why X must equal Y — because Z."
+- **Physical intuition anchors.** Score function = "uphill direction." Adding noise = "smearing the ridge." Normalization constant Z = "volume integral over all of space."
+
+### 7 · No paper-boilerplate language (反论文腔)
+
+The HTML's content is Chinese. **Banned template phrases** (search and remove before shipping): 本文提出 / 综上所述 / 基于以上分析 / 不失一般性 / 值得注意的是 / 显然地 / 与此同时 / 据此可知 / 由上可见.
+
+**Pacing.** Long and short sentences alternate. Allow short sentences, rhetorical questions, metaphors, colloquial pivots ("换句话说" / "问题来了" / "听起来很玄, 其实……" / "注意一个微妙的点"). No paragraph longer than 5–6 lines. After a dense reasoning paragraph, give the reader a breath.
+
+**Intuition before formalism.** Every new term, on first appearance, gets a one-line intuition anchor before its definition or formula.
+
+**First and second person allowed.** "我们" / "你会发现" / "试着想一下" beats wall-to-wall passive voice.
+
+**Don't pad.** One clear sentence beats three subordinate clauses cosplaying rigor.
+
+### 8 · Color-coded variables (define once, reuse everywhere)
+
+Recurring key variables / objects across math, SVG, and prose **all share a single color palette**:
 
 ```html
-<span class="v-x">x</span>      <!-- 红 -->
-<span class="v-y">y</span>      <!-- 蓝 -->
-<span class="v-z">z</span>      <!-- 绿 -->
-<span class="v-b">b</span>      <!-- 紫 (target) -->
+<span class="v-x">x</span>      <!-- red -->
+<span class="v-y">y</span>      <!-- blue -->
+<span class="v-z">z</span>      <!-- green -->
+<span class="v-b">b</span>      <!-- purple (target) -->
 ```
 
-公式里 `\(\textcolor{#dc2626}{x}\)`，SVG 里同色画箭头，段落 inline 同色 `<span>`——读者只需对一次色谱，之后所有公式 / 图都不再需要脑内翻译变量。
+In LaTeX: `\(\textcolor{#dc2626}{x}\)`. In SVG: stroke/fill with the same hex. In prose: inline `<span class="v-x">`. The reader calibrates the palette once; from then on, every formula and figure is parsable without mental relabeling.
 
-参考 MIT 18.06 的 vec-col1/2/3/b：column vectors 三色 + target 紫色，从 row picture 的折线 → column picture 的箭头 → matrix 形式 → n-dim 抽象，颜色一以贯之。
+Reference: MIT 18.06's `vec-col1/2/3/b` keeps three column vectors and the target the same colors from the row picture → column picture → matrix form → n-dim abstraction.
 
-### 8 · 揭示式交互（不是控件 demo）
+### 9 · Revealing interactivity (not knob-pushing demos)
 
-每个 lab block 第一行明写**「此 lab 揭示：…（对应 paper §X）」**。废交互（输入框 → 显示数字、纯滑条改色）一律禁止。常见有用形式：
+Every lab block leads with a single line: **"此 lab 揭示：…（对应 paper §X）"**. Useless interactions (input box → display number, slider that only changes a color) are banned. Useful forms include:
 
-- 向量场 / 流形可视化（点击放粒子，观察被 score 引导）
-- 参数滑动 → 几何对象变化（两条直线相交点、planes 交线、奇异 vs 非奇异）
-- 退火序列：从大噪声到小噪声逐帧播
-- 多步算法的 step-dot 序列：上一步 / 下一步按钮 + 高亮当前步骤
-- 多 method 切 tab：column method vs row method（同一计算两种视角）
+- Vector field / manifold visualization (click to drop particles, watch them follow the score).
+- Parameter slider → geometric object morphs (two lines' intersection, planes' intersection line, singular vs. non-singular).
+- Annealed sequence: from large noise to small noise, frame by frame.
+- Multi-step algorithm with step-dot indicator: prev/next buttons, current step highlighted.
+- Tab group when there are multiple methods to compare (column method vs. row method = same computation, two perspectives).
 
-### 9 · 网页感 = editorial-grade
+### 10 · Editorial-grade webpage feel
 
-成品要让人觉得这是一篇**杂志长读**或**专业期刊新版教材**——不是 Markdown 渲染：
+The artifact should read like a magazine longread or a freshly redesigned graduate textbook — **not Markdown rendered to HTML**.
 
-- **暖色纸面**（不是 `#ffffff`），如 `#fafaf9` / `#f5f0e8` / `#fdfcf9`；深色 hero 与浅色 body 形成对比。
-- **衬线正文**（Iowan Old Style / Source Serif 4 / Georgia）+ **mono 小标签**（JetBrains Mono / Courier New 用于 eyebrow / label / 代码）。
-- **章节级版式**：eyebrow `CH 03` → 大标题（含 `<strong>` 重点词）→ italic hook 一句话 → `.lead` 1.15rem 引导段 → 正文。
-- **Callout 矩阵**至少 3 种以上语义色：`.insight`（蓝）/`.danger`（红）/`.success`（绿）/`.warning`（橙）/`.definition`（蓝浅）/`.feynman`（深底白字 + 大引号）。
-- **Math box 三件套**：mono label（"能量模型 Energy-Based Model"）+ LaTeX + 普通话 math-note。
-- **Per-topic accent**（paper 有 2–3 并列概念时）：每个 section / formula-card 用 `:before` 色条标识归属，颜色全文一致。
-- **章末**用 `· · ·` editorial-divider，不要 `<hr>`。
-- **不允许**：通篇 760px 居中段落 + 偶尔 `<pre>` 的 markdown 既视感。
+- **Warm paper background** (not `#ffffff`): `#fafaf9` / `#f5f0e8` / `#fdfcf9`. Dark hero contrasts with light body.
+- **Serif body** (Source Serif 4 / Iowan Old Style / Georgia) **plus mono eyebrow labels** (JetBrains Mono / Courier New, used for eyebrows / labels / code).
+- **Chapter pattern**: eyebrow `CH 03` → big title (with one `<strong>` keyword) → one-line italic hook → `.lead` 1.15rem opening paragraph → body.
+- **Callout matrix** of at least 3 semantic colors: `.insight` (blue) / `.danger` (red) / `.success` (green) / `.warning` (orange) / `.definition` (light blue) / `.feynman` (dark, white text, big quote).
+- **Math box triple**: mono label ("能量模型 Energy-Based Model") + LaTeX + plain-Chinese math-note.
+- **Per-topic accent stripe** (when the paper has 2–3 parallel concepts): each section / formula-card gets a `:before` color stripe; same color used end-to-end.
+- **Chapter divider**: `· · ·`, never `<hr>`.
+- **Forbidden**: a single 760px column of `<p>` with the occasional `<pre>` — that's a Markdown render, not an editorial page.
 
-## 硬约束
+## Hard constraints
 
-- **单 HTML 文件**：所有 CSS/JS 内联或 CDN，**禁止**引用项目根、`_lib/`、本地资源。双击即用。
-- **同名同级**：HTML 与 PDF 在同一文件夹，只替换扩展名。
-- **数学**：KaTeX（CDN，auto-render）。
-- **代码**：Prism 或 highlight.js（CDN）。
-- **样式**：Tailwind CDN 或手写 CSS 都行；**禁 Bootstrap**。
-- **字体**：Google Fonts 加载衬线 body + mono；禁 system-ui-only 默认字体。
-- **禁构建步骤**：不要 npm / vite / webpack。
-- **不读其他主题文件夹**：严格隔离。
-- **联网自由**：可任意查外部资料；HTML 中 paper 原文 vs 外部解释**显式区分**（`aside.external`）。
-- **不懂的处理**：先联网查；查不到也要写下去，但该位置**显式标注** `<div class="uncertain">⚠ 此处未充分消化：[原因]</div>`。**不要打断用户问问题**。
-- **同名 HTML 已存在**：**直接覆盖**（同一篇 paper 重学即是想替换）；`_drafts/` 不动。
-- **CDN 版本**：所有 CDN URL 用稳定版本号，**不要 `@latest`**。
+- **Single HTML file.** All CSS/JS inlined or via CDN. **No** project-root, `_lib/`, or local-asset references. Double-click to view.
+- **Same name, same folder.** HTML lives next to the PDF, only the extension swaps.
+- **Math.** KaTeX (CDN, auto-render).
+- **Code.** Prism or highlight.js (CDN).
+- **Style.** Tailwind CDN or hand-written CSS — **Bootstrap is banned**.
+- **Fonts.** Google Fonts loads the serif body + mono. **Do not** ship a `system-ui`-only default.
+- **No build step.** No npm / vite / webpack.
+- **Topic isolation.** Do not read other topic folders.
+- **Online research is allowed.** When the agent enriches with external material, mark it explicitly using `aside.external` (paper-original vs. agent-added must be visually distinguishable).
+- **When unsure**, search the web first. If still uncertain, write the section anyway and mark the spot with `<div class="uncertain">⚠ 此处未充分消化：[原因]</div>`. **Do not interrupt the user with questions.**
+- **HTML already exists.** **Overwrite** (re-running learn-paper on the same paper means the user wants to replace). Don't touch `_drafts/`.
+- **Pin CDN versions** (`katex@0.16.11`, `prismjs@1.29.0`). **No `@latest`.**
 
-## 必备组件清单
+## Required component checklist
 
-每篇 HTML 至少包含下列组件，缺一项都算"文字堆叠"：
+Every HTML must include the following — missing any of them and the artifact regresses to "text on a page":
 
-1. **Hero / 封面** — 深色或带渐变背景，paper 标题（含 `<em>` 副标题强化）+ 一句话 thesis + 元信息（作者、年份、会议、原 PDF 链接）+ 阅读时长估计 + eyebrow 标签如 "第一性原理 · Feynman 讲法"。
-2. **顶部进度条** — `position:fixed; top:0; height:3px;`，随滚动条填充。
-3. **导航**（二选一或同时）：
-   - 左侧 sticky TOC 列表（学术风、章节多时用）
-   - 右侧固定 nav-dot 列表（hover 出 chapter label，narrative 长读用）
-4. **Chapter 模式** — 每章必须有 `.ch-num` + `.ch-title`（含 `<strong>` 重点词）+ `.ch-hook`（italic 一句话）+ 第一段用 `.lead`。
-5. **Callout 矩阵** — 至少使用 3 种：`.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`。
-6. **Math box 三件套** — `<div class="math-box"><div class="math-label">…</div>$$…$$<div class="math-note">…</div></div>`。
-7. **Naive vs Insight 对比** — 两栏并排，左 naive，右 paper 解法；每篇至少 1 个。
-8. **图示** — 至少 1–2 个 SVG / CSS / emoji 拼装的概念图。"图缺失"不允许。
-9. **Lab block** — `.lab` 容器 + `.lab-title`（带 ⚗ 等小图标）+ 一行揭示句 + canvas + `.ctrl-row` + `.btn-row` + `.lab-note`。
-10. **Timeline**（强烈推荐 paper 处于明确传承时） — 历史脉络（Hyvärinen 2005 → Vincent 2011 → Sohl-Dickstein 2015 → DDPM 2020 …）。
-11. **Comparison table** — "model × 怎么绕开 × 代价" 这类对照。
-12. **`aside.external`** — 联网补充的内容必须显式区分。
-13. **Pull quote / `.feynman`** — 至少 1 段提炼的金句或 Feynman 风元洞察。
-14. **Editorial divider** — `· · ·` 章末分隔。
-15. **Footer** — 引用条目、参考资料链接、生成时间戳、`uncertain` 汇总。
+1. **Hero / cover** — dark or gradient background; paper title (with `<em>` for the subtitle phrase) + one-line thesis + meta (authors, year, venue, link to original PDF) + reading-time estimate + eyebrow tag (e.g. "第一性原理 · Karpathy 讲法").
+2. **Top progress bar** — `position: fixed; top: 0; height: 3px;`, fills as the reader scrolls.
+3. **Navigation** (one or both):
+   - Left sticky TOC list (academic feel, useful for many chapters).
+   - Right fixed nav-dot rail (hover reveals chapter label, narrative-style longread).
+4. **Chapter pattern** — every chapter has `.ch-num` + `.ch-title` (with `<strong>` keyword) + `.ch-hook` (italic one-liner) + opening paragraph as `.lead`.
+5. **Callout matrix** — at least 3 of: `.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`.
+6. **Math box triple** — `<div class="math-box"><div class="math-label">…</div>$$…$$<div class="math-note">…</div></div>`.
+7. **Worked example** — a `.worked-example` block per new concept (`we-label` + `we-setup` + numbered `we-steps` + `we-takeaway`).
+8. **Naive vs. Insight comparison** — two-column grid, naive on left, paper's solution on right; at least one per HTML.
+9. **Figures** — at least 1–2 SVG / CSS / emoji-composed conceptual diagrams. "Figure missing" is not acceptable.
+10. **Lab block** — `.lab` container + `.lab-title` (with `⚗`-style icon) + reveal line + canvas + `.ctrl-row` + `.btn-row` + `.lab-note`.
+11. **Timeline** (strongly recommended when the paper sits in a clear lineage) — historical chain (Hyvärinen 2005 → Vincent 2011 → Sohl-Dickstein 2015 → DDPM 2020 …).
+12. **Comparison table** — model × how-it-dodges × cost, etc.
+13. **`aside.external`** — every agent-sourced external addition, marked.
+14. **Pull quote / `.feynman`** — at least one distilled punch-line or Feynman-style meta-insight.
+15. **Editorial divider `· · ·`** — chapter end.
+16. **Footer** — citations, references, generation timestamp, summary of all `uncertain` spots.
 
-## HTML 骨架
+## HTML skeleton
 
-每次从此骨架起步，按需扩展。骨架已含 hero + 进度条 + 右侧 nav-dot + chapter 模式 + 全套 callout + math-box + lab block + timeline + footer。**不要再退化成 760px 单柱 markdown**。
+Start from this skeleton; expand as needed. It already contains hero + progress bar + right-rail nav + chapter pattern + full callout matrix + math-box + worked-example + lab block + timeline + footer. **Do not regress to a single 760px Markdown column.**
 
 ```html
 <!DOCTYPE html>
@@ -184,9 +222,9 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title><!-- paper 主标题 --></title>
+<title><!-- paper title (Chinese) --></title>
 
-<!-- Fonts: 衬线 body + mono 小标签；按需可加 display 衬线 -->
+<!-- Fonts: serif body + mono eyebrow + optional display serif -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -201,44 +239,44 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
     {left:'$',right:'$',display:false},
     {left:'\\(',right:'\\)',display:false}]})"></script>
 
-<!-- Prism (代码高亮) -->
+<!-- Prism (code highlighting) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css">
 <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
 
 <style>
   :root {
-    /* —— 暖纸面 + 衬线 body + mono 小标签 —— */
-    --paper:    #f8f5ee;          /* 主背景，暖纸 */
-    --paper-2:  #efeae0;          /* lab / aside 副背景 */
-    --surface:  #ffffff;          /* 卡片白纸 */
-    --ink:      #1a1a1a;          /* 正文墨色 */
-    --ink-soft: #3f3a33;          /* 标题深褐 */
-    --muted:    #8a8278;          /* 次级文字 */
-    --border:   #d8d2c4;          /* 暖纸 border */
-    --hairline: #e6e0d2;          /* 极淡分隔线 */
+    /* Warm paper surfaces + ink hierarchy */
+    --paper:    #f8f5ee;          /* main background, warm paper */
+    --paper-2:  #efeae0;          /* lab / aside secondary fill */
+    --surface:  #ffffff;          /* card stock white */
+    --ink:      #1a1a1a;          /* body ink */
+    --ink-soft: #3f3a33;          /* heading dark brown */
+    --muted:    #8a8278;          /* secondary text */
+    --border:   #d8d2c4;          /* warm border */
+    --hairline: #e6e0d2;          /* faintest divider */
 
-    /* —— 主 accent + per-topic 色 —— */
-    --accent:    #1e5a8a;         /* 主蓝（核心 insight） */
+    /* Primary accent + semantic palette */
+    --accent:    #1e5a8a;         /* primary blue (insight) */
     --c-insight: #1e5a8a;
     --c-danger:  #b03a2e;
     --c-success: #2d7a4f;
     --c-warning: #c47a18;
-    --c-feynman: #2d2842;         /* feynman 深底 */
+    --c-feynman: #2d2842;         /* feynman dark-card background */
 
-    /* —— color-coded variables（按需重命名为 paper 真实变量）—— */
-    --v-x:  #c0392b;              /* 红 */
-    --v-y:  #1e5a8a;              /* 蓝 */
-    --v-z:  #2d7a4f;              /* 绿 */
-    --v-b:  #6c3483;              /* 紫（target） */
+    /* Color-coded variables (rename to the paper's actual variables) */
+    --v-x:  #c0392b;              /* red */
+    --v-y:  #1e5a8a;              /* blue */
+    --v-z:  #2d7a4f;              /* green */
+    --v-b:  #6c3483;              /* purple (target) */
 
-    /* —— 字体 stack —— */
+    /* Font stacks */
     --font-body:    'Source Serif 4', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
     --font-display: 'Space Grotesk', 'Source Serif 4', Georgia, serif;
     --font-mono:    'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
     --font-sans:    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-    --reading-w: 760px;           /* 章节正文最大宽 */
-    --shell-w:   1180px;          /* 主壳最大宽（含右 rail） */
+    --reading-w: 760px;           /* chapter body max width */
+    --shell-w:   1180px;          /* full shell max width */
   }
   *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -249,12 +287,12 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   }
   code, pre, .mono { font-family: var(--font-mono); }
 
-  /* —— 顶部进度条 —— */
+  /* Top progress bar */
   #progress { position: fixed; top: 0; left: 0; right: 0; height: 3px;
               background: rgba(0,0,0,0.06); z-index: 999; }
   #progress > div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
 
-  /* —— Hero —— */
+  /* Hero cover */
   .hero { background: linear-gradient(180deg,#1a1a2e 0%, #2d2842 100%);
           color: #e8e8f0; padding: 72px 24px 56px; text-align: center;
           border-bottom: 4px solid var(--accent); }
@@ -272,7 +310,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .hero .meta a { color: #aac4ff; text-decoration: none; }
   .hero .meta a:hover { text-decoration: underline; }
 
-  /* —— 右侧 nav-dot rail —— */
+  /* Right-side nav-dot rail */
   #rail { position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
           display: flex; flex-direction: column; gap: 10px; z-index: 100; }
   .dot { width: 11px; height: 11px; border-radius: 50%;
@@ -287,7 +325,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .dot:hover .lbl { opacity: 1; }
   @media (max-width: 900px) { #rail { display: none; } }
 
-  /* —— Chapter —— */
+  /* Chapter scaffold */
   .chapter { max-width: var(--reading-w); margin: 0 auto;
              padding: 72px 28px 24px; scroll-margin-top: 24px;
              border-bottom: 1px solid var(--hairline); }
@@ -305,7 +343,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .lead { font-size: 1.18rem; color: var(--ink-soft); margin-bottom: 20px; }
   .chapter p { margin-bottom: 18px; }
 
-  /* —— Per-topic accent stripe（paper 有 2–3 并列概念时）—— */
+  /* Per-topic accent stripes (when the paper has 2–3 parallel concepts) */
   .topic-a:before, .topic-b:before, .topic-c:before {
     content: ""; position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px; border-radius: 2px;
@@ -317,7 +355,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .topic-c { position: relative; padding-left: 20px; }
   .topic-c:before { background: var(--c-danger); }
 
-  /* —— Callout 矩阵 —— */
+  /* Callout matrix */
   .insight, .danger, .success, .warning, .definition {
     border-left: 4px solid; background: #fff;
     padding: 16px 20px; margin: 22px 0; border-radius: 0 4px 4px 0;
@@ -339,7 +377,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .warning    .label { color: var(--c-warning); }
   .definition .label { color: var(--c-insight); }
 
-  /* —— Feynman 块（深底 + 大引号）—— */
+  /* Feynman block (dark card with oversized opening quote) */
   .feynman { background: var(--c-feynman); color: #e8e8f0;
              padding: 22px 26px; margin: 28px 0; border-radius: 4px;
              position: relative; }
@@ -350,7 +388,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .feynman .attribution { color: #9090b0; font-size: .82rem; font-style: normal;
                           font-family: var(--font-mono); }
 
-  /* —— Math box 三件套 —— */
+  /* Math box triple */
   .math-box { background: #fef9e7; border: 1px solid var(--border);
               border-radius: 4px; padding: 18px 22px; margin: 20px 0;
               overflow-x: auto; }
@@ -360,7 +398,25 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .math-box .math-note  { font-size: .9rem; color: var(--muted);
                           margin-top: 10px; font-style: italic; }
 
-  /* —— Naive vs Insight 对比 —— */
+  /* Worked example: concrete numerical walkthrough */
+  .worked-example { background: #fffbef; border-left: 6px double var(--accent);
+                    padding: 18px 22px; margin: 22px 0;
+                    border-radius: 0 4px 4px 0; }
+  .worked-example .we-label { font-family: var(--font-mono); font-size: .72rem;
+                              letter-spacing: .1em; text-transform: uppercase;
+                              color: var(--accent); font-weight: 700;
+                              margin-bottom: 10px; display: block; }
+  .worked-example .we-setup { font-style: italic; color: var(--ink-soft);
+                              margin-bottom: 10px; }
+  .worked-example .we-steps { margin: 6px 0 6px 22px; padding: 0; }
+  .worked-example .we-steps li { margin: 4px 0; }
+  .worked-example .we-takeaway { margin-top: 12px; padding: 10px 14px;
+                                 background: rgba(255,255,255,.7);
+                                 border-radius: 4px; font-size: .94rem;
+                                 color: var(--ink-soft); }
+  .worked-example .we-takeaway::before { content: "📌 "; }
+
+  /* Naive vs. Insight comparison cards */
   .compare { display: grid; grid-template-columns: 1fr 1fr;
              gap: 16px; margin: 24px 0; }
   @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
@@ -372,7 +428,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
                           letter-spacing: .1em; text-transform: uppercase;
                           color: var(--muted); margin-bottom: 6px; display: block; }
 
-  /* —— Lab block —— */
+  /* Lab block (interactive sandbox) */
   .lab { background: var(--paper-2); border: 1px solid var(--border);
          border-radius: 6px; padding: 22px; margin: 28px 0; }
   .lab-title { font-family: var(--font-mono); font-size: .8rem;
@@ -405,7 +461,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .step-dots .d.active { background: var(--accent); }
   .step-dots .d.done   { background: var(--c-success); }
 
-  /* —— Timeline —— */
+  /* Timeline (historical lineage) */
   .timeline { position: relative; padding-left: 28px; margin: 24px 0; }
   .timeline::before { content: ''; position: absolute; left: 7px; top: 8px;
                       bottom: 8px; width: 2px; background: var(--border); }
@@ -419,14 +475,14 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   .tl-title { font-weight: 600; margin-bottom: 2px; color: var(--ink-soft); }
   .tl-desc  { color: var(--muted); font-size: .92rem; }
 
-  /* —— Pull quote —— */
+  /* Pull quote */
   .pull-quote { font-family: var(--font-display); font-size: 1.32rem;
                 line-height: 1.48; color: var(--ink-soft);
                 border-left: 3px solid var(--ink-soft);
                 padding: 6px 0 6px 18px; margin: 32px 0;
                 font-style: italic; }
 
-  /* —— Comparison table —— */
+  /* Comparison table */
   table { width: 100%; border-collapse: collapse;
           margin: 22px 0; font-size: .92rem; }
   th { background: var(--ink-soft); color: #f8f5ee;
@@ -437,7 +493,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
        vertical-align: top; }
   tr:hover td { background: var(--paper-2); }
 
-  /* —— External (agent 联网补充) —— */
+  /* External (agent-sourced supplementary content) */
   aside.external { display: block; background: #f1ede1;
                    border-left: 3px solid var(--muted);
                    padding: 12px 16px; margin: 18px 0;
@@ -448,27 +504,27 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
                            letter-spacing: .12em; color: var(--muted);
                            margin-bottom: 6px; }
 
-  /* —— Uncertain（未充分消化）—— */
+  /* Uncertain (not fully digested) */
   .uncertain { border-left: 4px solid #d97706; background: #fef3c7;
                padding: 12px 16px; border-radius: 0 4px 4px 0;
                margin: 16px 0; }
 
-  /* —— Color-coded variables（vec 等）—— */
+  /* Color-coded variables */
   .v-x { color: var(--v-x); font-weight: 600; }
   .v-y { color: var(--v-y); font-weight: 600; }
   .v-z { color: var(--v-z); font-weight: 600; }
   .v-b { color: var(--v-b); font-weight: 600; }
 
-  /* —— Editorial divider —— */
+  /* Editorial divider */
   .ch-end { text-align: center; margin: 48px 0 12px;
             color: var(--border); font-size: 1.2rem;
             letter-spacing: .5em; }
 
-  /* —— Code block 圆角 + 暖光 —— */
+  /* Code block: rounded with warm tone */
   pre[class*="language-"] { border-radius: 6px; padding: 14px 18px !important;
                             font-size: .88rem; }
 
-  /* —— Footer —— */
+  /* Footer */
   footer.page-foot { background: var(--ink-soft); color: #c8c2b8;
                      padding: 32px 24px; text-align: center;
                      font-family: var(--font-mono); font-size: .82rem;
@@ -487,51 +543,51 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
 
 <div id="progress"><div></div></div>
 
-<!-- 右侧 nav-dot rail -->
+<!-- Right-side nav-dot rail -->
 <nav id="rail" aria-label="章节导航">
   <div class="dot active" data-target="ch0"><span class="lbl">困境</span></div>
   <div class="dot" data-target="ch1"><span class="lbl">关键 insight</span></div>
   <div class="dot" data-target="ch2"><span class="lbl">怎么训</span></div>
-  <!-- 按需增加 -->
+  <!-- add more as needed -->
 </nav>
 
 <!-- Hero -->
 <header class="hero">
   <div class="eyebrow">Paper · 第一性原理 · Karpathy 风格</div>
-  <h1><!-- paper 主标题 --><br><em><!-- 一句话副 --></em></h1>
-  <p class="thesis"><!-- 一句话讲清这篇 paper 解决什么、关键 insight 是什么 --></p>
+  <h1><!-- paper main title (Chinese) --><br><em><!-- one-line subtitle (Chinese) --></em></h1>
+  <p class="thesis"><!-- one sentence: what this paper solves and what the key insight is (Chinese) --></p>
   <div class="meta">
-    <span><!-- 作者 · 年份 · 会议 --></span>
+    <span><!-- authors · year · venue --></span>
     <span>预计阅读 ~XX 分钟</span>
-    <a href="./<!-- 同名 PDF -->">原 PDF</a>
+    <a href="./<!-- same-name PDF -->">原 PDF</a>
   </div>
 </header>
 
-<!-- ═══ Chapter 0 — 根本困境（begin with why）═══ -->
+<!-- ═══ Chapter 0 — field-level predicament (begin with why) ═══ -->
 <section class="chapter" id="ch0">
   <div class="ch-num">Chapter 0</div>
   <h2 class="ch-title">领域级<strong>根本困境</strong></h2>
   <p class="ch-hook">在理解这篇 paper 之前，我们必须先理解它在解决什么问题。</p>
 
-  <p class="lead"><!-- 具体场景：假设你有 X，你想做 Y，这意味着数学上需要 Z --></p>
-  <p><!-- 把 Y 翻译成数学；引入主要变量并第一次给颜色：<span class="v-x">x</span> 等 --></p>
+  <p class="lead"><!-- concrete physical scenario in Chinese: assume you have X, you want Y, mathematically this means Z --></p>
+  <p><!-- translate Y to math; first appearance of key variables — assign them colors via <span class="v-x">x</span> etc. --></p>
 
   <div class="insight">
     <span class="label">核心问题</span>
-    <p><!-- 用一句话说清楚整个领域被卡在哪 --></p>
+    <p><!-- one-sentence statement of the field-wide bottleneck --></p>
   </div>
 
-  <p>最自然的想法：<!-- naive idea --></p>
+  <p>最自然的想法：<!-- the naive idea --></p>
 
   <div class="math-box">
     <div class="math-label"><!-- e.g. 能量模型 Energy-Based Model --></div>
-    \[ <!-- naive 公式 --> \]
-    <div class="math-note"><!-- 普通话解释 --></div>
+    \[ <!-- naive formula --> \]
+    <div class="math-note"><!-- plain-Chinese explanation --></div>
   </div>
 
   <div class="danger">
     <span class="label">致命问题</span>
-    <p><!-- naive 为什么 dead-on-arrival --></p>
+    <p><!-- why the naive idea is dead-on-arrival --></p>
   </div>
 
   <table>
@@ -549,29 +605,41 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
   <div class="ch-end">· · ·</div>
 </section>
 
-<!-- ═══ Chapter 1 — Key Insight ═══ -->
+<!-- ═══ Chapter 1 — key insight ═══ -->
 <section class="chapter" id="ch1">
   <div class="ch-num">Chapter 1</div>
-  <h2 class="ch-title">天才洞察：<strong><!-- key concept --></strong></h2>
-  <p class="ch-hook"><!-- italic hook 一句话 --></p>
+  <h2 class="ch-title">天才洞察：<strong><!-- key concept (Chinese) --></strong></h2>
+  <p class="ch-hook"><!-- italic one-line hook (Chinese) --></p>
 
-  <p class="lead"><!-- 物理直觉先行：站在山上想到山顶 --></p>
-  <p><!-- 把直觉翻译成数学，引入新符号 --></p>
+  <p class="lead"><!-- physical intuition first: standing on a mountain, you want to reach the top --></p>
+  <p><!-- translate the intuition to math; introduce new symbols --></p>
 
   <div class="math-box">
     <div class="math-label"><!-- e.g. Score Function --></div>
     \[ s(x) = \nabla_x \log p(x) \]
-    <div class="math-note"><!-- 这是 log 概率密度对 x 的梯度，每点指向"概率上山"方向 --></div>
+    <div class="math-note"><!-- plain Chinese: this is the gradient of log-density; at every point it points toward "uphill in probability" --></div>
+  </div>
+
+  <!-- Worked example for principle 3: smallest concrete instance -->
+  <div class="worked-example">
+    <span class="we-label">Worked example · 1D 标准正态</span>
+    <div class="we-setup">取 <span class="v-x">p(x) = (1/√2π)·e^(−x²/2)</span>，求 <span class="v-y">s(x) = ∇log p(x)</span>。</div>
+    <ol class="we-steps">
+      <li>log p(x) = −x²/2 − log√(2π)</li>
+      <li>∇ log p(x) = −x</li>
+      <li>所以 <span class="v-y">s(x) = −x</span>。在 <span class="v-x">x = 2</span> 处，score = −2，长度等于距离，方向指回原点。</li>
+    </ol>
+    <div class="we-takeaway">"score" 对正态分布只是<strong>负的位置</strong>——每个点都被以"距离"为大小的力拉回零点。一旦换成混合分布、流形数据，这个"拉回最近高密度区"的图像就成了 Langevin 采样的物理基础。</div>
   </div>
 
   <div class="success">
     <span class="label">关键突破</span>
-    <p><!-- 为什么这个 insight 一下就把困境化解了 --></p>
+    <p><!-- why this insight dissolves the predicament --></p>
   </div>
 
   <div class="lab">
-    <div class="lab-title">⚗ <!-- lab 名 --></div>
-    <p class="lab-reveal">此 lab 揭示：<!-- 具体洞见 --> · 对应 paper §X</p>
+    <div class="lab-title">⚗ <!-- lab name (Chinese) --></div>
+    <p class="lab-reveal">此 lab 揭示：<!-- specific insight --> · 对应 paper §X</p>
     <canvas id="canvas-1" width="760" height="320"></canvas>
     <div class="ctrl-row">
       <label>参数 σ</label>
@@ -582,13 +650,13 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
       <button class="btn">运行</button>
       <button class="btn outline">重置</button>
     </div>
-    <div class="lab-note"><!-- 怎么操作 + 注意观察什么 --></div>
+    <div class="lab-note"><!-- what to do + what to watch for --></div>
   </div>
 
   <div class="ch-end">· · ·</div>
 </section>
 
-<!-- ═══ Chapter N — Timeline（如果 paper 在传承中）═══ -->
+<!-- ═══ Chapter N — historical lineage (when applicable) ═══ -->
 <section class="chapter" id="chN">
   <div class="ch-num">Chapter N</div>
   <h2 class="ch-title">这条路是怎么走过来的：<strong>历史脉络</strong></h2>
@@ -614,12 +682,12 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
 </section>
 
 <footer class="page-foot">
-  <div>引用：<!-- BibTeX 行内 --></div>
-  <div>生成 <!-- ISO 时间 --> · 由 agent 基于原 PDF + 联网补充整理</div>
+  <div>引用：<!-- inline BibTeX line --></div>
+  <div>生成 <!-- ISO timestamp --> · 由 agent 基于原 PDF + 联网补充整理</div>
 </footer>
 
 <script>
-  /* —— 进度条 —— */
+  // Top progress bar — width tracks scroll fraction
   const prog = document.querySelector('#progress > div');
   window.addEventListener('scroll', () => {
     const h = document.documentElement;
@@ -627,7 +695,7 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
     prog.style.width = (p * 100) + '%';
   }, { passive: true });
 
-  /* —— 右 rail 当前章节高亮 —— */
+  // Right-rail dot highlight via IntersectionObserver
   const dots = document.querySelectorAll('#rail .dot');
   const sections = [...document.querySelectorAll('section.chapter')];
   dots.forEach(d => d.addEventListener('click', () => {
@@ -648,72 +716,76 @@ description: 把指定主题文件夹里的 paper PDF 转为同目录、单文�
 </html>
 ```
 
-### CSS class 用途速查
+### CSS class quick reference
 
-| Class | 用途 | 备注 |
+| Class | Purpose | Notes |
 |---|---|---|
-| `.hero` | 顶部封面 | 深底 + display 字 + eyebrow + thesis + meta |
-| `#progress` | 顶部 3px 进度条 | fixed，随滚动 |
-| `#rail .dot` | 右侧 nav-dot rail | hover 出 chapter label |
-| `.chapter` `.ch-num` `.ch-title` `.ch-hook` `.lead` | 标准章节模式 | 每章必备 4 件套 |
-| `.insight` `.danger` `.success` `.warning` `.definition` | 5 种语义 callout | 内部 `<span class="label">` 写小标 |
-| `.feynman` | 深底 Feynman 元洞察块 | 大引号字符 + attribution |
-| `.math-box` `.math-label` `.math-note` | 数学三件套 | mono label + LaTeX + 普通话注 |
-| `.compare > .naive` `.compare > .insight-card` | naive vs paper 解法对比 | 两栏并排 |
-| `.lab` `.lab-title` `.lab-reveal` `.ctrl-row` `.btn-row` `.lab-note` | 完整交互 lab | 揭示句必写 |
-| `.step-dots` `.d.active/.done` | 多步算法的状态指示 | 给序列动画用 |
-| `.timeline` `.tl-item` `.tl-dot` `.tl-year` `.tl-title` `.tl-desc` | 历史脉络 | 传承谱系强烈推荐 |
-| `.pull-quote` | 段中金句 | display 字 + 左竖线 |
-| `aside.external` | 联网外部补充 | 自带 "外部补充 · agent" eyebrow |
-| `.uncertain` | 未充分消化标记 | `⚠` 开头 |
-| `.v-x` `.v-y` `.v-z` `.v-b` | color-coded variables | 公式/段落/SVG 共享 |
-| `.ch-end` `· · ·` | 章末 editorial divider | 不要 `<hr>` |
-| `.topic-a/b/c` | per-topic accent stripe | 多概念并列 paper 用 |
+| `.hero` | Top cover | Dark background + display font + eyebrow + thesis + meta |
+| `#progress` | Top 3px scroll progress bar | Fixed; width tracks scroll fraction |
+| `#rail .dot` | Right-side nav-dot rail | Hover reveals chapter label |
+| `.chapter` `.ch-num` `.ch-title` `.ch-hook` `.lead` | Chapter scaffold | Every chapter needs all four |
+| `.insight` `.danger` `.success` `.warning` `.definition` | 5-color semantic callouts | Inner `<span class="label">` for the eyebrow |
+| `.feynman` | Dark-card meta-insight block | Oversized opening quote glyph + attribution |
+| `.math-box` `.math-label` `.math-note` | Math triple | Mono label + LaTeX + plain-Chinese note |
+| `.worked-example` `.we-label` `.we-setup` `.we-steps` `.we-takeaway` | Concrete numerical walkthrough | Required per new concept |
+| `.compare > .naive` `.compare > .insight-card` | Naive vs. paper-solution comparison | Two-column grid |
+| `.lab` `.lab-title` `.lab-reveal` `.ctrl-row` `.btn-row` `.lab-note` | Interactive sandbox | Reveal line is mandatory |
+| `.step-dots` `.d.active/.done` | Multi-step algorithm state indicator | For sequenced demos |
+| `.timeline` `.tl-item` `.tl-dot` `.tl-year` `.tl-title` `.tl-desc` | Historical lineage | Strongly recommended for papers in a clear chain |
+| `.pull-quote` | Inline punch-line | Display font + left rule |
+| `aside.external` | Agent-sourced external addition | Self-labels with "外部补充 · agent" |
+| `.uncertain` | Not-fully-digested marker | Lead with `⚠` |
+| `.v-x` `.v-y` `.v-z` `.v-b` | Color-coded variables | Same hex used in formulas / SVG / inline prose |
+| `.ch-end` `· · ·` | Chapter divider | Never use `<hr>` |
+| `.topic-a/b/c` | Per-topic accent stripe | Only when paper has 2–3 parallel concepts |
 
-## 自审清单（写完后逐条对，缺一项就回去补）
+## Self-audit checklist (run through every item before shipping)
 
-写作 / 内容：
-- [ ] **Chapter 0 是 "begin with why"**：领域困境 + naive + 致命问题 + 前辈对比表 + Feynman 元洞察。**不是**"本文方法概览"。
-- [ ] 每章有 `ch-num` + `ch-title`（含 `<strong>` 重点词）+ `ch-hook`（italic 一句话）+ `.lead` 引导段。
-- [ ] 论文腔词全清：通读一遍把"本文 / 综上 / 基于此 / 不失一般性 / 值得注意的是 / 显然地"全部替换或删掉。
-- [ ] 段落不超过 5–6 行；密集推理段之间有口气（短句 / 反问 / 比喻）。
-- [ ] 每个新术语第一次出现给一句直觉锚点，再上定义/公式。
+**Writing / content**
+- [ ] **Chapter 0 is begin-with-why**: predicament + naive + fatal flaw + prior-family comparison table + Feynman meta-line. Not "overview of our method."
+- [ ] Every chapter has `ch-num` + `ch-title` (with `<strong>` keyword) + `ch-hook` (italic one-liner) + `.lead` opening paragraph.
+- [ ] **Every new concept has a `.worked-example`** with `we-label` + `we-setup` + numbered `we-steps` + `we-takeaway`. Numbers are tiny (1, 2, 0, ½). The takeaway names what the example reveals about the abstract form.
+- [ ] No paper-boilerplate phrases left in the prose: 本文 / 综上 / 基于此 / 不失一般性 / 值得注意的是 / 显然地 — search and replace.
+- [ ] No paragraph runs longer than 5–6 lines. Dense reasoning paragraphs are interrupted with short sentences, rhetorical questions, or metaphors.
+- [ ] Every new term, on first appearance, gets a one-line intuition anchor before its definition or formula.
 
-视觉 / 组件：
-- [ ] 至少使用 **3 种** `.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`（不能全篇只有 `.insight`）。
-- [ ] 至少 **1 个** Math box 三件套（label + LaTeX + math-note）。
-- [ ] 至少 **1 个** Naive vs Insight `.compare` 对比卡。
-- [ ] 至少 **1 个** Lab block，第一行写 `class="lab-reveal"` 揭示句。
-- [ ] 至少 **1 个** SVG / canvas 图示（不允许"图缺失"）。
-- [ ] 如果 paper 在明确传承中（有清晰前辈），加 `.timeline`。
-- [ ] 关键变量有 color-code，公式 / SVG / 段落 inline 同色复用。
-- [ ] 暖纸面背景（不是 `#ffffff`），衬线正文 + mono 小标签。
-- [ ] 章末用 `· · ·`，不要 `<hr>`。
-- [ ] 顶部进度条 + 右侧 nav-dot rail 至少有一个能用。
+**Visual / components**
+- [ ] At least **3 different** callout types in use (not the entire page in `.insight`).
+- [ ] At least **1** math-box triple (label + LaTeX + math-note).
+- [ ] At least **1** worked example.
+- [ ] At least **1** naive vs. insight `.compare` block.
+- [ ] At least **1** lab block with the `lab-reveal` line filled in.
+- [ ] At least **1** SVG / canvas figure (no "figure missing").
+- [ ] If the paper sits in a clear lineage, a `.timeline` is present.
+- [ ] Recurring key variables are color-coded; the same hex appears in formulas, SVG strokes, and inline prose.
+- [ ] Background is warm paper (not `#ffffff`). Body font is serif. Eyebrow labels are mono.
+- [ ] Chapter dividers use `· · ·`, not `<hr>`.
+- [ ] Top progress bar and at least one nav (left TOC or right rail) are present and functional.
 
-技术：
-- [ ] 单 HTML 文件、所有 CDN URL 用稳定版本号、无本地资源引用。
-- [ ] 每个 `<section class="chapter">` 有 id，rail dot `data-target` 对得上，IntersectionObserver 真高亮当前章节。
-- [ ] 联网补充内容包在 `aside.external` 里。
-- [ ] 未充分消化处用 `<div class="uncertain">⚠ …</div>` 显式标注，没有静默 TODO。
+**Technical**
+- [ ] Single HTML file. All CDNs pinned to a stable version. No local-asset references.
+- [ ] Every `<section class="chapter">` has an `id`. Every rail dot's `data-target` resolves. IntersectionObserver actually highlights the active section.
+- [ ] Every agent-added external content is wrapped in `aside.external`.
+- [ ] Every not-fully-digested spot is marked with `<div class="uncertain">⚠ …</div>`. No silent TODOs.
 
 ## Gotchas
 
-- **多 PDF 时问用户**选哪个；不要静默选第一个。
-- **Mac 字体降级**：`Source Serif 4` 偶尔加载失败时正文会回落到 Iowan Old Style → Georgia → Times New Roman；`JetBrains Mono` 失败时回落到 Fira Code → Courier New。CSS stack 已经写好，不要省略 fallback。
-- **KaTeX 与 color-coded variable 同时使用**：在 LaTeX 内用 `\textcolor{#c0392b}{x}` 直接给颜色（KaTeX 支持）；在普通段落里用 `<span class="v-x">x</span>`。两边色谱必须一致。
-- **`@latest` 禁用**：所有 CDN 都钉死版本号（`katex@0.16.11`、`prismjs@1.29.0`），跨月加载稳定。
-- **不要默默留 TODO 占位章节**：要么写完整，要么用 `.uncertain` 显式标注。
-- **写完先自审"文字堆叠"**：如果整页只有 `<p>` + 偶尔 `<pre>`，没有 hero / nav / 章节模式 / 多种 callout / 任何 SVG / lab block——立刻回去补，否则不算交付。
-- **不要把 callout 用成段落 wrapper**：callout 是为了**强调一句话**或**一段命题**，不是普通正文的容器。`<div class="insight">` 里塞 5 段就是滥用。
-- **TOC / rail 必须真有效**：每个 `<section>` 必须有 id；rail dot 的 `data-target` 必须真能跳；IntersectionObserver 必须真高亮。骨架里的 JS 已经给好，不要漏。
-- **Per-topic accent 不要乱用**：只有 paper 真有 2–3 个并列核心概念（PSNR/SSIM/LPIPS、Score/Langevin/Denoising 这种）时才用。其他情况单一 `--accent` 就够。
+- **Multiple PDFs in the folder** — ask the user; never default to the first.
+- **Mac font fallback** — when `Source Serif 4` fails to load, body falls back through Iowan Old Style → Georgia → Times New Roman; when `JetBrains Mono` fails, through Fira Code → Courier New. The CSS stack is set up — don't strip the fallbacks.
+- **KaTeX + color-coded variables** — inside LaTeX use `\textcolor{#c0392b}{x}` (KaTeX supports it). In plain prose use `<span class="v-x">x</span>`. The hex must match on both sides.
+- **`@latest` is forbidden** — every CDN URL pins a stable version (`katex@0.16.11`, `prismjs@1.29.0`) so loads stay reproducible across months.
+- **Don't leave silent TODO placeholders** — fully write the section, or mark it explicitly with `.uncertain`.
+- **Worked-example pitfalls** — if the example takes more than ~5 steps, it's too big. If you can't extract a one-line takeaway, the example wasn't well-chosen. If the numbers aren't tiny (1, 2, 0, ½, π/4), pick smaller ones. The whole point is "the reader could redo this on a napkin."
+- **Self-audit "text on a page"** — if the page is mostly `<p>` and a few `<pre>`, with no hero, no nav, no chapter scaffold, no varied callouts, no SVG, no lab block, no worked example — go back and add components. That's not a delivery.
+- **Don't abuse callouts as paragraph wrappers** — a callout is to highlight one sentence or one proposition, not to box up five paragraphs of body text.
+- **TOC / rail must actually work** — every `<section>` needs a real `id`; every rail dot's `data-target` must resolve; the IntersectionObserver in the skeleton must remain wired up.
+- **Per-topic accent stripes** — only use `topic-a/b/c` when the paper genuinely has 2–3 parallel core concepts (PSNR/SSIM/LPIPS, Score/Langevin/Denoising, …). Otherwise a single `--accent` is enough.
 
 ## See also
 
-- 项目根 `AGENTS.md` — 用户背景、项目级硬约束、触发协议。
-- 参考样本（视觉与讲解风格的 ground truth）：
-  - `~/Documents/manus_out/3dgs/3DGS_Metrics_Interactive.html` — editorial / per-topic accent / oklch 配色
-  - `~/Documents/manus_out/3dgs/Depth Anything 3 交互网页 (1).html` — 衬线 + Space Grotesk 现代感
-  - `~/Documents/manus_out/other_reading/Diffusion Concepts Interactive Webpage (1).html` — begin-with-why 范式 + 多语义 callout + timeline + 右 rail
-  - `~/Documents/manus_out/other_reading/mit1806_lecture1.html` — 干净排版 + 演示动画 + color-coded variables + tab 切换方法
+- Project-root `AGENTS.md` — reader profile, project-level hard constraints, trigger protocol.
+- Reference samples (visual + pedagogical ground truth):
+  - `~/Documents/manus_out/3dgs/3DGS_Metrics_Interactive.html` — editorial / per-topic accent / oklch palette.
+  - `~/Documents/manus_out/3dgs/Depth Anything 3 交互网页 (1).html` — serif + Space Grotesk modern feel.
+  - `~/Documents/manus_out/other_reading/Diffusion Concepts Interactive Webpage (1).html` — begin-with-why pattern + multi-semantic callouts + timeline + right-rail nav.
+  - `~/Documents/manus_out/other_reading/mit1806_lecture1.html` — clean typography + step animations + color-coded variables + tabbed method comparison.
