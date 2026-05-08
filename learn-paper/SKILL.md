@@ -189,6 +189,15 @@ The artifact should read like a magazine longread or a freshly redesigned gradua
 - **HTML already exists.** **Overwrite** (re-running learn-paper on the same paper means the user wants to replace). Don't touch `_drafts/`.
 - **Pin CDN versions** (`katex@0.16.11`, `prismjs@1.29.0`). **No `@latest`.**
 
+### Interactive correctness (don't ship a blank canvas)
+
+The two failure modes that show up most often: **blank canvas** (lab block renders, canvas inside is empty) and **blurry / stretched canvas** (draws fine on the agent's screenshot, looks wrong on the user's retina screen). Guard both:
+
+1. **Render on init.** Every lab IIFE must end with one bare `draw()` call. Never leave the canvas waiting for a first input event — if the user doesn't touch a slider, they see nothing. Wrap each lab in `(function(){ const c = document.getElementById('…'); if (!c) return; … draw(); })();` so a missing element doesn't break the rest of the page.
+2. **DPR-scale every canvas.** After `getContext('2d')`, set `c.style.width = cssW + 'px'; c.style.height = cssH + 'px'; c.width = cssW * dpr; c.height = cssH * dpr; ctx.scale(dpr, dpr);`. Drawing then uses CSS pixels but stays sharp on retina.
+3. **Lab-prefixed ids.** Two labs cannot share `r1` / `canvas-1`. Prefix every control with the lab name (`lab2-yaw`, `rsc-step`) so a copy-paste doesn't silently cross-wire.
+4. **Run the page locally before declaring done.** `open <folder>/<name>.html`, scroll to each lab, drag every slider, click every button. If a canvas is blank or a control does nothing, fix before shipping.
+
 ## Required component checklist
 
 Every HTML must include the following — missing any of them and the artifact regresses to "text on a page":
@@ -640,15 +649,15 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
   <div class="lab">
     <div class="lab-title">⚗ <!-- lab name (Chinese) --></div>
     <p class="lab-reveal">此 lab 揭示：<!-- specific insight --> · 对应 paper §X</p>
-    <canvas id="canvas-1" width="760" height="320"></canvas>
+    <canvas id="lab1-canvas" width="760" height="320"></canvas>
     <div class="ctrl-row">
       <label>参数 σ</label>
-      <input type="range" id="r1" min="0" max="1" step=".01" value=".5">
-      <span class="ctrl-val" id="r1v">0.50</span>
+      <input type="range" id="lab1-sigma" min="0" max="1" step=".01" value=".5">
+      <span class="ctrl-val" id="lab1-sigmaV">0.50</span>
     </div>
     <div class="btn-row">
-      <button class="btn">运行</button>
-      <button class="btn outline">重置</button>
+      <button class="btn" id="lab1-run">运行</button>
+      <button class="btn outline" id="lab1-reset">重置</button>
     </div>
     <div class="lab-note"><!-- what to do + what to watch for --></div>
   </div>
@@ -710,6 +719,43 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
     });
   }, { rootMargin: '-40% 0px -55% 0px' });
   sections.forEach(s => io.observe(s));
+
+  /* ─── Lab 1 wiring ─── template every lab MUST follow:
+     1) IIFE so labs don't leak globals or collide on var names.
+     2) `if (!c) return` so a missing element doesn't break the page.
+     3) DPR scaling so canvas stays sharp on retina without stretching.
+     4) Bottom-of-IIFE `draw()` so the canvas renders on first paint —
+        do NOT rely on the user touching a slider for the first frame. */
+  (function(){
+    const c = document.getElementById('lab1-canvas');
+    if (!c) return;
+    const cssW = c.width, cssH = c.height;
+    const dpr  = window.devicePixelRatio || 1;
+    c.style.width  = cssW + 'px';
+    c.style.height = cssH + 'px';
+    c.width  = cssW * dpr;
+    c.height = cssH * dpr;
+    const ctx = c.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const slider = document.getElementById('lab1-sigma');
+    const valLbl = document.getElementById('lab1-sigmaV');
+    const btnRun = document.getElementById('lab1-run');
+    const btnRst = document.getElementById('lab1-reset');
+
+    function draw(){
+      const sigma = parseFloat(slider.value);
+      valLbl.textContent = sigma.toFixed(2);
+      ctx.clearRect(0, 0, cssW, cssH);
+      // … paper-specific drawing, in CSS pixels, using `sigma` …
+    }
+
+    slider.addEventListener('input', draw);
+    btnRun.addEventListener('click', draw);
+    btnRst.addEventListener('click', () => { slider.value = 0.5; draw(); });
+
+    draw();   // render immediately — never ship a blank canvas
+  })();
 </script>
 
 </body>
@@ -767,6 +813,8 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 - [ ] Every `<section class="chapter">` has an `id`. Every rail dot's `data-target` resolves. IntersectionObserver actually highlights the active section.
 - [ ] Every agent-added external content is wrapped in `aside.external`.
 - [ ] Every not-fully-digested spot is marked with `<div class="uncertain">⚠ …</div>`. No silent TODOs.
+- [ ] **Every lab IIFE ends with `draw()`** — no blank canvas on first paint. Verified by opening the file and looking at every lab without touching anything.
+- [ ] **Every canvas is DPR-scaled** (CSS width set + `width *= dpr` + `ctx.scale(dpr, dpr)`) — sharp on retina, not stretched. Lab control ids are lab-prefixed; no collisions across labs.
 
 ## Gotchas
 
@@ -780,6 +828,7 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 - **Don't abuse callouts as paragraph wrappers** — a callout is to highlight one sentence or one proposition, not to box up five paragraphs of body text.
 - **TOC / rail must actually work** — every `<section>` needs a real `id`; every rail dot's `data-target` must resolve; the IntersectionObserver in the skeleton must remain wired up.
 - **Per-topic accent stripes** — only use `topic-a/b/c` when the paper genuinely has 2–3 parallel core concepts (PSNR/SSIM/LPIPS, Score/Langevin/Denoising, …). Otherwise a single `--accent` is enough.
+- **Blank canvas / blurry canvas** — the two most common interactive regressions. Blank: the lab's IIFE wires `slider.addEventListener('input', draw)` but never calls `draw()` once at the bottom, so the canvas is empty until someone wiggles the slider. Blurry / stretched: the agent set the canvas's HTML `width` attribute but never DPR-scaled, so on retina the bitmap is half-resolution and CSS stretches it. The skeleton's lab template now bakes both fixes in — copy it verbatim instead of hand-rolling a new lab from scratch.
 
 ## See also
 
