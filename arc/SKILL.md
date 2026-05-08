@@ -90,6 +90,7 @@ arc rebuild                           # 修复软链 + index
 - **每完成一个有结论的步骤**（跑了脚本、得了数字、做了决定），调一次 `arc log "..."`。
 - **写代码时区分**：可能复用 → `utils/`；一次性 → `scripts/`。拿不准先丢 `scripts/`。
 - **写实验产出**：先 `out=$(arc output <name>)` 拿目录，所有产物写进 `$out`，避免散落。
+- **执行阶段并行优先**：`/arc-execute` 时识别无数据依赖的 steps，**默认在同一条消息里并发派发多个 `general-purpose` sub-agent**（不传 `model`，继承父模型保持一致）；sub-agent 不写日志，主 agent 收齐结果后统一调 `arc log`。详见 `arc-execute.md`。
 - **遇到 plan 没预料的情况**：停下问用户，不要擅自改 objective / plan。
 - **检测到边界感时建议 spawn**：如果发现一段工作有自己独立的 objective、独立验收，建议用户 `/arc-spawn <brief>`，但不擅自 spawn。
 - **session 中途**：当用户说 `pause/abandon/...` 时直接调 CLI；不要试图代替 `0_meta.md` 写状态。
