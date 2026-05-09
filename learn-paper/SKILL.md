@@ -136,6 +136,8 @@ The HTML's content is Chinese. **Banned template phrases** (search and remove be
 
 **Don't pad.** One clear sentence beats three subordinate clauses cosplaying rigor.
 
+**去 AI 味。** 读着要像一个语言天赋极强的人写的——自然、通顺、悦耳。**少用**"不是 X，而是 Y"这种工整对仗句式；其他被反复吐槽的模型腔（机械三段排比、空洞的"值得深思 / 综合来看 / 让我们一起"、整齐到僵硬的并列、过度收尾总结）一并避开。
+
 ### 8 · Color-coded variables (define once, reuse everywhere)
 
 Recurring key variables / objects across math, SVG, and prose **all share a single color palette**:
@@ -792,6 +794,7 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 - [ ] Every chapter has `ch-num` + `ch-title` (with `<strong>` keyword) + `ch-hook` (italic one-liner) + `.lead` opening paragraph.
 - [ ] **Every new concept has a `.worked-example`** with `we-label` + `we-setup` + numbered `we-steps` + `we-takeaway`. Numbers are tiny (1, 2, 0, ½). The takeaway names what the example reveals about the abstract form.
 - [ ] No paper-boilerplate phrases left in the prose: 本文 / 综上 / 基于此 / 不失一般性 / 值得注意的是 / 显然地 — search and replace.
+- [ ] **AI 味自检**："不是 X，而是 Y" 的对仗句式不超过 1–2 处；没有"值得深思 / 综合来看 / 让我们一起 / 总而言之"这类模型口头禅。
 - [ ] No paragraph runs longer than 5–6 lines. Dense reasoning paragraphs are interrupted with short sentences, rhetorical questions, or metaphors.
 - [ ] Every new term, on first appearance, gets a one-line intuition anchor before its definition or formula.
 
