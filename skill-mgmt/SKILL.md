@@ -18,6 +18,10 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 - Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
 - Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`.
 
+## Conventions
+
+- **Skill body language defaults to English.** Frontmatter (`name` / `description`) and the body of `SKILL.md` are written in English by default — this keeps skills portable across runtimes and consistent with upstream agent-tooling docs. Exceptions: trigger-phrase examples and quoted user utterances may include Chinese verbatim (so trigger matching works); a skill whose *artifact* is intentionally Chinese (e.g. `learn-paper` produces a Chinese HTML) still keeps the spec itself in English and notes the asymmetry explicitly.
+
 ## When to invoke (strict triggers)
 
 Trigger this skill when the user says any of:

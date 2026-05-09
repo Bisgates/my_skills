@@ -8,6 +8,8 @@ description: {{DESCRIPTION}}
 
 # {{TITLE}}
 
+<!-- Write the body in English by default. Trigger-phrase examples may include Chinese verbatim if that's how the user invokes this skill. -->
+
 ## Quick start
 
 <!-- Minimal working example: one or two lines so the agent immediately knows what calling this skill looks like. -->
