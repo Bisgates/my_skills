@@ -3,44 +3,45 @@ name: arc-execute
 description: Execute the arc's plan from current state, logging progress, until the plan is complete or an unexpected situation arises. Use when the user says "/arc-execute" or "/arc-execute 260430c".
 ---
 
-# /arc-execute — 执行计划并留痕
+# /arc-execute — Execute the plan and leave a trace
 
 ## Steps for the agent
 
-1. 解析 arc：id 或 cwd。
-2. 读 `0_meta.md`（frontmatter + history + `## log` 段；log 段只取末尾约 40 行，不要读全）、`1_objective.md`、`2_plan.md`。
-3. 判断当前进度：
-   - `## log` 里最后一个有结论的步骤是哪个？
-   - 对照 plan，下一步应该做什么？
-4. **识别可并行步骤并默认派发 sub-agent**：扫描 plan 中下一波待执行的 steps，判断哪些 step 之间**没有数据依赖**（独立 input、独立 output、不共享会被改写的中间状态）。
-   - **默认行为**：把彼此独立的 step **并行**派发给多个 sub-agent，加速执行。**在同一条消息里发出多个 Agent 工具调用**（这是触发并发的硬性条件，分多条消息会变成串行）。
-   - **subagent 选型**：用 `general-purpose`，**不要显式传 `model` 参数**——`general-purpose` 默认继承父 agent 的模型，从而保持"sub-agent 模型与主模型一致"。
-   - **每个 sub-agent prompt 必须自包含**：arc id 与 canonical 路径、它负责的 step 原文、输入文件路径、输出目录（**主 agent 提前调 `arc output <step_name>` 创建好后传给它**）、要回报哪些数字 / 路径、字数上限（建议 ≤200 字）。sub-agent 没有本对话上下文，要把背景一次性给够。
-   - **日志单一写入者**：sub-agent **不调 `arc log`**；主 agent 收齐所有并行结果后，**统一**为每个完成的 step 调一次 `arc log "[<step>] <一行结论>"`，避免并发写入撕裂 `## log`。
-   - **必须串行的情形**（不要并行）：step A 的 output 是 step B 的 input；多个 step 会改写同一文件（如同一份 `utils/foo.py`、同一个 plan 注解）；step 需要用户交互决策；尚未跑通 smoke test 之前的所有步骤；长跑（>10 min）类 step 之间通常也单独跑，便于失败定位。
-   - **拿不准就串行**：并行错误的代价（污染下游、覆盖产物）远大于串行慢一点。
-5. **默认一口气推到 plan 末尾**。每完成一个有结论的动作（跑了脚本、得了数字、做了决定）调一次：
+1. **Resolve the arc** — id or cwd.
+2. **Read context.** `0_meta.md` (frontmatter + history + the `## log` section; only the trailing ~40 lines of log, not the whole thing), `1_objective.md`, `2_plan.md`.
+3. **Locate current progress.**
+   - What is the last step in `## log` that has a conclusion?
+   - Per the plan, what should the next step be?
+4. **Identify parallelizable steps and dispatch sub-agents by default.** Scan the next wave of pending steps in the plan and decide which steps have **no data dependency** between them (independent inputs, independent outputs, no shared mutable intermediate state).
+   - **Default behavior:** dispatch independent steps **in parallel** to multiple sub-agents to speed things up. **Issue all Agent tool calls in a single message** (this is a hard requirement for concurrency — splitting them across messages serializes them).
+   - **Sub-agent selection:** use `general-purpose`, **do not pass an explicit `model` parameter**. `general-purpose` inherits the parent agent's model by default, which keeps "sub-agent model = main model".
+   - **Each sub-agent prompt must be self-contained:** arc id and canonical path, the literal text of the step it owns, input file paths, output directory (**the main agent calls `arc output <step_name>` ahead of time and passes the path in**), what numbers / paths to report back, and a word cap (~200 words is good). Sub-agents have none of the current conversation context — give them the background up front.
+   - **Single log writer:** sub-agents **do not call `arc log`**. After all parallel results come back, the main agent **uniformly** calls `arc log "[<step>] <one-line conclusion>"` once per completed step. This avoids concurrent writes shredding `## log`.
+   - **Cases that must be serial** (do not parallelize): step A's output is step B's input; multiple steps rewrite the same file (e.g. the same `utils/foo.py`, the same plan annotation); a step needs an interactive user decision; everything before the smoke test has run green; long-running steps (>10 min) are usually run separately too, for easier failure localization.
+   - **When in doubt, serialize.** The cost of getting parallelism wrong (poisoning downstream steps, overwriting artifacts) far exceeds the cost of running serially.
+5. **Default to driving all the way through to the end of the plan.** Every time you complete an action that has a conclusion (ran a script, got a number, made a decision), call:
    ```bash
-   arc log "[<phase>] <一行结论>"
+   arc log "[<phase>] <one-line conclusion>"
    ```
-   （`arc log` 会 append 到 `0_meta.md` 的 `## log` 段，不要手改文件。）
-6. **代码 / 产物归位**（子目录按需创建——首次写入前先 `mkdir -p` 或用支持自动建父目录的 Write tool）：
-   - 一次性脚本 → `scripts/`（带 argparse / 入口块）
-   - 可能复用 → `utils/`（纯函数 + docstring，不写 `__main__`）
-   - 实验产出 → `out=$(arc output <name>)` 自动创建目录并 echo 路径，所有文件写进 `$out`
-   - 自由经验 → `doc/<name>.md`
-7. **遇到 plan 没预料的情况**（错误、矛盾、需要决策、要改 objective）：**停下问用户**。例：
-   - "step 3 跑出来 RMSE 比基线还高，plan 没规定阈值不达标怎么办，你想怎么处理？"
-8. 推完最后一个 step 后：
-   - 调 `arc log "[done] all plan steps complete; ready for /arc-finalize"`。
-   - 提示用户："plan 完成，建议 `/arc-finalize`。"
+   (`arc log` appends to the `## log` section of `0_meta.md` — don't hand-edit the file.)
+6. **File code and artifacts in the right place** (subdirs are created lazily — `mkdir -p` before the first write, or use a Write tool that auto-creates parent dirs):
+   - One-shot script → `scripts/` (with `argparse` and an entry block).
+   - Possibly reusable → `utils/` (pure functions + docstring; no `__main__`).
+   - Experiment output → `out=$(arc output <name>)` auto-creates the directory and echoes the path; everything goes under `$out`.
+   - Freeform notes → `doc/<name>.md`.
+7. **When the plan does not anticipate the situation** (errors, contradictions, decisions needed, the objective wants to change): **stop and ask the user.** For example:
+   - "Step 3 came back with RMSE worse than baseline. The plan does not specify what to do when the threshold is missed — how would you like to handle it?"
+8. After driving the last step:
+   - Call `arc log "[done] all plan steps complete; ready for /arc-finalize"`.
+   - Tell the user: "plan complete — suggest `/arc-finalize`."
 
 ## Don't
-- 不要每个 step 都暂停问 continue（除非遇到了 plan 没预料的情况）。
-- 不要在根目录散落 `.py / .html / .json`（违反 layout 约束）。
-- 不要擅自改 `1_objective.md`、`2_plan.md`（要改就停下问）。
-- 不要跑长跑（>10 min）之前没跑 smoke。
-- 不要塞 binary（图片、ply、ckpt）进 git；这些都进 `output/`，被 `.gitignore`。
-- 不要把有数据依赖的 step 并行（A 的 output 是 B 的 input → 必须串行；并发写同一文件 → 必须串行）。
-- 不要给并行 sub-agent 显式传 `model` 参数（应让 `general-purpose` 继承父模型，保持模型一致）。
-- 不要让多个 sub-agent 各自调 `arc log`（并发追加会撕裂 `## log`；统一由主 agent 写日志）。
+
+- Do not stop and ask "continue?" after every step (unless the plan failed to anticipate the situation).
+- Do not scatter `.py / .html / .json` at the arc root (violates the layout invariant).
+- Do not silently rewrite `1_objective.md` or `2_plan.md` — if a change is needed, stop and ask.
+- Do not start a long run (>10 min) before the smoke run is green.
+- Do not commit binaries (images, ply, ckpt) to git; they go under `output/`, which is gitignored.
+- Do not parallelize steps that share a data dependency (A's output is B's input → serial; concurrent writes to the same file → serial).
+- Do not pass an explicit `model` parameter to parallel sub-agents — let `general-purpose` inherit the parent model so the model stays consistent.
+- Do not let multiple sub-agents each call `arc log` (concurrent appends shred `## log`; the main agent is the sole writer).

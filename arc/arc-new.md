@@ -3,29 +3,30 @@ name: arc-new
 description: Create a new arc (task) and immediately run /arc-objective. Use when the user says "/arc-new <brief>", "新建任务 ...", or similar.
 ---
 
-# /arc-new — 新建任务并锁定目标
+# /arc-new — Create a task and lock the objective
 
-链式两步：(1) `arc new` 建骨架，(2) 自动进入 `/arc-objective` 跑 grill-me。
+A two-step chain: (1) `arc new` builds the skeleton, (2) automatically enter `/arc-objective` to run grill-me.
 
 ## Steps for the agent
 
-1. 解析 brief：把用户给的描述凝练成 ≤5 个英文词的 snake-friendly 短语作为 brief。如果用户给的很模糊（"做点对齐的事"），先反问一句让用户澄清；不要自己脑补。
+1. **Parse the brief.** Distill what the user said into a snake-friendly phrase of ≤ 5 English words for the brief. If the user's description is vague ("do something about alignment"), ask one clarifying question first — don't fill in the gap yourself.
 
-2. 调 CLI：
+2. **Call the CLI:**
    ```bash
    arc new <brief words...>
    ```
-   stdout 第一行是 7-char id（如 `260430c`），stderr 是 human message。从 stdout 抓 id。
+   stdout's first line is the 7-char id (e.g. `260430c`); stderr carries the human-readable message. Capture the id from stdout.
 
-3. 立刻提示用户 cd（不要 cd，避免污染 agent 的 cwd 状态；让用户决定）：
+3. **Tell the user how to cd in** (don't cd yourself — that pollutes the agent's cwd; let the user decide):
    ```
    ✓ Created arc 260430c.
    To start: cd $(arc cd 260430c)
    ```
 
-4. 链式触发 `/arc-objective` skill：把 grill-me 流程跑起来，最终落地到 `1_objective.md`（用 `~/.claude/skills/arc/templates/1_objective.md` 作为骨架）。
+4. **Chain into `/arc-objective`.** Run the grill-me flow and write the result into `1_objective.md`, using `~/.claude/skills/arc/templates/1_objective.md` as the skeleton.
 
 ## Important
-- 不要在 `arc new` 之后立刻自己写 `1_objective.md`。链式进入 `/arc-objective`（grill-me 风格；**提问多少随任务复杂度自适应**，见 `arc-objective.md`）。
-- 不要在 `arc new` 之后调 `arc touch` —— `arc new` 已经设了 last_active_at。
-- 用户拒绝继续 grill-me（"先这样，我等会写 objective"）时，停在第 3 步，提醒"`arc list` 会显示 `needs 1_objective.md` 的 hint"。
+
+- Do not write `1_objective.md` yourself right after `arc new`. Chain into `/arc-objective` (grill-me style; **how many questions to ask is adaptive to task complexity** — see `arc-objective.md`).
+- Do not call `arc touch` after `arc new` — `arc new` already sets `last_active_at`.
+- If the user declines to continue with grill-me ("leave it, I'll write the objective later"), stop at step 3 and remind them that "`arc list` will show a `needs 1_objective.md` hint".

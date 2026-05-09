@@ -6,91 +6,99 @@ description: Task management protocol with file-based traces. Use when the user 
 # Arc — Task Management Protocol
 
 ## When to use this skill
-- 用户显式说 `/arc-new <brief>`、`/arc-resume 260430c`、或任何 `arc <subcmd>` CLI。
-- 用户描述了一个值得"立项"的任务（多步骤、需要留痕、可能跨 session），且可能要在不同 agent / terminal 中协同。
 
-**不主动触发**：本 skill 不在 session 启动时被触发；只有用户显式用 arc 协议时才进入。
+- The user explicitly invokes `/arc-new <brief>`, `/arc-resume 260430c`, or any `arc <subcmd>` CLI.
+- The user describes work worth "filing" — multi-step, needs a paper trail, may span sessions, may be coordinated across multiple agents / terminals.
 
-## Core invariants（必须遵守，违反即 bug）
-- **唯一物理路径**：`arcs/all/<id>_<slug>/`。任何 cwd / 日志 / 跨任务引用永远写这条路径。
-- **状态权威**：`0_meta.md` 的 `status` 字段（`active | paused | done | abandoned`）。`arcs/{active,paused,done,abandoned}/` 是软链派生视图，不是数据。
-- **状态翻转**：必须通过 CLI（`arc pause/resume/status/abandon`）。**agent 永远不手改 `0_meta.md`，永远不手 `ln -s`**。
-- **ID 引用**：用户用 7 字符 `YYMMDDx`；CLI 也接受全名 `<id>_<slug>` 用于 tab-completion。
-- **Done 硬门槛**：`arc status <id> done` 要求 `9_*.md` 存在且非空。
-- **Abandoned 硬门槛**：必须给 `--reason "..."`。
-- **Delete 是硬删（不保留 trace）**：`arc delete <id>` 直接 `rm -rf` canonical 目录 + 清掉所有 view 软链 + rebuild index，无确认无门槛。"想保留痕迹"用 `arc abandon`；"想彻底清掉"用 `arc delete`。
-- **多 active 允许**：每个 terminal 独立 cwd 表达"焦点"；resume 不自动 pause 别的。
+Common natural-language triggers (Chinese verbatim, kept here so trigger matching works): "新立项 / 立个 arc / 这个事建个任务 / 把这个挂到 arc 上".
+
+**Do not auto-trigger.** This skill is never entered at session start; only when the user explicitly speaks the arc protocol.
+
+## Core invariants (must hold; violations are bugs)
+
+- **Single physical path:** `arcs/all/<id>_<slug>/`. Every cwd / log / cross-task reference must point at this canonical path.
+- **Authoritative status:** the `status` field in `0_meta.md` (`active | paused | done | abandoned`). The `arcs/{active,paused,done,abandoned}/` symlink folders are derived views, not data.
+- **Status transitions go through the CLI** (`arc pause/resume/status/abandon`). **Agents must never hand-edit `0_meta.md`, never hand-create `ln -s`.**
+- **ID references:** users say the 7-char `YYMMDDx` form; the CLI also accepts the full `<id>_<slug>` form for tab-completion.
+- **`done` hard gate:** `arc status <id> done` requires `9_*.md` to exist and be non-empty.
+- **`abandoned` hard gate:** `--reason "..."` is required.
+- **`delete` is a hard delete (no trace preserved):** `arc delete <id>` runs `rm -rf` on the canonical dir, removes every view symlink, and rebuilds the index — no confirmation, no gate. If you want to preserve a paper trail, use `arc abandon`; if you want it gone entirely, use `arc delete`.
+- **Multiple `active` arcs are allowed:** each terminal's cwd expresses its own focus; `resume` does not auto-pause anything else.
 
 ## File layout
 
 ### Project root
+
 ```
 <project_root>/arcs/
-  all/<id>_<slug>/                 # canonical 物理位置
-  paused/   done/   abandoned/     # 软链视图（仅这三个状态）
-  <id>_<slug>                      # active 状态的软链直接放 arcs/ 根
-  index.md                         # 自动生成
+  all/<id>_<slug>/                 # canonical physical location
+  paused/   done/   abandoned/     # symlink views (these three states only)
+  <id>_<slug>                      # active-state symlinks live directly under arcs/
+  index.md                         # auto-generated
 ```
 
-`active` 状态没有专属子目录；active 软链直接位于 `arcs/<id>_<slug>`。
+`active` has no dedicated subdirectory; active symlinks sit directly at `arcs/<id>_<slug>`.
 
-### 单个 arc 内部
+### Inside a single arc
+
 ```
 arcs/all/<id>_<slug>/
-  0_meta.md                 # 必选；脚本生成与维护。frontmatter + ## history + ## log
-  1_objective.md            # 必选；/arc-objective 生成
-  2_plan.md                 # 必选；/arc-plan 生成
-  4_*.md ~ 7_*.md           # 留白，自由命名（pivot/eval/blocker/decision_*）
-  8_handoff_plan.md         # 仅 finalize 触发时生成
-  9_summary.md              # done 状态硬门槛
-  doc/                      # 自由 freeform 笔记（按需创建）
-  utils/                    # 候选 promote 到主项目的代码（按需创建）
-  scripts/                  # 一次性脚本，不 promote（按需创建）
-  output/<YYMMDD_HHMM>_<name>/   # 实验产出（arc output 创建）
+  0_meta.md                 # required; script-managed. frontmatter + ## history + ## log
+  1_objective.md            # required; produced by /arc-objective
+  2_plan.md                 # required; produced by /arc-plan
+  4_*.md ~ 7_*.md           # free slots, free naming (pivot/eval/blocker/decision_*)
+  8_handoff_plan.md         # generated only by finalize when triggered
+  9_summary.md              # required for `done` state
+  doc/                      # freeform notes (create on demand)
+  utils/                    # candidate code worth promoting to the main project (on demand)
+  scripts/                  # one-shot scripts, not promoted (on demand)
+  output/<YYMMDD_HHMM>_<name>/   # experiment outputs (created by `arc output`)
 ```
 
-`0_meta.md` 同时承载三件事：frontmatter（id/status/parent/last_active_at/...）、`## history`（状态翻转 trace）、`## log`（执行流水，由 `arc log` 追加）。**`arc log` 只往这里写**，不再单独维护 `3_process_log.md`。旧 arc 残留的 `3_process_log.md` 会在下次 CLI 触碰时自动 migrate 进 `0_meta.md` 并删除原文件。
+`0_meta.md` carries three things at once: the frontmatter (id / status / parent / last_active_at / ...), `## history` (status-transition trace), and `## log` (execution stream, appended by `arc log`). **`arc log` only writes here**; no separate `3_process_log.md` is maintained any more. Legacy arcs that still have a `3_process_log.md` get auto-migrated into `0_meta.md` on the next CLI touch and the old file is deleted.
 
-**子目录全部按需创建**：`arc new` / `arc spawn` 只生成 `0_meta.md`，子目录由 agent 写文件时自己 `mkdir -p`，或由 `arc output` 创建。
+**All subdirs are created lazily.** `arc new` / `arc spawn` only writes `0_meta.md`; the agent creates subdirs with `mkdir -p` as it writes files, and `arc output` creates output dirs.
 
-**根目录禁放散落 `.py / .html / .json / .ply`**。所有代码进 `utils/` 或 `scripts/`，所有产物进 `output/`。
+**No loose `.py / .html / .json / .ply` at the arc root.** All code goes under `utils/` or `scripts/`; all artifacts go under `output/`.
 
-## Phase commands（入口与子 skill）
+## Phase commands (entry points and sub-skills)
 
-| 阶段 | 触发 | 见子 skill |
+| Phase | Trigger | See |
 |---|---|---|
-| 立项 | `/arc-new <brief>` | `arc-new.md` |
-| 锁定目标 | `/arc-objective [<id>]` | `arc-objective.md` |
-| 写计划 | `/arc-plan [<id>]` | `arc-plan.md` |
-| 执行 | `/arc-execute [<id>]` | `arc-execute.md` |
-| 恢复上下文 | `/arc-resume <id>` | `arc-resume.md` |
-| 派生子任务 | `/arc-spawn <brief>` | `arc-spawn.md` |
-| 收尾 + promote | `/arc-finalize [<id>]` | `arc-finalize.md` |
-| 硬删除（不保 trace） | `/arc-delete <id>` | `arc-delete.md` |
+| File a new task | `/arc-new <brief>` | `arc-new.md` |
+| Lock the objective | `/arc-objective [<id>]` | `arc-objective.md` |
+| Write the plan | `/arc-plan [<id>]` | `arc-plan.md` |
+| Execute | `/arc-execute [<id>]` | `arc-execute.md` |
+| Restore context | `/arc-resume <id>` | `arc-resume.md` |
+| Spawn a child task | `/arc-spawn <brief>` | `arc-spawn.md` |
+| Wrap up + promote | `/arc-finalize [<id>]` | `arc-finalize.md` |
+| Hard delete (no trace) | `/arc-delete <id>` | `arc-delete.md` |
 
-## CLI cheatsheet（agent 直接调）
+## CLI cheatsheet (for direct agent use)
+
 ```bash
-arc init                              # 一次性冷启动；自动写 AGENTS.md hook
-arc new <brief...>                    # 创建骨架
-arc spawn <brief...> [--parent <id>]  # 子任务
+arc init                              # one-time bootstrap; auto-writes the AGENTS.md hook
+arc new <brief...>                    # create skeleton
+arc spawn <brief...> [--parent <id>]  # child task
 arc pause <id?> --note "..."
 arc resume <id>                       # echoes canonical path
 arc status <id> {active|paused|done|abandoned} [--note ...] [--reason ...]
 arc abandon <id> --reason "..."
-arc delete <id>                       # 硬删 canonical + 软链 + rebuild index（无门槛）
+arc delete <id>                       # hard-delete canonical + symlinks + rebuild index (no gate)
 arc touch <id?>
 arc log [-i <id>] <text...>
 arc output [-i <id>] <name>           # echoes canonical output dir
 arc list                              # prints index.md
-arc cd <id>                           # echoes canonical path; use: cd $(arc cd 260430c)
-arc rebuild                           # 修复软链 + index
+arc cd <id>                           # echoes canonical path; usage: cd $(arc cd 260430c)
+arc rebuild                           # repair symlinks + index
 ```
 
 ## Agent behavior guidance
-- **每完成一个有结论的步骤**（跑了脚本、得了数字、做了决定），调一次 `arc log "..."`。
-- **写代码时区分**：可能复用 → `utils/`；一次性 → `scripts/`。拿不准先丢 `scripts/`。
-- **写实验产出**：先 `out=$(arc output <name>)` 拿目录，所有产物写进 `$out`，避免散落。
-- **执行阶段并行优先**：`/arc-execute` 时识别无数据依赖的 steps，**默认在同一条消息里并发派发多个 `general-purpose` sub-agent**（不传 `model`，继承父模型保持一致）；sub-agent 不写日志，主 agent 收齐结果后统一调 `arc log`。详见 `arc-execute.md`。
-- **遇到 plan 没预料的情况**：停下问用户，不要擅自改 objective / plan。
-- **检测到边界感时建议 spawn**：如果发现一段工作有自己独立的 objective、独立验收，建议用户 `/arc-spawn <brief>`，但不擅自 spawn。
-- **session 中途**：当用户说 `pause/abandon/...` 时直接调 CLI；不要试图代替 `0_meta.md` 写状态。
+
+- **After every step that has a conclusion** — ran a script, got a number, made a decision — append one `arc log "..."` entry.
+- **When writing code**, sort it: potentially reusable → `utils/`; one-shot → `scripts/`. When in doubt, drop it in `scripts/`.
+- **For experiment outputs**, first grab a directory with `out=$(arc output <name>)`, then write everything under `$out`. Avoids stray files at the arc root.
+- **Prefer parallelism during execution.** During `/arc-execute`, identify steps with no data dependency between them and **default to dispatching multiple `general-purpose` sub-agents in parallel within a single message** (do not pass `model`; inherit the parent model so behavior stays consistent). Sub-agents do not write logs themselves; the main agent collects results and calls `arc log` once. See `arc-execute.md`.
+- **When the plan does not anticipate the situation**, stop and ask the user. Do not silently rewrite the objective or plan.
+- **When boundary instincts fire, suggest a spawn.** If a chunk of work has its own objective and its own acceptance criteria, suggest the user run `/arc-spawn <brief>` — but never spawn unilaterally.
+- **Mid-session**: when the user says `pause / abandon / ...`, call the CLI directly. Do not attempt to write status into `0_meta.md` yourself.
