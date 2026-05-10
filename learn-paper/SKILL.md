@@ -1,6 +1,6 @@
 ---
 name: learn-paper
-description: Convert a paper PDF in a target folder into a same-folder, single-file, CDN-self-contained editorial-grade interactive learning HTML — warm paper background, serif body, mono eyebrow labels, chapter-level color coding; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/learn-paper <folder>` or asks to "学习 / 讲解 / 拆解 X 文件夹里的 paper" inside the `learn_with_agent` project.
+description: Convert a paper PDF in a target folder into a same-folder, single-file, CDN-self-contained magazine-style interactive learning HTML — warm-paper background with dotted texture, Playfair Display + Cormorant Garamond + Inter typography, italic-em hero, ruled-section openers with giant Roman numerals, drop caps colored per chapter accent; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/learn-paper <folder>` or asks to "学习 / 讲解 / 拆解 X 文件夹里的 paper" inside the `learn_with_agent` project.
 ---
 
 # learn-paper
@@ -163,18 +163,34 @@ Every lab block leads with a single line: **"此 lab 揭示：…（对应 paper
 - Multi-step algorithm with step-dot indicator: prev/next buttons, current step highlighted.
 - Tab group when there are multiple methods to compare (column method vs. row method = same computation, two perspectives).
 
-### 10 · Editorial-grade webpage feel
+### 10 · Editorial-grade webpage feel — 杂志风默认主题
 
-The artifact should read like a magazine longread or a freshly redesigned graduate textbook — **not Markdown rendered to HTML**.
+The artifact reads like a Sunday-magazine longread typeset, not Markdown rendered to HTML.
 
-- **Warm paper background** (not `#ffffff`): `#fafaf9` / `#f5f0e8` / `#fdfcf9`. Dark hero contrasts with light body.
-- **Serif body** (Source Serif 4 / Iowan Old Style / Georgia) **plus mono eyebrow labels** (JetBrains Mono / Courier New, used for eyebrows / labels / code).
-- **Chapter pattern**: eyebrow `CH 03` → big title (with one `<strong>` keyword) → one-line italic hook → `.lead` 1.15rem opening paragraph → body.
-- **Callout matrix** of at least 3 semantic colors: `.insight` (blue) / `.danger` (red) / `.success` (green) / `.warning` (orange) / `.definition` (light blue) / `.feynman` (dark, white text, big quote).
-- **Math box triple**: mono label ("能量模型 Energy-Based Model") + LaTeX + plain-Chinese math-note.
-- **Per-topic accent stripe** (when the paper has 2–3 parallel concepts): each section / formula-card gets a `:before` color stripe; same color used end-to-end.
-- **Chapter divider**: `· · ·`, never `<hr>`.
-- **Forbidden**: a single 760px column of `<p>` with the occasional `<pre>` — that's a Markdown render, not an editorial page.
+- **Warm paper background** (`#f4ecdd`) with a subtle dotted texture (two layered radial-gradients, 3px / 7px). Body type sits on the paper, never on `#ffffff`. Hero is **not** a dark gradient — it sits on the same paper as the body, just with bigger typography.
+- **Type stack**: Playfair Display 800 (display headings, body headings, drop caps, Roman numerals) + Cormorant Garamond italic (decorative italics, ampersand, signoff, sublines, hooks) + Inter (sans eyebrows / labels / metadata) + JetBrains Mono (math-box label, code, lab eyebrow). The display serif stays italic-leaning; do not substitute Space Grotesk or Source Serif 4.
+- **Masthead**: a thin black-ruled bar at the top. Left = italic logo ("A Paper Reading — Private Edition") in Playfair italic; right = volume info in uppercase letterspaced Inter (`letter-spacing: 0.18em`).
+- **Hero**: kicker (warm-red, uppercase letterspaced Inter, 12px) → big Playfair `<h1>` 72px with one italic `<em>` for the subtitle phrase and an italic warm-red ampersand for separation → `.subline` (italic Cormorant, 22px) → `.editor-note` framed by `border-top: 4px double` + `border-bottom: 1px` of ink, with a mono uppercase `.label` and an italic Cormorant `.signoff` (e.g. "— 编于周日 22:30，配茶"). Optional `.hero-stats` row + `.meta-line` with a black `.pill` chip and a couple of warm-red links.
+- **Section opener (`section.branch`)** is the magazine's signature element. Each section carries `data-accent="red|indigo|forest|amber|plum|slate"`. The accent drives a 7px-thick `<hr class="section-rule">`, the giant Playfair Roman numeral (`I.`–`X.`, 88px), an `<h2>` with one `<strong>` keyword in the accent color, a tiny mono `.branchcode` (e.g. `chapter_3 · articulated humans`), a 1px `<hr class="section-rule thin">`, and an `.ornament` row of glyphs (`§ · § · §` / `◊ · ◊ · ◊` / `¶ · ¶ · ¶`) centered in italic Playfair. Rotate the ornament glyph between consecutive chapters to keep rhythm.
+- **Per-section accent rotation**: pick the chapter accent semantically — `red` for problem / results / limits, `indigo` for the core insight chapter and joint-training math, `forest`/`amber`/`plum`/`slate` for parallel topical chapters (when the paper has color-coded variables, match the chapter accent to the dominant variable's color so a reader keys both at once). Don't run two consecutive sections with the same accent unless deliberate.
+- **Body**: `.lede` first paragraph in Playfair 21px with a giant accent-colored drop cap (80px, floats left). Subsequent paragraphs return to serif reading at 17px / 1.74. Sub-heads `<h3>` use Playfair 700, 23px, with a small mono `.marker` (e.g. `§ 3.2`) prepended.
+- **Pull quote `.pullquote`**: paper-soft accent-tinted background, 6px left-border in the accent color, Playfair italic 26–28px. Attribution lives in `.who` (Inter uppercase 12px, letterspaced).
+- **Callout matrix** (`.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`) keeps its 6 semantic colors but moves to paper-soft fills (no white surfaces); labels are uppercase letterspaced **Inter**, not mono — eyebrows in the body switch font systematically (sans for callout labels, mono for math/lab/eyebrow). The Feynman block stays a dark plum-bordered card with white italic Cormorant text and an oversized `"` glyph.
+- **Math box**: paper-soft fill with a 3px accent left-border. Label in Inter uppercase letterspaced. Math-note in italic Cormorant 15px.
+- **Worked example**: paper-soft fill with a 6px **double**-style accent left-border. `we-label` in Inter uppercase. `we-setup` in italic Cormorant. `we-takeaway` keeps the 📌 prefix on a small white pill.
+- **Compare cards `.compare > .naive` / `.compare > .insight-card`**: paper-soft fills, no rounded corners, 3px top-border in muted vs. accent. Labels in Inter caps; titles in Playfair 18 700.
+- **Tables**: ink-black header bar + paper-soft body. Header text in Inter caps 11px letterspaced. Body cells in Cormorant 15. Numerics in JetBrains Mono right-aligned. `.num.win` in forest, `.num.lose` in muted. `tr.ours-row` gets a forest-tinted highlight.
+- **Lab block**: paper-soft container with a 3px accent top-border. `.lab-title` reads `Field Study · Lab N · <name>` in Inter caps. The reveal line stays mandatory. Buttons are flat ink-on-paper, sharp corners, Inter caps. `.btn.toggle.on` flips to the section's accent.
+- **Timeline**: dotted hairline rail; dots are accent-colored discs ringed by `box-shadow: 0 0 0 2px var(--accent)`. Year in mono caps, title in Playfair 700, desc in Cormorant.
+- **Aside.external**: paper-soft fill with mono uppercase eyebrow ("外部补充 · agent") and warm-red links.
+- **Afterword**: an ink-bordered paper-soft "kicker box" near the end of the article — Inter mono label, Playfair italic h4, serif body. Use it for "what I chose / what I excluded".
+- **Colophon footer**: italic Cormorant on warm paper, three columns (Citation / Resources / Colophon), each with a tiny Inter-mono uppercase `<h5>`.
+- **Chapter divider**: `· · ·` centered, accent-colored at 0.6 opacity.
+- **Forbidden**: dark gradient hero, bootstrap-feeling rounded cards, single-column Markdown renders, sans-serif body type, `#ffffff` page background, Source Serif 4 / Space Grotesk substitutions.
+
+Reference exemplars (visual ground truth):
+- `~/project/what_new/weekly/2026-19.html` — canonical typography & hero & section-rule pattern.
+- `260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — long-read application of the system to a 9-chapter paper read with all components in use.
 
 ## Hard constraints
 
@@ -204,28 +220,28 @@ The two failure modes that show up most often: **blank canvas** (lab block rende
 
 Every HTML must include the following — missing any of them and the artifact regresses to "text on a page":
 
-1. **Hero / cover** — dark or gradient background; paper title (with `<em>` for the subtitle phrase) + one-line thesis + meta (authors, year, venue, link to original PDF) + reading-time estimate + eyebrow tag (e.g. "第一性原理 · Karpathy 讲法").
-2. **Top progress bar** — `position: fixed; top: 0; height: 3px;`, fills as the reader scrolls.
-3. **Navigation** (one or both):
-   - Left sticky TOC list (academic feel, useful for many chapters).
-   - Right fixed nav-dot rail (hover reveals chapter label, narrative-style longread).
-4. **Chapter pattern** — every chapter has `.ch-num` + `.ch-title` (with `<strong>` keyword) + `.ch-hook` (italic one-liner) + opening paragraph as `.lead`.
-5. **Callout matrix** — at least 3 of: `.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`.
-6. **Math box triple** — `<div class="math-box"><div class="math-label">…</div>$$…$$<div class="math-note">…</div></div>`.
-7. **Worked example** — a `.worked-example` block per new concept (`we-label` + `we-setup` + numbered `we-steps` + `we-takeaway`).
-8. **Naive vs. Insight comparison** — two-column grid, naive on left, paper's solution on right; at least one per HTML.
-9. **Figures** — at least 1–2 SVG / CSS / emoji-composed conceptual diagrams. "Figure missing" is not acceptable.
-10. **Lab block** — `.lab` container + `.lab-title` (with `⚗`-style icon) + reveal line + canvas + `.ctrl-row` + `.btn-row` + `.lab-note`.
-11. **Timeline** (strongly recommended when the paper sits in a clear lineage) — historical chain (Hyvärinen 2005 → Vincent 2011 → Sohl-Dickstein 2015 → DDPM 2020 …).
-12. **Comparison table** — model × how-it-dodges × cost, etc.
-13. **`aside.external`** — every agent-sourced external addition, marked.
-14. **Pull quote / `.feynman`** — at least one distilled punch-line or Feynman-style meta-insight.
-15. **Editorial divider `· · ·`** — chapter end.
-16. **Footer** — citations, references, generation timestamp, summary of all `uncertain` spots.
+1. **Masthead** — thin black-ruled top bar: italic Playfair logo left ("A Paper Reading — Private Edition") + uppercase letterspaced volume info right.
+2. **Hero on warm paper** (no dark gradient) — kicker → big Playfair `<h1>` with one italic `<em>` and a warm-red ampersand → italic Cormorant `.subline` → `.editor-note` framed by double-rule + thin-rule with `.label` and `.signoff` → optional `.hero-stats` row → `.meta-line` with `.pill` chip and warm-red links.
+3. **Top progress bar** — `position: fixed; top: 0; height: 2px;` ink color, fills as the reader scrolls.
+4. **Right-fixed nav-dot rail** — hover reveals chapter label. Hidden under 1100px. (Sections use `section.branch`, not `section.chapter`.)
+5. **Section opener per chapter** — `<section class="branch" data-accent="…">` followed by `<hr class="section-rule">` → `.section-head` (giant Roman numeral + `<h2>` with `<strong>` keyword + tiny `.branchcode`) → `<hr class="section-rule thin">` → `.ornament` glyph row → `.ch-hook` italic one-liner → `.lede` opening paragraph (drop cap fires automatically). Rotate `data-accent` per chapter; never run two consecutive sections with the same accent unless deliberate.
+6. **Callout matrix** — at least 3 of: `.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`.
+7. **Math box triple** — `<div class="math-box"><div class="math-label">…</div>$$…$$<div class="math-note">…</div></div>`.
+8. **Worked example** — a `.worked-example` block per new concept (`we-label` + `we-setup` + numbered `we-steps` + 📌 `we-takeaway`).
+9. **Naive vs. Insight comparison** — `.compare` two-column grid, naive on left, paper's solution on right; at least one per HTML.
+10. **Figures** — at least 1–2 SVG / CSS / emoji-composed conceptual diagrams. "Figure missing" is not acceptable.
+11. **Lab block** — `.lab` container with `Field Study · Lab N · <name>` title in Inter caps + reveal line + canvas (DPR-scaled) + `.ctrl-row` + `.btn-row` + `.lab-note`.
+12. **Timeline** (strongly recommended when the paper sits in a clear lineage) — historical chain with the latest item flagged `.tl-item.highlight`.
+13. **Comparison table** — paper-soft body + ink header bar; mark the paper's own row with `tr.ours-row`.
+14. **`aside.external`** — every agent-sourced external addition, marked.
+15. **Pull quote `.pullquote`** — at least one distilled punch-line, attributed via `.who`.
+16. **Editorial divider `· · ·`** — chapter end, accent-colored at 0.6 opacity.
+17. **Afterword** — ink-bordered paper-soft kicker box near the article end, with Inter mono `.label`, italic Playfair h4, and a short bullet list of "what I chose / what I excluded".
+18. **Colophon footer** — three columns (Citation / Resources / Colophon) on warm paper, italic Cormorant body, tiny Inter-mono uppercase `<h5>` headers.
 
-## HTML skeleton
+## HTML skeleton — 杂志风默认主题
 
-Start from this skeleton; expand as needed. It already contains hero + progress bar + right-rail nav + chapter pattern + full callout matrix + math-box + worked-example + lab block + timeline + footer. **Do not regress to a single 760px Markdown column.**
+Start from this skeleton; expand as needed. It already contains masthead + warm-paper hero with editor-note + progress bar + right-rail nav + ruled-section openers with Roman numerals + drop-cap lede + callout matrix + math-box + worked-example + naive/insight compare + lab block (DPR-scaled) + table + feynman + timeline + pullquote + afterword + colophon. **Do not regress to a single 760px Markdown column or a dark-gradient hero.**
 
 ```html
 <!DOCTYPE html>
@@ -235,10 +251,10 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><!-- paper title (Chinese) --></title>
 
-<!-- Fonts: serif body + mono eyebrow + optional display serif -->
+<!-- Fonts: Playfair (display serif) + Cormorant (decorative italic) + Inter (sans labels) + JetBrains Mono -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <!-- KaTeX -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
@@ -248,305 +264,385 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
     {left:'$$',right:'$$',display:true},
     {left:'\\[',right:'\\]',display:true},
     {left:'$',right:'$',display:false},
-    {left:'\\(',right:'\\)',display:false}]})"></script>
+    {left:'\\(',right:'\\)',display:false}],throwOnError:false})"></script>
 
 <!-- Prism (code highlighting) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css">
 <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
 
 <style>
-  :root {
-    /* Warm paper surfaces + ink hierarchy */
-    --paper:    #f8f5ee;          /* main background, warm paper */
-    --paper-2:  #efeae0;          /* lab / aside secondary fill */
-    --surface:  #ffffff;          /* card stock white */
-    --ink:      #1a1a1a;          /* body ink */
-    --ink-soft: #3f3a33;          /* heading dark brown */
-    --muted:    #8a8278;          /* secondary text */
-    --border:   #d8d2c4;          /* warm border */
-    --hairline: #e6e0d2;          /* faintest divider */
+  :root{
+    /* Warm paper surfaces */
+    --paper:      #f4ecdd;
+    --paper-soft: #ede2cc;
+    --paper-deep: #e6dcc4;
+    --ink:        #1a1814;
+    --ink-soft:   #4a4438;
+    --muted:      #8b8170;
+    --hairline:   rgba(26,24,20,0.18);
 
-    /* Primary accent + semantic palette */
-    --accent:    #1e5a8a;         /* primary blue (insight) */
-    --c-insight: #1e5a8a;
-    --c-danger:  #b03a2e;
-    --c-success: #2d7a4f;
-    --c-warning: #c47a18;
-    --c-feynman: #2d2842;         /* feynman dark-card background */
+    /* Editorial accents (per-section --accent picks one) */
+    --indigo:    #3b3a8a;
+    --warm-red:  #b23a48;
+    --forest:    #2f5c3f;
+    --amber:     #a86810;
+    --plum:      #6c3483;
+    --slate:     #1e5a8a;
 
-    /* Color-coded variables (rename to the paper's actual variables) */
-    --v-x:  #c0392b;              /* red */
-    --v-y:  #1e5a8a;              /* blue */
-    --v-z:  #2d7a4f;              /* green */
-    --v-b:  #6c3483;              /* purple (target) */
+    /* Color-coded variables — rename to the paper's actual variables */
+    --v-x:  #c0392b;   /* red */
+    --v-y:  #1e5a8a;   /* blue */
+    --v-z:  #2d7a4f;   /* green */
+    --v-b:  #6c3483;   /* purple (target) */
 
-    /* Font stacks */
-    --font-body:    'Source Serif 4', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
-    --font-display: 'Space Grotesk', 'Source Serif 4', Georgia, serif;
-    --font-mono:    'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-    --font-sans:    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* Defaults; overridden per .branch[data-accent] */
+    --accent:    #1a1814;
+    --accent-bg: rgba(26,24,20,0.05);
 
-    --reading-w: 760px;           /* chapter body max width */
-    --shell-w:   1180px;          /* full shell max width */
+    --serif:      "Playfair Display","Cormorant Garamond",Georgia,serif;
+    --serif-text: "Cormorant Garamond","Source Serif 4",Georgia,serif;
+    --sans:       "Inter",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --mono:       "JetBrains Mono","Fira Code","Courier New",monospace;
   }
-  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--paper); color: var(--ink);
-    font-family: var(--font-body); font-size: 17px; line-height: 1.78;
-    -webkit-font-smoothing: antialiased;
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:17px; line-height:1.62;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.018) 1px,transparent 1px),
+      radial-gradient(rgba(0,0,0,0.012) 1px,transparent 1px);
+    background-size:3px 3px,7px 7px;
+    background-position:0 0,1px 2px;
   }
-  code, pre, .mono { font-family: var(--font-mono); }
+  a{color:inherit;}
+  code,pre,.mono{font-family:var(--mono);}
 
-  /* Top progress bar */
-  #progress { position: fixed; top: 0; left: 0; right: 0; height: 3px;
-              background: rgba(0,0,0,0.06); z-index: 999; }
-  #progress > div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+  /* Page shell */
+  .page{max-width:1180px;margin:0 auto;padding:56px 64px 88px;}
+  @media(max-width:800px){.page{padding:32px 22px 64px;}}
 
-  /* Hero cover */
-  .hero { background: linear-gradient(180deg,#1a1a2e 0%, #2d2842 100%);
-          color: #e8e8f0; padding: 72px 24px 56px; text-align: center;
-          border-bottom: 4px solid var(--accent); }
-  .hero .eyebrow { font-family: var(--font-mono); font-size: .75rem;
-                   letter-spacing: .15em; text-transform: uppercase;
-                   color: #9999c0; margin-bottom: 12px; }
-  .hero h1 { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3rem);
-             font-weight: 600; line-height: 1.18; letter-spacing: -.01em; max-width: 800px; margin: 0 auto; }
-  .hero h1 em { color: #aac4ff; font-style: normal; }
-  .hero .thesis { color: #c8c2d8; font-size: 1.1rem; max-width: 60ch;
-                  margin: 16px auto 0; font-style: italic; }
-  .hero .meta { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center;
-                margin-top: 24px; font-family: var(--font-mono);
-                font-size: .82rem; color: #8a8aaa; }
-  .hero .meta a { color: #aac4ff; text-decoration: none; }
-  .hero .meta a:hover { text-decoration: underline; }
+  /* Progress bar (low-saturation) */
+  #progress{position:fixed;top:0;left:0;right:0;height:2px;
+            background:rgba(0,0,0,0.06);z-index:999;}
+  #progress > div{height:100%;width:0;background:var(--ink);transition:width .1s;}
 
   /* Right-side nav-dot rail */
-  #rail { position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
-          display: flex; flex-direction: column; gap: 10px; z-index: 100; }
-  .dot { width: 11px; height: 11px; border-radius: 50%;
-         background: var(--border); cursor: pointer; position: relative;
-         transition: all .2s; border: 2px solid transparent; }
-  .dot:hover, .dot.active { background: var(--accent); transform: scale(1.3); }
-  .dot .lbl { position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
-              background: var(--ink-soft); color: #f8f5ee;
-              padding: 4px 9px; border-radius: 3px; font-family: var(--font-mono);
-              font-size: .72rem; white-space: nowrap; opacity: 0;
-              pointer-events: none; transition: opacity .2s; }
-  .dot:hover .lbl { opacity: 1; }
-  @media (max-width: 900px) { #rail { display: none; } }
+  #rail{position:fixed;right:18px;top:50%;transform:translateY(-50%);
+        display:flex;flex-direction:column;gap:8px;z-index:100;}
+  #rail .dot{width:9px;height:9px;border-radius:50%;
+       background:rgba(26,24,20,0.18);cursor:pointer;position:relative;
+       transition:all .2s;}
+  #rail .dot:hover,#rail .dot.active{background:var(--ink);transform:scale(1.4);}
+  #rail .dot .lbl{position:absolute;right:18px;top:50%;transform:translateY(-50%);
+            background:var(--ink);color:var(--paper);
+            padding:4px 9px;font-family:var(--sans);font-size:.68rem;
+            white-space:nowrap;opacity:0;letter-spacing:.08em;text-transform:uppercase;
+            pointer-events:none;transition:opacity .2s;}
+  #rail .dot:hover .lbl{opacity:1;}
+  @media(max-width:1100px){#rail{display:none;}}
 
-  /* Chapter scaffold */
-  .chapter { max-width: var(--reading-w); margin: 0 auto;
-             padding: 72px 28px 24px; scroll-margin-top: 24px;
-             border-bottom: 1px solid var(--hairline); }
-  .chapter:last-of-type { border-bottom: 0; }
-  .ch-num { font-family: var(--font-mono); font-size: .76rem;
-            letter-spacing: .14em; text-transform: uppercase;
-            color: var(--muted); margin-bottom: 8px; }
-  .ch-title { font-family: var(--font-display); font-size: 1.95rem;
-              font-weight: 600; color: var(--ink-soft); line-height: 1.22;
-              letter-spacing: -.005em; }
-  .ch-title strong { color: var(--accent); font-weight: 700; }
-  .ch-hook { font-style: italic; color: var(--muted);
-             font-size: 1.08rem; margin: 8px 0 22px;
-             padding-bottom: 18px; border-bottom: 2px solid var(--border); }
-  .lead { font-size: 1.18rem; color: var(--ink-soft); margin-bottom: 20px; }
-  .chapter p { margin-bottom: 18px; }
+  /* Masthead (top thin-ruled bar) */
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:1px solid var(--ink);padding-bottom:14px;margin-bottom:32px;
+    font-family:var(--sans);text-transform:uppercase;letter-spacing:0.18em;
+    font-size:11px;color:var(--ink-soft);}
+  .masthead .logo{font-family:var(--serif);font-style:italic;font-weight:600;
+    font-size:18px;letter-spacing:0.04em;text-transform:none;color:var(--ink);}
 
-  /* Per-topic accent stripes (when the paper has 2–3 parallel concepts) */
-  .topic-a:before, .topic-b:before, .topic-c:before {
-    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px; border-radius: 2px;
-  }
-  .topic-a { position: relative; padding-left: 20px; }
-  .topic-a:before { background: var(--c-insight); }
-  .topic-b { position: relative; padding-left: 20px; }
-  .topic-b:before { background: var(--c-success); }
-  .topic-c { position: relative; padding-left: 20px; }
-  .topic-c:before { background: var(--c-danger); }
+  /* Hero */
+  .hero{margin:28px 0 56px;}
+  .hero .kicker{font-family:var(--sans);font-size:12px;
+    text-transform:uppercase;letter-spacing:0.32em;
+    color:var(--warm-red);margin-bottom:18px;}
+  .hero h1{font-family:var(--serif);font-weight:800;
+    font-size:72px;line-height:0.98;letter-spacing:-0.012em;margin:0 0 14px;}
+  .hero h1 em{font-family:"Cormorant Garamond",serif;
+    font-style:italic;font-weight:600;color:var(--warm-red);}
+  .hero h1 .ampersand{font-family:"Cormorant Garamond",serif;
+    font-style:italic;font-weight:400;color:var(--warm-red);}
+  .hero .subline{font-family:var(--serif);font-style:italic;
+    font-size:22px;color:var(--ink-soft);margin:6px 0 26px;max-width:780px;}
+  .editor-note{border-top:4px double var(--ink);border-bottom:1px solid var(--ink);
+    padding:22px 0 24px;max-width:780px;
+    font-family:var(--serif);font-size:19px;line-height:1.55;color:var(--ink);}
+  .editor-note .label{display:block;font-family:var(--sans);font-size:11px;
+    letter-spacing:0.28em;text-transform:uppercase;color:var(--warm-red);margin-bottom:10px;}
+  .editor-note .signoff{display:block;margin-top:14px;font-style:italic;
+    color:var(--ink-soft);font-size:16px;}
+  .hero-stats{display:flex;flex-wrap:wrap;gap:30px;margin:30px 0 0;
+    padding-top:18px;border-top:1px dotted var(--hairline);}
+  .hero-stats .v{font-family:var(--serif);font-weight:800;font-size:30px;
+    color:var(--warm-red);display:block;line-height:1;}
+  .hero-stats .l{font-family:var(--sans);font-size:10.5px;letter-spacing:0.22em;
+    color:var(--ink-soft);text-transform:uppercase;margin-top:4px;display:block;}
+  .hero .meta-line{margin-top:24px;font-family:var(--sans);font-size:12px;
+    letter-spacing:0.04em;color:var(--ink-soft);
+    display:flex;flex-wrap:wrap;gap:18px;align-items:center;}
+  .hero .meta-line .pill{font-family:var(--sans);font-size:10.5px;
+    letter-spacing:0.18em;text-transform:uppercase;font-weight:600;
+    background:var(--ink);color:var(--paper);padding:5px 11px;}
+  .hero .meta-line a{color:var(--warm-red);text-decoration:none;
+    border-bottom:1px solid var(--warm-red);}
+  @media(max-width:800px){.hero h1{font-size:46px;}.hero .subline{font-size:18px;}
+    .editor-note{font-size:17px;}}
 
-  /* Callout matrix */
-  .insight, .danger, .success, .warning, .definition {
-    border-left: 4px solid; background: #fff;
-    padding: 16px 20px; margin: 22px 0; border-radius: 0 4px 4px 0;
-  }
-  .insight    { border-color: var(--c-insight); background: #eef3fb; }
-  .danger     { border-color: var(--c-danger);  background: #fdf0ee; }
-  .success    { border-color: var(--c-success); background: #eef8f0; }
-  .warning    { border-color: var(--c-warning); background: #fdf5ee; }
-  .definition { border-color: var(--c-insight); background: #eef3fb; }
-  .insight .label, .danger .label, .success .label,
-  .warning .label, .definition .label {
-    font-family: var(--font-mono); font-size: .72rem;
-    letter-spacing: .1em; text-transform: uppercase;
-    font-weight: 700; margin-bottom: 6px; display: block;
-  }
-  .insight    .label { color: var(--c-insight); }
-  .danger     .label { color: var(--c-danger); }
-  .success    .label { color: var(--c-success); }
-  .warning    .label { color: var(--c-warning); }
-  .definition .label { color: var(--c-insight); }
+  /* Section opener (.branch) — magazine signature */
+  section.branch{margin:88px 0 0;}
+  .section-rule{height:7px;border:0;background:var(--accent);margin:0 0 6px;}
+  .section-rule.thin{height:1px;margin-top:6px;margin-bottom:28px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;
+    gap:24px;flex-wrap:wrap;margin:14px 0 8px;}
+  .section-head .head-l{display:flex;align-items:baseline;}
+  .section-head .numeral{font-family:var(--serif);font-weight:900;
+    font-size:88px;line-height:1;letter-spacing:-0.02em;
+    color:var(--accent);margin-right:18px;}
+  .section-head .titles{flex:1 1 360px;}
+  .section-head h2{font-family:var(--serif);font-weight:800;
+    font-size:38px;line-height:1.05;margin:0 0 6px;letter-spacing:-0.005em;}
+  .section-head h2 strong{color:var(--accent);font-weight:800;}
+  .section-head h2 em{font-style:italic;font-family:"Cormorant Garamond",serif;
+    font-weight:600;color:var(--accent);}
+  .section-head .branchcode{font-family:var(--sans);font-size:11px;
+    text-transform:uppercase;letter-spacing:0.28em;color:var(--ink-soft);}
+  .ornament{font-family:var(--serif);font-style:italic;font-size:22px;
+    color:var(--accent);text-align:center;letter-spacing:0.4em;
+    opacity:0.85;margin:6px 0 4px;}
+  .ch-hook{font-family:var(--serif);font-style:italic;color:var(--ink-soft);
+    font-size:18px;margin:14px 0 4px;}
 
-  /* Feynman block (dark card with oversized opening quote) */
-  .feynman { background: var(--c-feynman); color: #e8e8f0;
-             padding: 22px 26px; margin: 28px 0; border-radius: 4px;
-             position: relative; }
-  .feynman::before { content: '"'; position: absolute; top: -10px; left: 18px;
-                     font-size: 4rem; color: #4a4a7a; font-family: Georgia, serif;
-                     line-height: 1; }
-  .feynman p { font-style: italic; color: #d8d8f0; margin-bottom: 8px; }
-  .feynman .attribution { color: #9090b0; font-size: .82rem; font-style: normal;
-                          font-family: var(--font-mono); }
+  /* Per-section accent palettes */
+  .branch[data-accent="red"]    { --accent:var(--warm-red); --accent-bg:rgba(178,58,72,0.08); }
+  .branch[data-accent="indigo"] { --accent:var(--indigo);   --accent-bg:rgba(59,58,138,0.08); }
+  .branch[data-accent="forest"] { --accent:var(--forest);   --accent-bg:rgba(47,92,63,0.08); }
+  .branch[data-accent="amber"]  { --accent:var(--amber);    --accent-bg:rgba(196,122,24,0.10); }
+  .branch[data-accent="plum"]   { --accent:var(--plum);     --accent-bg:rgba(108,52,131,0.08); }
+  .branch[data-accent="slate"]  { --accent:var(--slate);    --accent-bg:rgba(30,90,138,0.08); }
 
-  /* Math box triple */
-  .math-box { background: #fef9e7; border: 1px solid var(--border);
-              border-radius: 4px; padding: 18px 22px; margin: 20px 0;
-              overflow-x: auto; }
-  .math-box .math-label { font-family: var(--font-mono); font-size: .72rem;
-                          letter-spacing: .1em; text-transform: uppercase;
-                          color: var(--muted); margin-bottom: 10px; }
-  .math-box .math-note  { font-size: .9rem; color: var(--muted);
-                          margin-top: 10px; font-style: italic; }
+  /* Body / drop cap */
+  .lede{font-family:var(--serif);font-size:21px;line-height:1.5;
+    margin:22px 0 24px;max-width:780px;}
+  .lede::first-letter{font-family:var(--serif);font-weight:800;
+    font-size:80px;line-height:0.86;float:left;
+    padding:6px 12px 0 0;margin-top:6px;color:var(--accent);}
+  .branch p,.branch ul,.branch ol{max-width:780px;}
+  .branch p{margin:0 0 16px;font-family:var(--serif);font-size:17px;line-height:1.74;}
+  .branch ul,.branch ol{margin:0 0 16px;padding-left:22px;font-family:var(--serif);font-size:17px;line-height:1.7;}
+  .branch li{margin-bottom:6px;}
+  .branch h3{font-family:var(--serif);font-weight:700;font-size:23px;line-height:1.25;
+    color:var(--ink);margin:36px 0 12px;letter-spacing:-0.005em;max-width:780px;}
+  .branch h3 .marker{font-family:var(--mono);font-size:11px;
+    color:var(--muted);font-weight:500;margin-right:10px;letter-spacing:0.1em;}
 
-  /* Worked example: concrete numerical walkthrough */
-  .worked-example { background: #fffbef; border-left: 6px double var(--accent);
-                    padding: 18px 22px; margin: 22px 0;
-                    border-radius: 0 4px 4px 0; }
-  .worked-example .we-label { font-family: var(--font-mono); font-size: .72rem;
-                              letter-spacing: .1em; text-transform: uppercase;
-                              color: var(--accent); font-weight: 700;
-                              margin-bottom: 10px; display: block; }
-  .worked-example .we-setup { font-style: italic; color: var(--ink-soft);
-                              margin-bottom: 10px; }
-  .worked-example .we-steps { margin: 6px 0 6px 22px; padding: 0; }
-  .worked-example .we-steps li { margin: 4px 0; }
-  .worked-example .we-takeaway { margin-top: 12px; padding: 10px 14px;
-                                 background: rgba(255,255,255,.7);
-                                 border-radius: 4px; font-size: .94rem;
-                                 color: var(--ink-soft); }
-  .worked-example .we-takeaway::before { content: "📌 "; }
+  /* Color-coded variables (define once, reuse everywhere) */
+  .v-x{color:var(--v-x);font-weight:600;}
+  .v-y{color:var(--v-y);font-weight:600;}
+  .v-z{color:var(--v-z);font-weight:600;}
+  .v-b{color:var(--v-b);font-weight:600;}
 
-  /* Naive vs. Insight comparison cards */
-  .compare { display: grid; grid-template-columns: 1fr 1fr;
-             gap: 16px; margin: 24px 0; }
-  @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
-  .compare > div { border: 1px solid var(--border); background: var(--surface);
-                   border-radius: 6px; padding: 16px 18px; }
-  .compare .naive       { border-top: 3px solid var(--muted); }
-  .compare .insight-card{ border-top: 3px solid var(--accent); }
-  .compare .label       { font-family: var(--font-mono); font-size: .72rem;
-                          letter-spacing: .1em; text-transform: uppercase;
-                          color: var(--muted); margin-bottom: 6px; display: block; }
-
-  /* Lab block (interactive sandbox) */
-  .lab { background: var(--paper-2); border: 1px solid var(--border);
-         border-radius: 6px; padding: 22px; margin: 28px 0; }
-  .lab-title { font-family: var(--font-mono); font-size: .8rem;
-               letter-spacing: .1em; text-transform: uppercase;
-               color: var(--ink-soft); margin-bottom: 8px;
-               display: flex; align-items: center; gap: 8px; }
-  .lab-reveal { font-size: .92rem; color: var(--muted);
-                margin-bottom: 14px; font-style: italic; }
-  .lab canvas, .lab svg { display: block; margin: 0 auto;
-                          max-width: 100%; border-radius: 4px;
-                          background: #fff; }
-  .ctrl-row { display: flex; align-items: center; gap: 14px;
-              margin-top: 14px; flex-wrap: wrap;
-              font-family: var(--font-mono); font-size: .85rem; }
-  .ctrl-row label { color: var(--muted); min-width: 70px; }
-  .ctrl-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
-  .ctrl-val { color: var(--accent); min-width: 48px; text-align: right; }
-  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .btn { padding: 6px 14px; background: var(--ink-soft); color: #f8f5ee;
-         border: none; border-radius: 3px; cursor: pointer; font-size: .85rem;
-         font-family: var(--font-mono); transition: opacity .15s; }
-  .btn:hover { opacity: .8; }
-  .btn.outline { background: transparent; border: 1px solid var(--ink-soft);
-                 color: var(--ink-soft); }
-  .lab-note { font-size: .82rem; color: var(--muted); margin-top: 12px;
-              font-style: italic; }
-  .step-dots { display: flex; gap: 6px; margin: 12px 0; align-items: center; }
-  .step-dots .d { width: 9px; height: 9px; border-radius: 50%;
-                  background: var(--border); transition: background .25s; }
-  .step-dots .d.active { background: var(--accent); }
-  .step-dots .d.done   { background: var(--c-success); }
-
-  /* Timeline (historical lineage) */
-  .timeline { position: relative; padding-left: 28px; margin: 24px 0; }
-  .timeline::before { content: ''; position: absolute; left: 7px; top: 8px;
-                      bottom: 8px; width: 2px; background: var(--border); }
-  .tl-item { position: relative; margin-bottom: 22px; }
-  .tl-dot { position: absolute; left: -24px; top: 6px;
-            width: 12px; height: 12px; border-radius: 50%;
-            background: var(--accent); border: 2px solid var(--paper);
-            box-shadow: 0 0 0 2px var(--accent); }
-  .tl-year { font-family: var(--font-mono); font-size: .78rem;
-             color: var(--accent); font-weight: 700; margin-bottom: 2px; }
-  .tl-title { font-weight: 600; margin-bottom: 2px; color: var(--ink-soft); }
-  .tl-desc  { color: var(--muted); font-size: .92rem; }
+  /* Optional per-topic stripes (when paper has 2-3 parallel topics) */
+  .topic-a,.topic-b,.topic-c{position:relative;padding-left:18px;}
+  .topic-a::before,.topic-b::before,.topic-c::before{
+    content:"";position:absolute;left:0;top:.35em;bottom:.35em;width:3px;border-radius:2px;}
+  .topic-a::before{background:var(--indigo);}
+  .topic-b::before{background:var(--forest);}
+  .topic-c::before{background:var(--warm-red);}
 
   /* Pull quote */
-  .pull-quote { font-family: var(--font-display); font-size: 1.32rem;
-                line-height: 1.48; color: var(--ink-soft);
-                border-left: 3px solid var(--ink-soft);
-                padding: 6px 0 6px 18px; margin: 32px 0;
-                font-style: italic; }
+  .pullquote,.pull-quote{margin:34px 0;padding:22px 26px 22px 28px;
+    border-left:6px solid var(--accent);background:var(--accent-bg);
+    font-family:var(--serif);font-style:italic;
+    font-size:26px;line-height:1.32;letter-spacing:-0.005em;
+    max-width:880px;color:var(--accent);}
+  .pullquote .who{display:block;margin-top:14px;font-style:normal;
+    font-family:var(--sans);font-size:12px;letter-spacing:0.22em;
+    text-transform:uppercase;color:var(--ink-soft);}
 
-  /* Comparison table */
-  table { width: 100%; border-collapse: collapse;
-          margin: 22px 0; font-size: .92rem; }
-  th { background: var(--ink-soft); color: #f8f5ee;
-       padding: 10px 14px; text-align: left;
-       font-weight: 500; font-family: var(--font-mono);
-       font-size: .78rem; letter-spacing: .05em; }
-  td { padding: 10px 14px; border-bottom: 1px solid var(--border);
-       vertical-align: top; }
-  tr:hover td { background: var(--paper-2); }
+  /* Math box (KaTeX wrapper) */
+  .math-box{background:var(--paper-soft);border:1px solid var(--hairline);
+    border-left:3px solid var(--accent);padding:18px 22px;margin:22px 0;
+    overflow-x:auto;max-width:880px;}
+  .math-box .math-label{font-family:var(--sans);font-size:10.5px;
+    letter-spacing:0.22em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin-bottom:10px;}
+  .math-box .math-note{font-family:var(--serif);font-size:15px;
+    color:var(--ink-soft);margin-top:12px;font-style:italic;line-height:1.6;}
+  .math-box .math-note strong{font-style:normal;color:var(--ink);}
 
-  /* External (agent-sourced supplementary content) */
-  aside.external { display: block; background: #f1ede1;
-                   border-left: 3px solid var(--muted);
-                   padding: 12px 16px; margin: 18px 0;
-                   border-radius: 0 4px 4px 0;
-                   font-size: .92em; color: var(--ink-soft); }
-  aside.external::before { content: "外部补充 · agent"; display: block;
-                           font-family: var(--font-mono); font-size: .68rem;
-                           letter-spacing: .12em; color: var(--muted);
-                           margin-bottom: 6px; }
+  /* Worked example */
+  .worked-example{background:var(--paper-soft);border-left:6px double var(--accent);
+    padding:18px 22px;margin:22px 0;max-width:880px;}
+  .worked-example .we-label{font-family:var(--sans);font-size:11px;
+    letter-spacing:0.22em;text-transform:uppercase;color:var(--accent);
+    font-weight:700;margin-bottom:10px;display:block;}
+  .worked-example .we-setup{font-family:var(--serif);font-style:italic;
+    color:var(--ink-soft);margin-bottom:10px;}
+  .worked-example .we-steps{margin:6px 0 6px 22px;padding:0;font-family:var(--serif);}
+  .worked-example .we-steps li{margin:4px 0;}
+  .worked-example .we-takeaway{margin-top:12px;padding:10px 14px;
+    background:rgba(255,255,255,.7);font-size:.94rem;
+    color:var(--ink-soft);font-family:var(--serif);}
+  .worked-example .we-takeaway::before{content:"📌 ";}
 
-  /* Uncertain (not fully digested) */
-  .uncertain { border-left: 4px solid #d97706; background: #fef3c7;
-               padding: 12px 16px; border-radius: 0 4px 4px 0;
-               margin: 16px 0; }
+  /* Callout matrix */
+  .insight,.danger,.success,.warning,.definition{
+    border-left:4px solid;background:var(--paper-soft);
+    padding:16px 22px;margin:22px 0;max-width:880px;font-family:var(--serif);}
+  .insight    {border-color:var(--indigo);   background:rgba(59,58,138,0.06);}
+  .danger     {border-color:var(--warm-red); background:rgba(178,58,72,0.06);}
+  .success    {border-color:var(--forest);   background:rgba(47,92,63,0.06);}
+  .warning    {border-color:var(--amber);    background:rgba(168,104,16,0.08);}
+  .definition {border-color:var(--plum);     background:rgba(108,52,131,0.06);}
+  .insight .label,.danger .label,.success .label,
+  .warning .label,.definition .label{
+    font-family:var(--sans);font-size:10.5px;
+    letter-spacing:0.22em;text-transform:uppercase;font-weight:700;
+    margin-bottom:8px;display:block;}
+  .insight    .label{color:var(--indigo);}
+  .danger     .label{color:var(--warm-red);}
+  .success    .label{color:var(--forest);}
+  .warning    .label{color:var(--amber);}
+  .definition .label{color:var(--plum);}
+  .insight p,.danger p,.success p,.warning p,.definition p{margin:0 0 8px;font-size:16px;line-height:1.66;}
 
-  /* Color-coded variables */
-  .v-x { color: var(--v-x); font-weight: 600; }
-  .v-y { color: var(--v-y); font-weight: 600; }
-  .v-z { color: var(--v-z); font-weight: 600; }
-  .v-b { color: var(--v-b); font-weight: 600; }
+  /* Feynman block (dark plum-bordered card) */
+  .feynman{background:#262432;color:#ece6f4;
+    padding:24px 30px 22px;margin:30px 0;position:relative;
+    max-width:880px;border-left:4px solid var(--plum);}
+  .feynman::before{content:"\201C";position:absolute;top:-8px;left:18px;
+    font-size:5rem;color:#5a4a8a;font-family:Georgia,serif;line-height:1;}
+  .feynman p{font-family:var(--serif);font-style:italic;color:#dcd6f0;
+    margin:0 0 8px;font-size:18px;line-height:1.55;}
+  .feynman .attribution{color:#9890b8;font-size:11px;font-style:normal;
+    font-family:var(--sans);letter-spacing:0.18em;text-transform:uppercase;}
+
+  /* Compare cards */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:26px 0;max-width:880px;}
+  @media(max-width:800px){.compare{grid-template-columns:1fr;}}
+  .compare > div{border:1px solid var(--hairline);background:var(--paper-soft);
+    padding:18px 20px;}
+  .compare .naive       {border-top:3px solid var(--muted);}
+  .compare .insight-card{border-top:3px solid var(--accent);}
+  .compare .label{font-family:var(--sans);font-size:10.5px;
+    letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:6px;display:block;font-weight:600;}
+  .compare .insight-card .label{color:var(--accent);}
+  .compare h4{font-family:var(--serif);font-size:18px;font-weight:700;
+    color:var(--ink);margin:0 0 8px;}
+  .compare ul{margin:6px 0 0 18px;font-size:15px;line-height:1.6;}
+  .compare li{margin-bottom:4px;}
+
+  /* Lab block (interactive sandbox) */
+  .lab{background:var(--paper-soft);border:1px solid var(--hairline);
+    border-top:3px solid var(--accent);padding:24px 26px;margin:32px 0;max-width:1000px;}
+  .lab-title{font-family:var(--sans);font-size:11px;
+    letter-spacing:0.22em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;
+    margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .lab-reveal{font-family:var(--serif);font-style:italic;
+    font-size:15px;color:var(--ink-soft);margin-bottom:16px;line-height:1.6;}
+  .lab canvas,.lab svg{display:block;margin:0 auto;max-width:100%;
+    background:#fff;border:1px solid var(--hairline);}
+  .ctrl-row{display:flex;align-items:center;gap:14px;margin-top:14px;
+    flex-wrap:wrap;font-family:var(--mono);font-size:13px;}
+  .ctrl-row label{color:var(--muted);min-width:80px;}
+  .ctrl-row input[type=range]{flex:1;min-width:140px;accent-color:var(--accent);}
+  .ctrl-val{color:var(--accent);min-width:54px;text-align:right;font-weight:600;}
+  .btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .btn{padding:7px 14px;background:var(--ink);color:var(--paper);
+    border:none;cursor:pointer;font-size:12px;font-family:var(--sans);
+    transition:opacity .15s;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;}
+  .btn:hover{opacity:.84;}
+  .btn.outline{background:transparent;border:1px solid var(--ink);color:var(--ink);}
+  .btn.toggle.on{background:var(--accent);}
+  .btn.toggle{background:var(--muted);}
+  .lab-note{font-family:var(--serif);font-style:italic;
+    font-size:14px;color:var(--ink-soft);margin-top:14px;line-height:1.62;}
+  .step-dots{display:flex;gap:6px;margin-top:12px;}
+  .step-dots .d{width:8px;height:8px;border-radius:50%;background:rgba(26,24,20,0.18);}
+  .step-dots .d.active{background:var(--accent);}
+  .step-dots .d.done{background:var(--muted);}
+
+  /* Tables */
+  table{width:100%;max-width:880px;border-collapse:collapse;margin:24px 0;
+    font-size:14.5px;background:var(--paper-soft);
+    border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);}
+  th{background:var(--ink);color:var(--paper);
+    padding:10px 14px;text-align:left;font-weight:600;
+    font-family:var(--sans);font-size:11px;
+    letter-spacing:0.14em;text-transform:uppercase;}
+  td{padding:10px 14px;border-bottom:1px solid var(--hairline);
+    vertical-align:top;font-family:var(--serif);font-size:15px;}
+  tr:last-child td{border-bottom:0;}
+  tr:hover td{background:var(--paper-deep);}
+  .num{font-family:var(--mono);text-align:right;font-size:13.5px;}
+  .num.win{color:var(--forest);font-weight:700;}
+  .num.lose{color:var(--muted);}
+  tr.ours-row td{background:rgba(47,92,63,0.10) !important;font-weight:600;}
+
+  /* External (agent-sourced supplementary) */
+  aside.external{display:block;background:var(--paper-soft);
+    border-left:3px solid var(--muted);padding:14px 20px;margin:22px 0;max-width:880px;
+    font-family:var(--serif);font-size:15px;color:var(--ink-soft);line-height:1.66;}
+  aside.external::before{content:"外部补充 · agent";display:block;
+    font-family:var(--sans);font-size:10.5px;letter-spacing:0.22em;
+    color:var(--muted);margin-bottom:6px;text-transform:uppercase;font-weight:600;}
+  aside.external a{color:var(--warm-red);text-decoration:none;
+    border-bottom:1px solid var(--warm-red);}
+
+  /* Uncertain marker */
+  .uncertain{border-left:4px solid var(--amber);background:rgba(168,104,16,0.10);
+    padding:12px 18px;margin:18px 0;font-size:15px;font-family:var(--serif);max-width:880px;}
+
+  /* Timeline */
+  .timeline{position:relative;padding-left:28px;margin:28px 0;max-width:880px;}
+  .timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;
+    width:2px;background:var(--hairline);}
+  .tl-item{position:relative;margin-bottom:24px;}
+  .tl-dot{position:absolute;left:-24px;top:7px;width:11px;height:11px;
+    border-radius:50%;background:var(--accent);
+    border:2px solid var(--paper);box-shadow:0 0 0 2px var(--accent);}
+  .tl-item.highlight .tl-dot{background:var(--warm-red);box-shadow:0 0 0 2px var(--warm-red);}
+  .tl-year{font-family:var(--mono);font-size:12px;color:var(--accent);
+    font-weight:700;margin-bottom:2px;letter-spacing:0.04em;}
+  .tl-title{font-family:var(--serif);font-weight:700;font-size:17.5px;
+    color:var(--ink);margin-bottom:2px;}
+  .tl-desc{font-family:var(--serif);color:var(--ink-soft);font-size:15.5px;line-height:1.6;}
 
   /* Editorial divider */
-  .ch-end { text-align: center; margin: 48px 0 12px;
-            color: var(--border); font-size: 1.2rem;
-            letter-spacing: .5em; }
+  .ch-end{text-align:center;margin:52px 0 12px;
+    color:var(--accent);font-size:1.2rem;letter-spacing:.6em;opacity:0.6;}
 
-  /* Code block: rounded with warm tone */
-  pre[class*="language-"] { border-radius: 6px; padding: 14px 18px !important;
-                            font-size: .88rem; }
+  /* Code */
+  pre[class*="language-"]{padding:14px 18px !important;font-size:.86rem;max-width:880px;}
 
-  /* Footer */
-  footer.page-foot { background: var(--ink-soft); color: #c8c2b8;
-                     padding: 32px 24px; text-align: center;
-                     font-family: var(--font-mono); font-size: .82rem;
-                     line-height: 1.6; }
-  footer.page-foot a { color: #e8d8b8; text-decoration: none; }
+  /* Afterword (kicker box near the end) */
+  .afterword{margin-top:96px;padding:28px 32px 30px;
+    border:1px solid var(--ink);background:var(--paper-soft);max-width:880px;}
+  .afterword h4{font-family:var(--serif);font-style:italic;font-weight:600;
+    font-size:22px;margin:0 0 12px;color:var(--ink-soft);}
+  .afterword p,.afterword li{font-family:var(--serif);font-size:15px;line-height:1.66;}
+  .afterword ul{margin:6px 0 0;padding-left:20px;}
+  .afterword .label{display:inline-block;font-family:var(--sans);font-size:11px;
+    letter-spacing:0.22em;text-transform:uppercase;
+    color:var(--warm-red);margin-bottom:8px;font-weight:600;}
 
-  @media (max-width: 700px) {
-    body { font-size: 16px; }
-    .chapter { padding: 48px 18px 18px; }
-    .hero h1 { font-size: 1.7rem; }
-    .hero { padding: 48px 16px 36px; }
+  /* Colophon footer */
+  .colophon{margin-top:56px;padding-top:18px;border-top:1px solid var(--ink);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:24px;
+    font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-soft);}
+  .colophon .col{flex:1 1 220px;}
+  .colophon h5{font-family:var(--sans);font-size:10.5px;letter-spacing:0.22em;
+    color:var(--muted);margin:0 0 8px;font-weight:600;text-transform:uppercase;font-style:normal;}
+  .colophon a{color:var(--ink-soft);}
+
+  @media(max-width:800px){
+    .section-head .numeral{font-size:64px;}
+    .section-head h2{font-size:28px;}
+    .lede{font-size:18px;}
+    .lede::first-letter{font-size:60px;}
+    .pullquote{font-size:20px;}
   }
 </style>
 </head>
@@ -554,46 +650,80 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 
 <div id="progress"><div></div></div>
 
-<!-- Right-side nav-dot rail -->
 <nav id="rail" aria-label="章节导航">
   <div class="dot active" data-target="ch0"><span class="lbl">困境</span></div>
   <div class="dot" data-target="ch1"><span class="lbl">关键 insight</span></div>
-  <div class="dot" data-target="ch2"><span class="lbl">怎么训</span></div>
+  <div class="dot" data-target="chN"><span class="lbl">脉络</span></div>
   <!-- add more as needed -->
 </nav>
 
-<!-- Hero -->
-<header class="hero">
-  <div class="eyebrow">Paper · 第一性原理 · Karpathy 风格</div>
-  <h1><!-- paper main title (Chinese) --><br><em><!-- one-line subtitle (Chinese) --></em></h1>
-  <p class="thesis"><!-- one sentence: what this paper solves and what the key insight is (Chinese) --></p>
-  <div class="meta">
-    <span><!-- authors · year · venue --></span>
-    <span>预计阅读 ~XX 分钟</span>
-    <a href="./<!-- same-name PDF -->">原 PDF</a>
-  </div>
+<div class="page">
+
+<!-- ============ MASTHEAD ============ -->
+<header class="masthead">
+  <div class="logo">A Paper Reading &mdash; Private Edition</div>
+  <div>Vol. <!-- year --> &middot; <!-- short paper handle --> &middot; <!-- venue --></div>
 </header>
 
-<!-- ═══ Chapter 0 — field-level predicament (begin with why) ═══ -->
-<section class="chapter" id="ch0">
-  <div class="ch-num">Chapter 0</div>
-  <h2 class="ch-title">领域级<strong>根本困境</strong></h2>
-  <p class="ch-hook">在理解这篇 paper 之前，我们必须先理解它在解决什么问题。</p>
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="kicker">Paper Reading &middot; 第一性原理 &middot; Karpathy 风格 &middot; ~XX min</div>
+  <h1><!-- main title (Chinese) --><span class="ampersand"> &mdash; </span><em><!-- subtitle phrase (Chinese) --></em></h1>
+  <p class="subline"><!-- one-sentence thesis (Chinese): what this paper solves and what the key insight is --></p>
 
-  <p class="lead"><!-- concrete physical scenario in Chinese: assume you have X, you want Y, mathematically this means Z --></p>
+  <div class="editor-note">
+    <span class="label">Editor&rsquo;s Note &middot; 阅读契约</span>
+    <!-- 2-3 sentences telling the reader the chapter map and what trade you're making with the page budget. -->
+    <span class="signoff">&mdash; learn-paper / <!-- ISO date -->，配茶</span>
+  </div>
+
+  <!-- optional hero stats -->
+  <div class="hero-stats">
+    <div><span class="v">+X.X</span><span class="l">headline metric</span></div>
+    <div><span class="v">YY%</span><span class="l">improvement</span></div>
+  </div>
+
+  <div class="meta-line">
+    <span class="pill"><!-- venue / year --></span>
+    <span><!-- authors et al. --></span>
+    <span><!-- affiliations --></span>
+    <a href="./<!-- same-name PDF -->">原 PDF</a>
+    <a href="https://arxiv.org/abs/XXXX.XXXXX">arXiv</a>
+  </div>
+</section>
+
+<!-- ═══ Chapter 0 — field-level predicament (begin with why) ═══ -->
+<section class="branch" data-accent="red" id="ch0">
+  <hr class="section-rule" />
+  <div class="section-head">
+    <div class="head-l">
+      <div class="numeral">I.</div>
+      <div class="titles">
+        <h2>领域级<strong>根本困境</strong></h2>
+        <div class="branchcode">chapter_0 &middot; the diagnosis</div>
+      </div>
+    </div>
+  </div>
+  <hr class="section-rule thin" />
+  <div class="ornament">&sect; &nbsp;&middot;&nbsp; &sect; &nbsp;&middot;&nbsp; &sect;</div>
+
+  <p class="ch-hook">在欢呼&ldquo;<!-- new paradigm name -->&rdquo;之前，先看清这道题原本卡在哪。</p>
+
+  <p class="lede"><!-- concrete physical scenario in Chinese: assume you have X, you want Y, mathematically this means Z. The drop cap appears on the first letter automatically. --></p>
+
   <p><!-- translate Y to math; first appearance of key variables — assign them colors via <span class="v-x">x</span> etc. --></p>
 
   <div class="insight">
-    <span class="label">核心问题</span>
+    <span class="label">领域级硬题</span>
     <p><!-- one-sentence statement of the field-wide bottleneck --></p>
   </div>
 
-  <p>最自然的想法：<!-- the naive idea --></p>
+  <h3><span class="marker">§ 0.1</span>最自然的做法 = <!-- naive approach --></h3>
 
   <div class="math-box">
-    <div class="math-label"><!-- e.g. 能量模型 Energy-Based Model --></div>
+    <div class="math-label"><!-- e.g. Naive · 直接建模 p(x) --></div>
     \[ <!-- naive formula --> \]
-    <div class="math-note"><!-- plain-Chinese explanation --></div>
+    <div class="math-note"><!-- plain-Chinese explanation. Use <strong> to mark the killer assumption. --></div>
   </div>
 
   <div class="danger">
@@ -602,45 +732,57 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
   </div>
 
   <table>
-    <tr><th>模型</th><th>如何绕开</th><th>代价</th></tr>
-    <tr><td>VAE</td><td>用 ELBO 近似下界</td><td>样本质量受限</td></tr>
-    <tr><td>GAN</td><td>不建模 p(x)，用判别器</td><td>训练不稳定</td></tr>
-    <tr><td><strong>这篇 paper</strong></td><td><strong>…</strong></td><td><strong>…</strong></td></tr>
+    <tr><th>路线</th><th>怎么绕开</th><th>代价</th></tr>
+    <tr><td><strong>VAE</strong></td><td>用 ELBO 近似下界</td><td>样本质量受限</td></tr>
+    <tr><td><strong>GAN</strong></td><td>不建模 p(x)，用判别器</td><td>训练不稳定</td></tr>
+    <tr class="ours-row"><td><strong>这篇 paper</strong></td><td><!-- … --></td><td><!-- … --></td></tr>
   </table>
 
   <div class="feynman">
     <p>如果你不能直接解决一个问题，先问：我真正需要的是什么？也许我需要的比我以为的少得多。</p>
-    <div class="attribution">— Feynman 式思维</div>
+    <div class="attribution">&mdash; 这篇 paper 的元洞察，下一章展开</div>
   </div>
 
-  <div class="ch-end">· · ·</div>
+  <div class="ch-end">&middot; &middot; &middot;</div>
 </section>
 
 <!-- ═══ Chapter 1 — key insight ═══ -->
-<section class="chapter" id="ch1">
-  <div class="ch-num">Chapter 1</div>
-  <h2 class="ch-title">天才洞察：<strong><!-- key concept (Chinese) --></strong></h2>
+<section class="branch" data-accent="indigo" id="ch1">
+  <hr class="section-rule" />
+  <div class="section-head">
+    <div class="head-l">
+      <div class="numeral">II.</div>
+      <div class="titles">
+        <h2>天才洞察：<strong><!-- key concept (Chinese) --></strong></h2>
+        <div class="branchcode">chapter_1 &middot; the key insight</div>
+      </div>
+    </div>
+  </div>
+  <hr class="section-rule thin" />
+  <div class="ornament">&loz; &nbsp;&middot;&nbsp; &loz; &nbsp;&middot;&nbsp; &loz;</div>
+
   <p class="ch-hook"><!-- italic one-line hook (Chinese) --></p>
 
-  <p class="lead"><!-- physical intuition first: standing on a mountain, you want to reach the top --></p>
-  <p><!-- translate the intuition to math; introduce new symbols --></p>
+  <p class="lede"><!-- physical intuition first --></p>
+
+  <p><!-- translate the intuition to math; introduce new symbols using v-x/y/z color spans --></p>
 
   <div class="math-box">
     <div class="math-label"><!-- e.g. Score Function --></div>
     \[ s(x) = \nabla_x \log p(x) \]
-    <div class="math-note"><!-- plain Chinese: this is the gradient of log-density; at every point it points toward "uphill in probability" --></div>
+    <div class="math-note"><!-- plain Chinese: gradient of log-density; at every point it points "uphill in probability" --></div>
   </div>
 
   <!-- Worked example for principle 3: smallest concrete instance -->
   <div class="worked-example">
-    <span class="we-label">Worked example · 1D 标准正态</span>
-    <div class="we-setup">取 <span class="v-x">p(x) = (1/√2π)·e^(−x²/2)</span>，求 <span class="v-y">s(x) = ∇log p(x)</span>。</div>
+    <span class="we-label">Worked example &middot; 1D 标准正态</span>
+    <div class="we-setup">取 <span class="v-x">p(x) = (1/&radic;2&pi;)&middot;e^(&minus;x&sup2;/2)</span>，求 <span class="v-y">s(x) = &nabla;log p(x)</span>。</div>
     <ol class="we-steps">
-      <li>log p(x) = −x²/2 − log√(2π)</li>
-      <li>∇ log p(x) = −x</li>
-      <li>所以 <span class="v-y">s(x) = −x</span>。在 <span class="v-x">x = 2</span> 处，score = −2，长度等于距离，方向指回原点。</li>
+      <li>log p(x) = &minus;x&sup2;/2 &minus; log&radic;(2&pi;)</li>
+      <li>&nabla; log p(x) = &minus;x</li>
+      <li>所以 <span class="v-y">s(x) = &minus;x</span>。在 <span class="v-x">x = 2</span> 处，score = &minus;2，长度等于距离，方向指回原点。</li>
     </ol>
-    <div class="we-takeaway">"score" 对正态分布只是<strong>负的位置</strong>——每个点都被以"距离"为大小的力拉回零点。一旦换成混合分布、流形数据，这个"拉回最近高密度区"的图像就成了 Langevin 采样的物理基础。</div>
+    <div class="we-takeaway">&ldquo;score&rdquo; 对正态分布只是<strong>负的位置</strong>&mdash;&mdash;每个点都被以&ldquo;距离&rdquo;为大小的力拉回零点。换成混合分布、流形数据后，这张&ldquo;拉回最近高密度区&rdquo;的图像就成了 Langevin 采样的物理基础。</div>
   </div>
 
   <div class="success">
@@ -648,12 +790,16 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
     <p><!-- why this insight dissolves the predicament --></p>
   </div>
 
-  <div class="lab">
-    <div class="lab-title">⚗ <!-- lab name (Chinese) --></div>
-    <p class="lab-reveal">此 lab 揭示：<!-- specific insight --> · 对应 paper §X</p>
+  <blockquote class="pullquote">&ldquo;<!-- a one-line distillation of the chapter's punchline -->&rdquo;
+    <span class="who">&mdash; 章节核心 &middot; <!-- short attribution --></span>
+  </blockquote>
+
+  <div class="lab" id="lab1">
+    <div class="lab-title">Field Study &middot; Lab 1 &middot; <!-- lab name (Chinese) --></div>
+    <p class="lab-reveal">此 lab 揭示：<!-- specific insight --> &middot; 对应 paper §X</p>
     <canvas id="lab1-canvas" width="760" height="320"></canvas>
     <div class="ctrl-row">
-      <label>参数 σ</label>
+      <label>参数 &sigma;</label>
       <input type="range" id="lab1-sigma" min="0" max="1" step=".01" value=".5">
       <span class="ctrl-val" id="lab1-sigmaV">0.50</span>
     </div>
@@ -664,51 +810,97 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
     <div class="lab-note"><!-- what to do + what to watch for --></div>
   </div>
 
-  <div class="ch-end">· · ·</div>
+  <div class="ch-end">&middot; &middot; &middot;</div>
 </section>
 
 <!-- ═══ Chapter N — historical lineage (when applicable) ═══ -->
-<section class="chapter" id="chN">
-  <div class="ch-num">Chapter N</div>
-  <h2 class="ch-title">这条路是怎么走过来的：<strong>历史脉络</strong></h2>
+<section class="branch" data-accent="slate" id="chN">
+  <hr class="section-rule" />
+  <div class="section-head">
+    <div class="head-l">
+      <div class="numeral">N.</div>
+      <div class="titles">
+        <h2>这条路是怎么走过来的：<strong>历史脉络</strong></h2>
+        <div class="branchcode">chapter_N &middot; the lineage</div>
+      </div>
+    </div>
+  </div>
+  <hr class="section-rule thin" />
+  <div class="ornament">&para; &nbsp;&middot;&nbsp; &para; &nbsp;&middot;&nbsp; &para;</div>
+
   <p class="ch-hook">这篇 paper 不是凭空冒出来的。</p>
 
   <div class="timeline">
     <div class="tl-item">
       <div class="tl-dot"></div>
-      <div class="tl-year">2005 · Hyvärinen</div>
+      <div class="tl-year">2005 &middot; Hyv&auml;rinen</div>
       <div class="tl-title">Score Matching</div>
       <div class="tl-desc">证明可以不用 Z 来学 score function，但计算代价高</div>
     </div>
     <div class="tl-item">
       <div class="tl-dot"></div>
-      <div class="tl-year">2011 · Vincent</div>
+      <div class="tl-year">2011 &middot; Vincent</div>
       <div class="tl-title">Denoising Score Matching</div>
       <div class="tl-desc">去噪 = 学 score，计算高效</div>
     </div>
-    <!-- … -->
+    <div class="tl-item highlight">
+      <div class="tl-dot"></div>
+      <div class="tl-year"><!-- year · this paper --></div>
+      <div class="tl-title"><!-- this paper title --></div>
+      <div class="tl-desc"><!-- one-line distillation of how it builds on the prior step --></div>
+    </div>
   </div>
 
-  <div class="ch-end">· · ·</div>
+  <div class="ch-end">&middot; &middot; &middot;</div>
 </section>
 
-<footer class="page-foot">
-  <div>引用：<!-- inline BibTeX line --></div>
-  <div>生成 <!-- ISO timestamp --> · 由 agent 基于原 PDF + 联网补充整理</div>
+<!-- ============ AFTERWORD ============ -->
+<aside class="afterword">
+  <span class="label">阅读说明 &middot; Afterword</span>
+  <h4>关于这次整理我做了哪些选择</h4>
+  <p><!-- 2-3 lines on what got 80% of the page budget and why; explicitly note any uncertain spots and any topics deliberately collapsed to a footnote --></p>
+  <ul>
+    <li><strong>章节配色</strong>：<!-- which accents map to which chapters and why --></li>
+    <li><strong>变量颜色</strong>：<!-- which symbols share which colors --></li>
+    <li><strong>未收</strong>：<!-- topics intentionally not covered --></li>
+  </ul>
+</aside>
+
+<!-- ============ COLOPHON ============ -->
+<footer class="colophon">
+  <div class="col">
+    <h5>Citation</h5>
+    <!-- inline BibTeX line -->
+  </div>
+  <div class="col">
+    <h5>Resources</h5>
+    <a href="./<!-- same-name PDF -->">原 PDF</a><br/>
+    <a href="https://arxiv.org/abs/XXXX.XXXXX">arXiv</a><br/>
+    <!-- project page / code if any -->
+  </div>
+  <div class="col">
+    <h5>Colophon</h5>
+    Set in Playfair Display &amp; Cormorant Garamond &amp; Inter.<br/>
+    Math by KaTeX, code by Prism.<br/>
+    Single file &middot; CDN-self-contained.<br/>
+    Generated <!-- ISO timestamp --> by learn-paper.
+  </div>
 </footer>
 
+</div>
+
 <script>
-  // Top progress bar — width tracks scroll fraction
+  /* Top progress bar — width tracks scroll fraction */
   const prog = document.querySelector('#progress > div');
   window.addEventListener('scroll', () => {
     const h = document.documentElement;
-    const p = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
+    const p = (h.scrollTop) / Math.max(1, h.scrollHeight - h.clientHeight);
     prog.style.width = (p * 100) + '%';
   }, { passive: true });
 
-  // Right-rail dot highlight via IntersectionObserver
+  /* Right-rail dot highlight via IntersectionObserver — sections use .branch now */
   const dots = document.querySelectorAll('#rail .dot');
-  const sections = [...document.querySelectorAll('section.chapter')];
+  const sections = [...document.querySelectorAll('section.branch')];
   dots.forEach(d => d.addEventListener('click', () => {
     const t = document.getElementById(d.dataset.target);
     if (t) t.scrollIntoView({ behavior: 'smooth' });
@@ -766,26 +958,39 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 
 ### CSS class quick reference
 
-| Class | Purpose | Notes |
+| Class / element | Purpose | Notes |
 |---|---|---|
-| `.hero` | Top cover | Dark background + display font + eyebrow + thesis + meta |
-| `#progress` | Top 3px scroll progress bar | Fixed; width tracks scroll fraction |
-| `#rail .dot` | Right-side nav-dot rail | Hover reveals chapter label |
-| `.chapter` `.ch-num` `.ch-title` `.ch-hook` `.lead` | Chapter scaffold | Every chapter needs all four |
-| `.insight` `.danger` `.success` `.warning` `.definition` | 5-color semantic callouts | Inner `<span class="label">` for the eyebrow |
-| `.feynman` | Dark-card meta-insight block | Oversized opening quote glyph + attribution |
-| `.math-box` `.math-label` `.math-note` | Math triple | Mono label + LaTeX + plain-Chinese note |
-| `.worked-example` `.we-label` `.we-setup` `.we-steps` `.we-takeaway` | Concrete numerical walkthrough | Required per new concept |
-| `.compare > .naive` `.compare > .insight-card` | Naive vs. paper-solution comparison | Two-column grid |
-| `.lab` `.lab-title` `.lab-reveal` `.ctrl-row` `.btn-row` `.lab-note` | Interactive sandbox | Reveal line is mandatory |
-| `.step-dots` `.d.active/.done` | Multi-step algorithm state indicator | For sequenced demos |
-| `.timeline` `.tl-item` `.tl-dot` `.tl-year` `.tl-title` `.tl-desc` | Historical lineage | Strongly recommended for papers in a clear chain |
-| `.pull-quote` | Inline punch-line | Display font + left rule |
-| `aside.external` | Agent-sourced external addition | Self-labels with "外部补充 · agent" |
+| `.masthead` `.logo` | Top thin-ruled magazine bar | Italic Playfair logo left, mono uppercase volume info right |
+| `.hero` `.kicker` `h1 em` `h1 .ampersand` `.subline` | Editorial hero on warm paper | No dark gradient. `<em>` italic + warm-red `.ampersand` separator |
+| `.editor-note` `.label` `.signoff` | Hero contract block | `border-top: 4px double` + `border-bottom: 1px` ink rules |
+| `.hero-stats` `.v` `.l` | Optional headline-number row | Big serif value + tiny mono caption |
+| `.hero .meta-line` `.pill` | Authors / venue / links row | Black `pill` chip + warm-red `<a>` |
+| `#progress` | Top 2px scroll progress bar | Fixed; width tracks scroll fraction; ink color (low saturation) |
+| `#rail .dot` | Right-side nav-dot rail | Hover reveals uppercase mono label |
+| `section.branch[data-accent]` | Editorial section opener | Accent ∈ {`red`,`indigo`,`forest`,`amber`,`plum`,`slate`} drives `--accent` |
+| `.section-rule` `.section-rule.thin` | 7px top + 1px under-rule | Both colored by `--accent` |
+| `.section-head .numeral` `.titles h2 strong/em` `.branchcode` | Big Roman numeral + h2 + tiny code | Numeral in 88px Playfair 900; branchcode in mono uppercase |
+| `.ornament` | Italic glyph row (`§ · § · §`) | Rotate glyph between consecutive chapters |
+| `.ch-hook` | Italic Cormorant one-liner under section opener | Replaces the old `.ch-hook` border style |
+| `.lede` | Opening paragraph with drop cap | First letter floats at 80px, colored by `--accent` |
+| `.branch h3` `.marker` | Sub-heads inside chapters | Playfair 700 + small mono `§ X.Y` marker |
+| `.pullquote` `.who` (also `.pull-quote`) | Inline italic punch-line | 6px accent left-border, paper-soft accent-tinted bg, attribution in mono caps |
+| `.math-box` `.math-label` `.math-note` | Math triple | Inter-caps label + LaTeX + italic Cormorant note |
+| `.worked-example` `.we-label` `.we-setup` `.we-steps` `.we-takeaway` | Concrete numerical walkthrough | Required per new concept; `we-label` in Inter caps |
+| `.insight` `.danger` `.success` `.warning` `.definition` | 5-color semantic callouts | Paper-soft fills; inner `<span class="label">` in Inter caps |
+| `.feynman` `.attribution` | Dark plum-bordered meta-insight card | Oversized `"` glyph + italic Cormorant body |
+| `.compare > .naive` `.compare > .insight-card` | Naive vs. paper-solution two-col | Sharp-corner paper-soft cards with mono `.label` eyebrow |
+| `.lab` `.lab-title` `.lab-reveal` `.ctrl-row` `.btn-row` `.lab-note` | Interactive sandbox | Title reads `Field Study · Lab N · …`; reveal line mandatory |
+| `.step-dots .d.active/.done` | Multi-step algorithm state indicator | For sequenced demos |
+| `table` `th` `td.num.win/.lose` `tr.ours-row` | Editorial table | Ink header bar + paper-soft body, mono numerics |
+| `.timeline` `.tl-item.highlight` `.tl-dot` `.tl-year` `.tl-title` `.tl-desc` | Historical lineage | Highlight item turns warm-red |
+| `aside.external` | Agent-sourced external addition | Self-labels with "外部补充 · agent" + warm-red links |
 | `.uncertain` | Not-fully-digested marker | Lead with `⚠` |
 | `.v-x` `.v-y` `.v-z` `.v-b` | Color-coded variables | Same hex used in formulas / SVG / inline prose |
-| `.ch-end` `· · ·` | Chapter divider | Never use `<hr>` |
 | `.topic-a/b/c` | Per-topic accent stripe | Only when paper has 2–3 parallel concepts |
+| `.ch-end` `· · ·` | Chapter divider | Accent-colored at 0.6 opacity; never `<hr>` |
+| `.afterword` `.label` `h4` | End-of-article kicker box | Ink-bordered paper-soft frame; for "what I chose / excluded" |
+| `.colophon` `.col` `h5` | Three-column footer | Italic Cormorant body + tiny Inter mono caps headers |
 
 ## Self-audit checklist (run through every item before shipping)
 
@@ -799,17 +1004,24 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 - [ ] Every new term, on first appearance, gets a one-line intuition anchor before its definition or formula.
 
 **Visual / components**
-- [ ] At least **3 different** callout types in use (not the entire page in `.insight`).
+- [ ] **Masthead** present (italic logo + uppercase letterspaced volume info, divided by 1px ink rule).
+- [ ] **Hero on warm paper** (`#f4ecdd` body + dotted texture, no dark gradient): kicker + Playfair `<h1>` with `<em>` + ampersand + Cormorant `.subline` + `.editor-note` (with double-rule + thin-rule frame, `.label`, `.signoff`).
+- [ ] Each chapter is `<section class="branch" data-accent="…">` with **section-rule (7px) → numeral (`I.`–`X.`) → `<h2>` with `<strong>` accent keyword → `.branchcode` → section-rule.thin → ornament**. No bare `.chapter` blocks left over from the old skeleton.
+- [ ] **`.lede` opens each chapter** with a drop cap colored by `--accent`. Subsequent paragraphs in serif at 17 / 1.74.
+- [ ] **At least one `.pullquote`** with `.who` attribution in the article.
+- [ ] **`.afterword`** (ink-bordered kicker box) and **`.colophon`** (three-column italic footer) present.
+- [ ] **At least 3 different** callout types in use (not the entire page in `.insight`).
 - [ ] At least **1** math-box triple (label + LaTeX + math-note).
 - [ ] At least **1** worked example.
 - [ ] At least **1** naive vs. insight `.compare` block.
-- [ ] At least **1** lab block with the `lab-reveal` line filled in.
+- [ ] At least **1** lab block with `Field Study · Lab N · …` title and the `lab-reveal` line filled in.
 - [ ] At least **1** SVG / canvas figure (no "figure missing").
-- [ ] If the paper sits in a clear lineage, a `.timeline` is present.
+- [ ] If the paper sits in a clear lineage, a `.timeline` is present (latest item flagged `.tl-item.highlight`).
 - [ ] Recurring key variables are color-coded; the same hex appears in formulas, SVG strokes, and inline prose.
-- [ ] Background is warm paper (not `#ffffff`). Body font is serif. Eyebrow labels are mono.
-- [ ] Chapter dividers use `· · ·`, not `<hr>`.
-- [ ] Top progress bar and at least one nav (left TOC or right rail) are present and functional.
+- [ ] Body type is **Playfair Display + Cormorant Garamond**; **callout / hero / branchcode labels in Inter caps**; **math-box / lab / progress / code in JetBrains Mono**. No Source Serif 4 or Space Grotesk leftovers.
+- [ ] Chapter accents rotate semantically (red for problem/results/limits, indigo for core insight, forest/amber/plum/slate for parallel topics); no two consecutive sections share an accent unintentionally.
+- [ ] Chapter dividers use `· · ·`, accent-colored at 0.6 opacity. Never `<hr>` for divider purposes.
+- [ ] Top progress bar (2px ink) and right nav-dot rail are present and functional.
 
 **Technical**
 - [ ] Single HTML file. All CDNs pinned to a stable version. No local-asset references.
@@ -822,12 +1034,13 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 ## Gotchas
 
 - **Multiple PDFs in the folder** — ask the user; never default to the first.
-- **Mac font fallback** — when `Source Serif 4` fails to load, body falls back through Iowan Old Style → Georgia → Times New Roman; when `JetBrains Mono` fails, through Fira Code → Courier New. The CSS stack is set up — don't strip the fallbacks.
+- **Mac font fallback** — when `Playfair Display` fails to load, body headings fall back through Cormorant Garamond → Georgia → Times New Roman; when `Inter` fails, through system-ui / Helvetica Neue / Arial; when `JetBrains Mono` fails, through Fira Code → Courier New. The CSS stack is already set up — don't strip the fallbacks.
 - **KaTeX + color-coded variables** — inside LaTeX use `\textcolor{#c0392b}{x}` (KaTeX supports it). In plain prose use `<span class="v-x">x</span>`. The hex must match on both sides.
 - **`@latest` is forbidden** — every CDN URL pins a stable version (`katex@0.16.11`, `prismjs@1.29.0`) so loads stay reproducible across months.
 - **Don't leave silent TODO placeholders** — fully write the section, or mark it explicitly with `.uncertain`.
 - **Worked-example pitfalls** — if the example takes more than ~5 steps, it's too big. If you can't extract a one-line takeaway, the example wasn't well-chosen. If the numbers aren't tiny (1, 2, 0, ½, π/4), pick smaller ones. The whole point is "the reader could redo this on a napkin."
-- **Self-audit "text on a page"** — if the page is mostly `<p>` and a few `<pre>`, with no hero, no nav, no chapter scaffold, no varied callouts, no SVG, no lab block, no worked example — go back and add components. That's not a delivery.
+- **Self-audit "text on a page"** — if the page is mostly `<p>` and a few `<pre>`, with no masthead, no editor-note hero, no `section-rule` + Roman-numeral openers, no drop-cap lede, no varied callouts, no SVG, no lab block, no worked example, no afterword, no colophon — go back and add components. That's not a delivery.
+- **Don't drift back to the old `.chapter` pattern** — the magazine theme uses `section.branch[data-accent]` with section-rule openers. Old `<section class="chapter">` with `.ch-num` / `.ch-title` / `.lead` is deprecated. The IntersectionObserver in the skeleton observes `section.branch` — keep that selector.
 - **Don't abuse callouts as paragraph wrappers** — a callout is to highlight one sentence or one proposition, not to box up five paragraphs of body text.
 - **TOC / rail must actually work** — every `<section>` needs a real `id`; every rail dot's `data-target` must resolve; the IntersectionObserver in the skeleton must remain wired up.
 - **Per-topic accent stripes** — only use `topic-a/b/c` when the paper genuinely has 2–3 parallel core concepts (PSNR/SSIM/LPIPS, Score/Langevin/Denoising, …). Otherwise a single `--accent` is enough.
@@ -836,8 +1049,9 @@ Start from this skeleton; expand as needed. It already contains hero + progress 
 ## See also
 
 - Project-root `AGENTS.md` — reader profile, project-level hard constraints, trigger protocol.
-- Reference samples (visual + pedagogical ground truth):
-  - `~/Documents/manus_out/3dgs/3DGS_Metrics_Interactive.html` — editorial / per-topic accent / oklch palette.
-  - `~/Documents/manus_out/3dgs/Depth Anything 3 交互网页 (1).html` — serif + Space Grotesk modern feel.
-  - `~/Documents/manus_out/other_reading/Diffusion Concepts Interactive Webpage (1).html` — begin-with-why pattern + multi-semantic callouts + timeline + right-rail nav.
-  - `~/Documents/manus_out/other_reading/mit1806_lecture1.html` — clean typography + step animations + color-coded variables + tabbed method comparison.
+- Reference samples — visual ground truth for the 杂志风 default theme:
+  - `~/project/what_new/weekly/2026-19.html` — **canonical** masthead + hero + section-rule pattern; this is the look learn-paper imports.
+  - `~/project/learn_with_agent/260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — full long-read application: 10-section paper read with accent rotation across red / indigo / slate / amber / plum / forest, three labs (DPR-scaled), afterword, colophon.
+- Reference samples — pedagogical patterns (older visual theme, read for content not visuals):
+  - `~/Documents/manus_out/other_reading/Diffusion Concepts Interactive Webpage (1).html` — begin-with-why + multi-semantic callouts + timeline.
+  - `~/Documents/manus_out/other_reading/mit1806_lecture1.html` — step animations + color-coded variables + tabbed method comparison.
