@@ -1,6 +1,6 @@
 ---
 name: grok
-description: Convert a target folder — containing a paper PDF, book chapter, concept note, codebase entry-point, or any other thing the user is trying to understand — into a same-folder, single-file, CDN-self-contained magazine-style interactive learning HTML — warm-paper background with dotted texture, Playfair Display + Cormorant Garamond + Inter typography, italic-em hero, ruled-section openers with giant Roman numerals, drop caps colored per chapter accent; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/grok <folder>` or asks to "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside the `learn_with_agent` project.
+description: Convert a target folder — containing a paper PDF, book chapter, concept note, codebase entry-point, or any other thing the user is trying to understand — into a single-file, CDN-self-contained magazine-style interactive learning HTML (saved to `learn_with_agent/<YYMMDD>/` by default, or next to the source if a folder argument is passed) — warm-paper background with dotted texture, Playfair Display + Cormorant Garamond + Inter typography, italic-em hero, ruled-section openers with giant Roman numerals, drop caps colored per chapter accent; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/grok <folder>` or asks to "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside the `learn_with_agent` project.
 ---
 
 # grok
@@ -14,7 +14,11 @@ description: Convert a target folder — containing a paper PDF, book chapter, c
 /grok "260506_Coding Agents_alphazero" --align
 ```
 
-Output: `<folder>/<source-name>.html` (same stem as the source file or folder, same folder, single file, all dependencies via CDN).
+Output:
+- **Default** (no folder argument, or source path lives outside `learn_with_agent/`): `/Users/han/project/learn_with_agent/<YYMMDD>/<source-name>.html` — today's date folder under `learn_with_agent`, in `YYMMDD` form (today = `260510`). Created on demand with `mkdir -p`.
+- **Override** (folder argument given, e.g. `/grok "260506_Coding Agents_alphazero"`): `<folder>/<source-name>.html` — lives next to the source.
+
+Filename always = source stem with extension swapped to `.html`. Single file, all dependencies via CDN.
 
 ## Trigger discipline
 
@@ -22,18 +26,18 @@ Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natu
 
 ## Workflow
 
-1. **Locate the input.**
-   - Resolve `<folder>` (relative to project root or absolute path).
-   - The user names the source — in the invocation, in chat, or via an obviously-named file inside `<folder>`. Read that source. Don't auto-detect: don't glob for `*.pdf` and silently pick one, don't assume a particular file extension.
-   - You may also read other files inside the same `<folder>` (pre-extracted notes under `_drafts/`, related figures, supplementary code, sibling source files) when they help you understand. The user-named source is primary; everything else is supplementary.
-   - **Do not read other topic folders.** Strict isolation.
+1. **Locate the input and resolve the output directory.**
+   - **Input.** Resolve `<folder>` (relative to project root or absolute path) when one is given. The user names the source — in the invocation, in chat, or via an obviously-named file inside `<folder>`. Read that source. Don't auto-detect: don't glob for `*.pdf` and silently pick one, don't assume a particular file extension. You may also read other files inside the same source folder (pre-extracted notes under `_drafts/`, related figures, supplementary code, sibling source files) when they help you understand. The user-named source is primary; everything else is supplementary. **Do not read other topic folders.** Strict isolation.
+   - **Output directory** (referred to below as `<output-dir>`):
+     - **Explicit folder argument** (e.g. `/grok "260506_Coding Agents_alphazero"` or `/grok ~/project/learn_with_agent/260507_OmniRe`) → `<output-dir>` = that folder. HTML lives next to the source.
+     - **No folder argument**, or a bare source path that lives outside `learn_with_agent/` → `<output-dir>` = `/Users/han/project/learn_with_agent/<YYMMDD>/`, where `<YYMMDD>` is today's date (`date +%y%m%d`, e.g. `260510`). Run `mkdir -p` on it; it may not exist yet.
 
 2. **Branch on mode.**
    - Default (no `--align`): jump to step 4.
    - With `--align`: run the alignment checkpoint in step 3 first.
 
 3. **Alignment checkpoint (only with `--align`).**
-   Output the following in chat **and** write to `<folder>/_drafts/outline.md`. The natural-language content of these items is **in Chinese** because they preview the HTML's content:
+   Output the following in chat **and** write to `<output-dir>/_drafts/outline.md` (using the `<output-dir>` resolved in step 1). The natural-language content of these items is **in Chinese** because they preview the HTML's content:
    1. **Begin-with-why paragraph.** What was the whole field stuck on before this source? What's the obvious approach? Why doesn't it work? This is chapter 0, not chapter 1.
    2. **One-paragraph thesis.** The source's key insight, and what fundamentally separates it from prior solutions.
    3. **Chapter outline.** Per chapter: title (with one `<strong>` emphasis word), one-line italic hook, percent of page budget.
@@ -46,10 +50,10 @@ Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natu
    Wait for user confirmation or revision before proceeding to step 4.
 
 4. **Generate the HTML.**
-   - Output filename = PDF filename with `.pdf` → `.html`, same folder.
+   - Output path = `<output-dir>/<source-stem>.html` (source filename with extension swapped to `.html`), where `<output-dir>` is the directory resolved in step 1.
+   - Intermediate notes and external references go in `<output-dir>/_drafts/`.
    - Start from the HTML skeleton below.
    - Follow the writing principles and hard constraints below.
-   - Intermediate notes and external references go in `<folder>/_drafts/`.
 
 ## Writing principles
 
@@ -195,7 +199,7 @@ Reference exemplars (visual ground truth):
 ## Hard constraints
 
 - **Single HTML file.** All CSS/JS inlined or via CDN. **No** project-root, `_lib/`, or local-asset references. Double-click to view.
-- **Same name, same folder.** HTML lives next to the source, only the extension swaps.
+- **Same stem; folder per resolution rule.** Filename always swaps the source extension to `.html`. The folder follows step 1 of the workflow: explicit `<folder>` argument → that folder; otherwise → `/Users/han/project/learn_with_agent/<YYMMDD>/` (today's date, e.g. `260510`).
 - **Math.** KaTeX (CDN, auto-render).
 - **Code.** Prism or highlight.js (CDN).
 - **Style.** Tailwind CDN or hand-written CSS — **Bootstrap is banned**.
@@ -214,7 +218,7 @@ The two failure modes that show up most often: **blank canvas** (lab block rende
 1. **Render on init.** Every lab IIFE must end with one bare `draw()` call. Never leave the canvas waiting for a first input event — if the user doesn't touch a slider, they see nothing. Wrap each lab in `(function(){ const c = document.getElementById('…'); if (!c) return; … draw(); })();` so a missing element doesn't break the rest of the page.
 2. **DPR-scale every canvas.** After `getContext('2d')`, set `c.style.width = cssW + 'px'; c.style.height = cssH + 'px'; c.width = cssW * dpr; c.height = cssH * dpr; ctx.scale(dpr, dpr);`. Drawing then uses CSS pixels but stays sharp on retina.
 3. **Lab-prefixed ids.** Two labs cannot share `r1` / `canvas-1`. Prefix every control with the lab name (`lab2-yaw`, `rsc-step`) so a copy-paste doesn't silently cross-wire.
-4. **Run the page locally before declaring done.** `open <folder>/<name>.html`, scroll to each lab, drag every slider, click every button. If a canvas is blank or a control does nothing, fix before shipping.
+4. **Run the page locally before declaring done.** `open <output-dir>/<name>.html`, scroll to each lab, drag every slider, click every button. If a canvas is blank or a control does nothing, fix before shipping.
 
 ## Required component checklist
 
