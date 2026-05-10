@@ -1,6 +1,6 @@
 ---
 name: grok
-description: Convert a paper PDF in a target folder into a same-folder, single-file, CDN-self-contained magazine-style interactive learning HTML — warm-paper background with dotted texture, Playfair Display + Cormorant Garamond + Inter typography, italic-em hero, ruled-section openers with giant Roman numerals, drop caps colored per chapter accent; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/grok <folder>` or asks to "学习 / 讲解 / 拆解 X 文件夹里的 paper" inside the `learn_with_agent` project.
+description: Convert a target folder — containing a paper PDF, book chapter, concept note, codebase entry-point, or any other thing the user is trying to understand — into a same-folder, single-file, CDN-self-contained magazine-style interactive learning HTML — warm-paper background with dotted texture, Playfair Display + Cormorant Garamond + Inter typography, italic-em hero, ruled-section openers with giant Roman numerals, drop caps colored per chapter accent; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/grok <folder>` or asks to "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside the `learn_with_agent` project.
 ---
 
 # grok
@@ -14,11 +14,11 @@ description: Convert a paper PDF in a target folder into a same-folder, single-f
 /grok "260506_Coding Agents_alphazero" --align
 ```
 
-Output: `<folder>/<paper-name>.html` (same name as the PDF, same folder, single file, all dependencies via CDN).
+Output: `<folder>/<source-name>.html` (same stem as the source file or folder, same folder, single file, all dependencies via CDN).
 
 ## Trigger discipline
 
-Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natural-language "学习 / 讲解 / 拆解 X 文件夹里的 paper". Seeing a PDF in the workspace is **not** a trigger — don't proactively start writing.
+Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natural-language "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码". Seeing a PDF, Markdown note, e-book, or unfamiliar source folder in the workspace is **not** a trigger — don't proactively start writing.
 
 ## Workflow
 
