@@ -8,7 +8,10 @@ description: {{DESCRIPTION}}
 
 # {{TITLE}}
 
-<!-- Write the body in English by default. Trigger-phrase examples may include Chinese verbatim if that's how the user invokes this skill. -->
+<!--
+Author note (delete before shipping):
+Before drafting this skill, read ../write-a-skill/SKILL.md end-to-end. Then walk its authoring checklist before considering this skill done. Body language defaults to English; trigger-phrase examples may include Chinese verbatim if that's how the user invokes this skill.
+-->
 
 ## Quick start
 

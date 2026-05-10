@@ -32,10 +32,11 @@ Trigger this skill when the user says any of:
 - "在这台机器装 / 安装 my skills"  /  "install my skills here"  /  "bootstrap skills on this machine"
 - "安装 skill X" / "install skill X" / "rebuild links for X"
 
-Do NOT trigger for:
+Do NOT trigger this skill's lifecycle ops for:
 - Asking what a particular skill does (read that skill's SKILL.md instead)
-- Asking only to edit the content of an existing skill can be done by directly editing `<repo>/<name>/SKILL.md`; after the edit, commit + push by default unless the user says not to.
 - General git operations on the repo
+
+Editing the content of an existing skill is in scope but takes the **Edit** path below, not a `bin/` script. Authoring rules still apply on edits — see Op 5.
 
 ## Operations
 
@@ -76,7 +77,38 @@ After adopt, the script auto-commits and pushes by default if the repo was clean
 
 Creates `<repo>/<name>/SKILL.md` from `<repo>/skill-mgmt/templates/SKILL.md.template`. The template follows the [write-a-skill](../write-a-skill/SKILL.md) authoring conventions (frontmatter with strict trigger, optional dependencies, Quick start, Workflows). Appends `<name>` to `manifest.txt`, runs `install`.
 
-After scaffolding, **read `<repo>/write-a-skill/SKILL.md` for full authoring guidance** and finish writing the skill. The script auto-commits and pushes the scaffold by default if the repo was clean when the script started; set `SKILL_MGMT_AUTOCOMMIT=0` when you want to author first and commit once later.
+**Authoring loop (mandatory):**
+
+1. **Before drafting**, the agent reads `<repo>/write-a-skill/SKILL.md` end-to-end. The scaffold is empty on purpose — every section must be written under the principles in that guide (description writing, progressive disclosure, explain-the-why style, anti-overfitting, lack-of-surprise).
+2. **While drafting**, mentally run the description against 5 should-trigger and 5 should-not-trigger near-miss prompts; rewrite the description until it disambiguates cleanly. Same for 2-3 realistic body-test prompts.
+3. **Before finalizing**, walk the authoring checklist at the bottom of `write-a-skill/SKILL.md`.
+
+The script auto-commits and pushes the scaffold by default if the repo was clean when the script started; set `SKILL_MGMT_AUTOCOMMIT=0` when you want to author first and commit once later.
+
+### Op 5 — Edit (modify an existing skill)
+
+There is no `bin/` script for edits. The agent edits `<repo>/<name>/SKILL.md` (and bundled resources) directly. Edits are still subject to the authoring rules in `<repo>/write-a-skill/SKILL.md` — the same principles apply whether the file is new or 18 months old.
+
+**Pre-edit audit (mandatory before substantive changes):**
+
+1. Read the full current `<repo>/<name>/SKILL.md` plus any referenced bundled files relevant to the change.
+2. Re-read `<repo>/write-a-skill/SKILL.md` (or the section governing the area being changed).
+3. Look for instructions that no longer earn their keep — model has improved, sibling skill now owns it, the use case died. Delete those before adding new content; an edit is a chance to shed weight, not just to grow.
+
+**Refactor escalation (must follow):**
+
+If a small change reveals that the skill is structurally drifting, **stop the small change and surface a refactor proposal to the user before continuing**. Do not quietly enlarge a skill that wants to be split. Concrete triggers:
+
+- SKILL.md will cross ~500 lines after this edit
+- The description no longer accurately describes what the body covers (responsibility creep)
+- Two or more responsibilities are tangled in one skill
+- Three or more near-duplicate sections exist
+- A reference file will cross ~300 lines without a top-of-file ToC
+- Cross-references would become more than one hop deep
+
+The escalation looks like: "I started to make change X, but the skill has drifted — I think we should first do Y (split / promote to references / rewrite description). Do you want me to (a) just make the small change, (b) do the refactor first, (c) do both as separate commits?"
+
+**After-edit:** the same auto-commit/push rule from "Git automation" applies. Frontmatter `description` changes always count as substantive — they alter the trigger surface across all runtimes.
 
 ## Dependency format
 
@@ -122,5 +154,6 @@ After successful modifying operations (`new`, `adopt`, and any direct skill edit
 
 ## See also
 
-- `<repo>/write-a-skill/SKILL.md` — how to author a good skill
+- `<repo>/write-a-skill/SKILL.md` — authoring guide (mandatory read for Op 4 New and Op 5 Edit)
+- Upstream reference: [anthropics/skills · skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) — original source of most authoring rules; also ships an automated eval / description-optimization harness we don't currently mirror
 - `<repo>/README.md` — repo overview and bootstrap instructions
