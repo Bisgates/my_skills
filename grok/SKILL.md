@@ -24,8 +24,8 @@ Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natu
 
 1. **Locate the input.**
    - Resolve `<folder>` (relative to project root or absolute path).
-   - Find `*.pdf` inside the folder. If multiple PDFs exist, **ask the user** which one — do not silently pick the first.
-   - If `<folder>/_drafts/paper.md` exists, **read it first** (often a richer pre-extracted note); otherwise `Read` the PDF directly.
+   - The user names the source — in the invocation, in chat, or via an obviously-named file inside `<folder>`. Read that source. Don't auto-detect: don't glob for `*.pdf` and silently pick one, don't assume a particular file extension.
+   - You may also read other files inside the same `<folder>` (pre-extracted notes under `_drafts/`, related figures, supplementary code, sibling source files) when they help you understand. The user-named source is primary; everything else is supplementary.
    - **Do not read other topic folders.** Strict isolation.
 
 2. **Branch on mode.**
@@ -34,14 +34,14 @@ Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natu
 
 3. **Alignment checkpoint (only with `--align`).**
    Output the following in chat **and** write to `<folder>/_drafts/outline.md`. The natural-language content of these items is **in Chinese** because they preview the HTML's content:
-   1. **Begin-with-why paragraph.** What was the whole field stuck on before this paper? What's the obvious approach? Why doesn't it work? This is chapter 0, not chapter 1.
-   2. **One-paragraph thesis.** The paper's key insight, and what fundamentally separates it from prior solutions.
+   1. **Begin-with-why paragraph.** What was the whole field stuck on before this source? What's the obvious approach? Why doesn't it work? This is chapter 0, not chapter 1.
+   2. **One-paragraph thesis.** The source's key insight, and what fundamentally separates it from prior solutions.
    3. **Chapter outline.** Per chapter: title (with one `<strong>` emphasis word), one-line italic hook, percent of page budget.
    4. **80% allocation.** Name the 1–3 core concepts that consume 80% of the page. Justify why everything else collapses to 20% (cite reader background — see `AGENTS.md`).
-   5. **Color-code plan.** Enumerate the recurring key variables / objects in the paper (e.g. score function, noisy point vs. clean point, column vectors, target b…). Assign a fixed color to each (red / blue / green / purple / orange). Reuse it in every formula, SVG, and inline `<span>`.
-   6. **Per-topic accent (optional).** If the paper has 2–3 parallel core concepts (PSNR/SSIM/LPIPS-style), assign each section an accent stripe color.
+   5. **Color-code plan.** Enumerate the recurring key variables / objects in the source (e.g. score function, noisy point vs. clean point, column vectors, target b…). Assign a fixed color to each (red / blue / green / purple / orange). Reuse it in every formula, SVG, and inline `<span>`.
+   6. **Per-topic accent (optional).** If the source has 2–3 parallel core concepts (PSNR/SSIM/LPIPS-style), assign each section an accent stripe color.
    7. **Worked-example plan.** For each new concept introduced, name the smallest concrete instance you'll walk the reader through (e.g. "score function: 1D standard normal, x=2"). See § Writing principle 3.
-   8. **Interactive module list.** Each lab block: what insight it reveals + the visualization form + the corresponding paper section.
+   8. **Interactive module list.** Each lab block: what insight it reveals + the visualization form + the corresponding source section.
 
    Wait for user confirmation or revision before proceeding to step 4.
 
@@ -53,26 +53,26 @@ Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natu
 
 ## Writing principles
 
-> Not writing a paper digest. Writing a magazine-grade longread. The reader should close the page feeling "someone took the time to make this make sense to me."
+> Not writing a source summary. Writing a magazine-grade longread. The reader should close the page feeling "someone took the time to make this make sense to me."
 
 ### 1 · Begin with why (chapter 0 is non-negotiable)
 
 The first chapter the reader sees is **never** "overview of our method." It must be a **field-level predicament**:
 
-- Before this paper landed, what were people stuck on?
+- Before this work landed, what were people stuck on?
 - What's the obvious thing to try? Why does it fail? (Make this explicit with a `.danger` callout titled "致命问题".)
 - Ground the predicament in a concrete physical scenario ("假设你有一万张猫的图片"), then translate it to math.
-- Drop a comparison table of how prior families dodge the issue (VAE / GAN / Flow / this paper).
+- Drop a comparison table of how prior families dodge the issue (VAE / GAN / Flow / this work).
 - Close with one Feynman-grade meta-line: "如果不能直接解决，先问我真正需要的是什么——也许我需要的比我以为的少得多。"
 
-Chapter 1 then introduces the paper's actual key insight. Reference template (Diffusion):
+Chapter 1 then introduces the source's actual key insight. Reference template (Diffusion):
 `ch0 根本困境 → ch1 天才洞察 (Score Function) → ch2 怎么用 (Langevin) → ch3 怎么学 (Score Matching) → …`.
 
-**Banned**: "Section 1 介绍 / Section 2 相关工作 / Section 3 方法" — that's the structure of the source paper, not of pedagogy.
+**Banned**: "Section 1 介绍 / Section 2 相关工作 / Section 3 方法" — that's the structure of the source, not of pedagogy.
 
 ### 2 · First principles: naive → fatal flaw → insight → design
 
-Each core concept is unfolded in this exact sequence. First describe the obvious idea any smart reader would think of, so they nod along. Then expose the hidden flaw. Then let the paper's insight emerge as the rescue. **Forbidden**: working backward from "the paper proposes X."
+Each core concept is unfolded in this exact sequence. First describe the obvious idea any smart reader would think of, so they nod along. Then expose the hidden flaw. Then let the source's insight emerge as the rescue. **Forbidden**: working backward from "the source proposes X."
 
 ### 3 · A concrete minimal worked example for every new concept
 
@@ -104,7 +104,7 @@ The skeleton ships a `.worked-example` block. Format:
 
 ### 4 · 80% to the core, as a budget
 
-1–3 core insights consume 80% of the page; everything else collapses to a single sentence or a footnote. If a paper has 5 contributions, pick the deepest 1–3 and go deep. **Do not** transcribe full ablation tables.
+1–3 core insights consume 80% of the page; everything else collapses to a single sentence or a footnote. If the source has 5 contributions, pick the deepest 1–3 and go deep. **Do not** transcribe full ablation tables.
 
 ### 5 · Audience-aware (reader profile lives in `AGENTS.md`)
 
@@ -115,7 +115,7 @@ The reader is a CS PhD with 8 years in vision/DL. **Mention briefly or skip:**
 - ResNet / U-Net / ViT basics
 - Plain cross-entropy / KL divergence
 
-**Spend the page budget on what's actually new**: the paper's key insight, the new mechanism, why only this design works.
+**Spend the page budget on what's actually new**: the source's key insight, the new mechanism, why only this design works.
 
 ### 6 · Feynman / Karpathy voice
 
@@ -155,7 +155,7 @@ Reference: MIT 18.06's `vec-col1/2/3/b` keeps three column vectors and the targe
 
 ### 9 · Revealing interactivity (not knob-pushing demos)
 
-Every lab block leads with a single line: **"此 lab 揭示：…（对应 paper §X）"**. Useless interactions (input box → display number, slider that only changes a color) are banned. Useful forms include:
+Every lab block leads with a single line: **"此 lab 揭示：…（对应来源章节）"**. Useless interactions (input box → display number, slider that only changes a color) are banned. Useful forms include:
 
 - Vector field / manifold visualization (click to drop particles, watch them follow the score).
 - Parameter slider → geometric object morphs (two lines' intersection, planes' intersection line, singular vs. non-singular).
@@ -169,10 +169,10 @@ The artifact reads like a Sunday-magazine longread typeset, not Markdown rendere
 
 - **Warm paper background** (`#f4ecdd`) with a subtle dotted texture (two layered radial-gradients, 3px / 7px). Body type sits on the paper, never on `#ffffff`. Hero is **not** a dark gradient — it sits on the same paper as the body, just with bigger typography.
 - **Type stack**: Playfair Display 800 (display headings, body headings, drop caps, Roman numerals) + Cormorant Garamond italic (decorative italics, ampersand, signoff, sublines, hooks) + Inter (sans eyebrows / labels / metadata) + JetBrains Mono (math-box label, code, lab eyebrow). The display serif stays italic-leaning; do not substitute Space Grotesk or Source Serif 4.
-- **Masthead**: a thin black-ruled bar at the top. Left = italic logo ("A Paper Reading — Private Edition") in Playfair italic; right = volume info in uppercase letterspaced Inter (`letter-spacing: 0.18em`).
+- **Masthead**: a thin black-ruled bar at the top. Left = italic logo ("A Deep Understanding — Private Edition") in Playfair italic; right = volume info in uppercase letterspaced Inter (`letter-spacing: 0.18em`).
 - **Hero**: kicker (warm-red, uppercase letterspaced Inter, 12px) → big Playfair `<h1>` 72px with one italic `<em>` for the subtitle phrase and an italic warm-red ampersand for separation → `.subline` (italic Cormorant, 22px) → `.editor-note` framed by `border-top: 4px double` + `border-bottom: 1px` of ink, with a mono uppercase `.label` and an italic Cormorant `.signoff` (e.g. "— 编于周日 22:30，配茶"). Optional `.hero-stats` row + `.meta-line` with a black `.pill` chip and a couple of warm-red links.
 - **Section opener (`section.branch`)** is the magazine's signature element. Each section carries `data-accent="red|indigo|forest|amber|plum|slate"`. The accent drives a 7px-thick `<hr class="section-rule">`, the giant Playfair Roman numeral (`I.`–`X.`, 88px), an `<h2>` with one `<strong>` keyword in the accent color, a tiny mono `.branchcode` (e.g. `chapter_3 · articulated humans`), a 1px `<hr class="section-rule thin">`, and an `.ornament` row of glyphs (`§ · § · §` / `◊ · ◊ · ◊` / `¶ · ¶ · ¶`) centered in italic Playfair. Rotate the ornament glyph between consecutive chapters to keep rhythm.
-- **Per-section accent rotation**: pick the chapter accent semantically — `red` for problem / results / limits, `indigo` for the core insight chapter and joint-training math, `forest`/`amber`/`plum`/`slate` for parallel topical chapters (when the paper has color-coded variables, match the chapter accent to the dominant variable's color so a reader keys both at once). Don't run two consecutive sections with the same accent unless deliberate.
+- **Per-section accent rotation**: pick the chapter accent semantically — `red` for problem / results / limits, `indigo` for the core insight chapter and joint-training math, `forest`/`amber`/`plum`/`slate` for parallel topical chapters (when the source has color-coded variables, match the chapter accent to the dominant variable's color so a reader keys both at once). Don't run two consecutive sections with the same accent unless deliberate.
 - **Body**: `.lede` first paragraph in Playfair 21px with a giant accent-colored drop cap (80px, floats left). Subsequent paragraphs return to serif reading at 17px / 1.74. Sub-heads `<h3>` use Playfair 700, 23px, with a small mono `.marker` (e.g. `§ 3.2`) prepended.
 - **Pull quote `.pullquote`**: paper-soft accent-tinted background, 6px left-border in the accent color, Playfair italic 26–28px. Attribution lives in `.who` (Inter uppercase 12px, letterspaced).
 - **Callout matrix** (`.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`) keeps its 6 semantic colors but moves to paper-soft fills (no white surfaces); labels are uppercase letterspaced **Inter**, not mono — eyebrows in the body switch font systematically (sans for callout labels, mono for math/lab/eyebrow). The Feynman block stays a dark plum-bordered card with white italic Cormorant text and an oversized `"` glyph.
@@ -190,21 +190,21 @@ The artifact reads like a Sunday-magazine longread typeset, not Markdown rendere
 
 Reference exemplars (visual ground truth):
 - `~/project/what_new/weekly/2026-19.html` — canonical typography & hero & section-rule pattern.
-- `260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — long-read application of the system to a 9-chapter paper read with all components in use.
+- `260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — long-read application of the system to a 9-chapter long-read with all components in use.
 
 ## Hard constraints
 
 - **Single HTML file.** All CSS/JS inlined or via CDN. **No** project-root, `_lib/`, or local-asset references. Double-click to view.
-- **Same name, same folder.** HTML lives next to the PDF, only the extension swaps.
+- **Same name, same folder.** HTML lives next to the source, only the extension swaps.
 - **Math.** KaTeX (CDN, auto-render).
 - **Code.** Prism or highlight.js (CDN).
 - **Style.** Tailwind CDN or hand-written CSS — **Bootstrap is banned**.
 - **Fonts.** Google Fonts loads the serif body + mono. **Do not** ship a `system-ui`-only default.
 - **No build step.** No npm / vite / webpack.
 - **Topic isolation.** Do not read other topic folders.
-- **Online research is allowed.** When the agent enriches with external material, mark it explicitly using `aside.external` (paper-original vs. agent-added must be visually distinguishable).
+- **Online research is allowed.** When the agent enriches with external material, mark it explicitly using `aside.external` (source-original vs. agent-added must be visually distinguishable).
 - **When unsure**, search the web first. If still uncertain, write the section anyway and mark the spot with `<div class="uncertain">⚠ 此处未充分消化：[原因]</div>`. **Do not interrupt the user with questions.**
-- **HTML already exists.** **Overwrite** (re-running grok on the same paper means the user wants to replace). Don't touch `_drafts/`.
+- **HTML already exists.** **Overwrite** (re-running grok on the same source means the user wants to replace). Don't touch `_drafts/`.
 - **Pin CDN versions** (`katex@0.16.11`, `prismjs@1.29.0`). **No `@latest`.**
 
 ### Interactive correctness (don't ship a blank canvas)
@@ -220,7 +220,7 @@ The two failure modes that show up most often: **blank canvas** (lab block rende
 
 Every HTML must include the following — missing any of them and the artifact regresses to "text on a page":
 
-1. **Masthead** — thin black-ruled top bar: italic Playfair logo left ("A Paper Reading — Private Edition") + uppercase letterspaced volume info right.
+1. **Masthead** — thin black-ruled top bar: italic Playfair logo left ("A Deep Understanding — Private Edition") + uppercase letterspaced volume info right.
 2. **Hero on warm paper** (no dark gradient) — kicker → big Playfair `<h1>` with one italic `<em>` and a warm-red ampersand → italic Cormorant `.subline` → `.editor-note` framed by double-rule + thin-rule with `.label` and `.signoff` → optional `.hero-stats` row → `.meta-line` with `.pill` chip and warm-red links.
 3. **Top progress bar** — `position: fixed; top: 0; height: 2px;` ink color, fills as the reader scrolls.
 4. **Right-fixed nav-dot rail** — hover reveals chapter label. Hidden under 1100px. (Sections use `section.branch`, not `section.chapter`.)
@@ -228,11 +228,11 @@ Every HTML must include the following — missing any of them and the artifact r
 6. **Callout matrix** — at least 3 of: `.insight` / `.danger` / `.success` / `.warning` / `.definition` / `.feynman`.
 7. **Math box triple** — `<div class="math-box"><div class="math-label">…</div>$$…$$<div class="math-note">…</div></div>`.
 8. **Worked example** — a `.worked-example` block per new concept (`we-label` + `we-setup` + numbered `we-steps` + 📌 `we-takeaway`).
-9. **Naive vs. Insight comparison** — `.compare` two-column grid, naive on left, paper's solution on right; at least one per HTML.
+9. **Naive vs. Insight comparison** — `.compare` two-column grid, naive on left, the source's solution on right; at least one per HTML.
 10. **Figures** — at least 1–2 SVG / CSS / emoji-composed conceptual diagrams. "Figure missing" is not acceptable.
 11. **Lab block** — `.lab` container with `Field Study · Lab N · <name>` title in Inter caps + reveal line + canvas (DPR-scaled) + `.ctrl-row` + `.btn-row` + `.lab-note`.
-12. **Timeline** (strongly recommended when the paper sits in a clear lineage) — historical chain with the latest item flagged `.tl-item.highlight`.
-13. **Comparison table** — paper-soft body + ink header bar; mark the paper's own row with `tr.ours-row`.
+12. **Timeline** (strongly recommended when the source sits in a clear lineage) — historical chain with the latest item flagged `.tl-item.highlight`.
+13. **Comparison table** — paper-soft body + ink header bar; mark the source's own row with `tr.ours-row`.
 14. **`aside.external`** — every agent-sourced external addition, marked.
 15. **Pull quote `.pullquote`** — at least one distilled punch-line, attributed via `.who`.
 16. **Editorial divider `· · ·`** — chapter end, accent-colored at 0.6 opacity.
@@ -249,7 +249,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title><!-- paper title (Chinese) --></title>
+<title><!-- title (Chinese) --></title>
 
 <!-- Fonts: Playfair (display serif) + Cormorant (decorative italic) + Inter (sans labels) + JetBrains Mono -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -289,7 +289,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
     --plum:      #6c3483;
     --slate:     #1e5a8a;
 
-    /* Color-coded variables — rename to the paper's actual variables */
+    /* Color-coded variables — rename to the source's actual variables */
     --v-x:  #c0392b;   /* red */
     --v-y:  #1e5a8a;   /* blue */
     --v-z:  #2d7a4f;   /* green */
@@ -441,7 +441,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
   .v-z{color:var(--v-z);font-weight:600;}
   .v-b{color:var(--v-b);font-weight:600;}
 
-  /* Optional per-topic stripes (when paper has 2-3 parallel topics) */
+  /* Optional per-topic stripes (when source has 2-3 parallel topics) */
   .topic-a,.topic-b,.topic-c{position:relative;padding-left:18px;}
   .topic-a::before,.topic-b::before,.topic-c::before{
     content:"";position:absolute;left:0;top:.35em;bottom:.35em;width:3px;border-radius:2px;}
@@ -661,15 +661,15 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 
 <!-- ============ MASTHEAD ============ -->
 <header class="masthead">
-  <div class="logo">A Paper Reading &mdash; Private Edition</div>
-  <div>Vol. <!-- year --> &middot; <!-- short paper handle --> &middot; <!-- venue --></div>
+  <div class="logo">A Deep Understanding &mdash; Private Edition</div>
+  <div>Vol. <!-- year --> &middot; <!-- short source handle --> &middot; <!-- venue --></div>
 </header>
 
 <!-- ============ HERO ============ -->
 <section class="hero">
   <div class="kicker">Paper Reading &middot; 第一性原理 &middot; Karpathy 风格 &middot; ~XX min</div>
   <h1><!-- main title (Chinese) --><span class="ampersand"> &mdash; </span><em><!-- subtitle phrase (Chinese) --></em></h1>
-  <p class="subline"><!-- one-sentence thesis (Chinese): what this paper solves and what the key insight is --></p>
+  <p class="subline"><!-- one-sentence thesis (Chinese): what this source solves and what the key insight is --></p>
 
   <div class="editor-note">
     <span class="label">Editor&rsquo;s Note &middot; 阅读契约</span>
@@ -735,12 +735,12 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
     <tr><th>路线</th><th>怎么绕开</th><th>代价</th></tr>
     <tr><td><strong>VAE</strong></td><td>用 ELBO 近似下界</td><td>样本质量受限</td></tr>
     <tr><td><strong>GAN</strong></td><td>不建模 p(x)，用判别器</td><td>训练不稳定</td></tr>
-    <tr class="ours-row"><td><strong>这篇 paper</strong></td><td><!-- … --></td><td><!-- … --></td></tr>
+    <tr class="ours-row"><td><strong>本作</strong></td><td><!-- … --></td><td><!-- … --></td></tr>
   </table>
 
   <div class="feynman">
     <p>如果你不能直接解决一个问题，先问：我真正需要的是什么？也许我需要的比我以为的少得多。</p>
-    <div class="attribution">&mdash; 这篇 paper 的元洞察，下一章展开</div>
+    <div class="attribution">&mdash; 本作的元洞察，下一章展开</div>
   </div>
 
   <div class="ch-end">&middot; &middot; &middot;</div>
@@ -796,7 +796,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 
   <div class="lab" id="lab1">
     <div class="lab-title">Field Study &middot; Lab 1 &middot; <!-- lab name (Chinese) --></div>
-    <p class="lab-reveal">此 lab 揭示：<!-- specific insight --> &middot; 对应 paper §X</p>
+    <p class="lab-reveal">此 lab 揭示：<!-- specific insight --> &middot; 对应来源章节</p>
     <canvas id="lab1-canvas" width="760" height="320"></canvas>
     <div class="ctrl-row">
       <label>参数 &sigma;</label>
@@ -828,7 +828,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
   <hr class="section-rule thin" />
   <div class="ornament">&para; &nbsp;&middot;&nbsp; &para; &nbsp;&middot;&nbsp; &para;</div>
 
-  <p class="ch-hook">这篇 paper 不是凭空冒出来的。</p>
+  <p class="ch-hook">本作不是凭空冒出来的。</p>
 
   <div class="timeline">
     <div class="tl-item">
@@ -845,8 +845,8 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
     </div>
     <div class="tl-item highlight">
       <div class="tl-dot"></div>
-      <div class="tl-year"><!-- year · this paper --></div>
-      <div class="tl-title"><!-- this paper title --></div>
+      <div class="tl-year"><!-- year · 本作 --></div>
+      <div class="tl-title"><!-- 本作 title --></div>
       <div class="tl-desc"><!-- one-line distillation of how it builds on the prior step --></div>
     </div>
   </div>
@@ -941,7 +941,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
       const sigma = parseFloat(slider.value);
       valLbl.textContent = sigma.toFixed(2);
       ctx.clearRect(0, 0, cssW, cssH);
-      // … paper-specific drawing, in CSS pixels, using `sigma` …
+      // … source-specific drawing, in CSS pixels, using `sigma` …
     }
 
     slider.addEventListener('input', draw);
@@ -987,7 +987,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 | `aside.external` | Agent-sourced external addition | Self-labels with "外部补充 · agent" + warm-red links |
 | `.uncertain` | Not-fully-digested marker | Lead with `⚠` |
 | `.v-x` `.v-y` `.v-z` `.v-b` | Color-coded variables | Same hex used in formulas / SVG / inline prose |
-| `.topic-a/b/c` | Per-topic accent stripe | Only when paper has 2–3 parallel concepts |
+| `.topic-a/b/c` | Per-topic accent stripe | Only when source has 2–3 parallel concepts |
 | `.ch-end` `· · ·` | Chapter divider | Accent-colored at 0.6 opacity; never `<hr>` |
 | `.afterword` `.label` `h4` | End-of-article kicker box | Ink-bordered paper-soft frame; for "what I chose / excluded" |
 | `.colophon` `.col` `h5` | Three-column footer | Italic Cormorant body + tiny Inter mono caps headers |
@@ -1016,7 +1016,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 - [ ] At least **1** naive vs. insight `.compare` block.
 - [ ] At least **1** lab block with `Field Study · Lab N · …` title and the `lab-reveal` line filled in.
 - [ ] At least **1** SVG / canvas figure (no "figure missing").
-- [ ] If the paper sits in a clear lineage, a `.timeline` is present (latest item flagged `.tl-item.highlight`).
+- [ ] If the source sits in a clear lineage, a `.timeline` is present (latest item flagged `.tl-item.highlight`).
 - [ ] Recurring key variables are color-coded; the same hex appears in formulas, SVG strokes, and inline prose.
 - [ ] Body type is **Playfair Display + Cormorant Garamond**; **callout / hero / branchcode labels in Inter caps**; **math-box / lab / progress / code in JetBrains Mono**. No Source Serif 4 or Space Grotesk leftovers.
 - [ ] Chapter accents rotate semantically (red for problem/results/limits, indigo for core insight, forest/amber/plum/slate for parallel topics); no two consecutive sections share an accent unintentionally.
@@ -1043,7 +1043,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 - **Don't drift back to the old `.chapter` pattern** — the magazine theme uses `section.branch[data-accent]` with section-rule openers. Old `<section class="chapter">` with `.ch-num` / `.ch-title` / `.lead` is deprecated. The IntersectionObserver in the skeleton observes `section.branch` — keep that selector.
 - **Don't abuse callouts as paragraph wrappers** — a callout is to highlight one sentence or one proposition, not to box up five paragraphs of body text.
 - **TOC / rail must actually work** — every `<section>` needs a real `id`; every rail dot's `data-target` must resolve; the IntersectionObserver in the skeleton must remain wired up.
-- **Per-topic accent stripes** — only use `topic-a/b/c` when the paper genuinely has 2–3 parallel core concepts (PSNR/SSIM/LPIPS, Score/Langevin/Denoising, …). Otherwise a single `--accent` is enough.
+- **Per-topic accent stripes** — only use `topic-a/b/c` when the source genuinely has 2–3 parallel core concepts (PSNR/SSIM/LPIPS, Score/Langevin/Denoising, …). Otherwise a single `--accent` is enough.
 - **Blank canvas / blurry canvas** — the two most common interactive regressions. Blank: the lab's IIFE wires `slider.addEventListener('input', draw)` but never calls `draw()` once at the bottom, so the canvas is empty until someone wiggles the slider. Blurry / stretched: the agent set the canvas's HTML `width` attribute but never DPR-scaled, so on retina the bitmap is half-resolution and CSS stretches it. The skeleton's lab template now bakes both fixes in — copy it verbatim instead of hand-rolling a new lab from scratch.
 
 ## See also
@@ -1051,7 +1051,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 - Project-root `AGENTS.md` — reader profile, project-level hard constraints, trigger protocol.
 - Reference samples — visual ground truth for the 杂志风 default theme:
   - `~/project/what_new/weekly/2026-19.html` — **canonical** masthead + hero + section-rule pattern; this is the look grok imports.
-  - `~/project/learn_with_agent/260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — full long-read application: 10-section paper read with accent rotation across red / indigo / slate / amber / plum / forest, three labs (DPR-scaled), afterword, colophon.
+  - `~/project/learn_with_agent/260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — full long-read application: 10-section long-read with accent rotation across red / indigo / slate / amber / plum / forest, three labs (DPR-scaled), afterword, colophon.
 - Reference samples — pedagogical patterns (older visual theme, read for content not visuals):
   - `~/Documents/manus_out/other_reading/Diffusion Concepts Interactive Webpage (1).html` — begin-with-why + multi-semantic callouts + timeline.
   - `~/Documents/manus_out/other_reading/mit1806_lecture1.html` — step animations + color-coded variables + tabbed method comparison.
