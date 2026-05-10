@@ -5,4 +5,4 @@ grill-me
 zk
 improve-codebase-architecture
 grill-with-docs
-learn-paper
+grok

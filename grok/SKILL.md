@@ -1,24 +1,24 @@
 ---
-name: learn-paper
-description: Convert a paper PDF in a target folder into a same-folder, single-file, CDN-self-contained magazine-style interactive learning HTML — warm-paper background with dotted texture, Playfair Display + Cormorant Garamond + Inter typography, italic-em hero, ruled-section openers with giant Roman numerals, drop caps colored per chapter accent; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/learn-paper <folder>` or asks to "学习 / 讲解 / 拆解 X 文件夹里的 paper" inside the `learn_with_agent` project.
+name: grok
+description: Convert a paper PDF in a target folder into a same-folder, single-file, CDN-self-contained magazine-style interactive learning HTML — warm-paper background with dotted texture, Playfair Display + Cormorant Garamond + Inter typography, italic-em hero, ruled-section openers with giant Roman numerals, drop caps colored per chapter accent; opens with "begin with why", deconstructs from first principles, walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights; supports color-coded variables, multi-semantic callouts, lab blocks, and a historical timeline. The generated HTML's natural-language content is in Chinese (the user's reading language); only the skill spec itself is in English. Use when the user runs `/grok <folder>` or asks to "学习 / 讲解 / 拆解 X 文件夹里的 paper" inside the `learn_with_agent` project.
 ---
 
-# learn-paper
+# grok
 
 > **Languages.** This skill spec is written in English. The artifact it produces — the interactive HTML — has Chinese natural-language content (chapter titles, prose, callouts, captions). Treat this asymmetry as load-bearing: instructions, comments, and reasoning happen in English; everything the human reader sees in the rendered page is in Chinese.
 
 ## Quick start
 
 ```
-/learn-paper "260506_Coding Agents_alphazero"
-/learn-paper "260506_Coding Agents_alphazero" --align
+/grok "260506_Coding Agents_alphazero"
+/grok "260506_Coding Agents_alphazero" --align
 ```
 
 Output: `<folder>/<paper-name>.html` (same name as the PDF, same folder, single file, all dependencies via CDN).
 
 ## Trigger discipline
 
-Enter this skill **only** on explicit user invocation: `/learn-paper <folder>`, or natural-language "学习 / 讲解 / 拆解 X 文件夹里的 paper". Seeing a PDF in the workspace is **not** a trigger — don't proactively start writing.
+Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natural-language "学习 / 讲解 / 拆解 X 文件夹里的 paper". Seeing a PDF in the workspace is **not** a trigger — don't proactively start writing.
 
 ## Workflow
 
@@ -204,7 +204,7 @@ Reference exemplars (visual ground truth):
 - **Topic isolation.** Do not read other topic folders.
 - **Online research is allowed.** When the agent enriches with external material, mark it explicitly using `aside.external` (paper-original vs. agent-added must be visually distinguishable).
 - **When unsure**, search the web first. If still uncertain, write the section anyway and mark the spot with `<div class="uncertain">⚠ 此处未充分消化：[原因]</div>`. **Do not interrupt the user with questions.**
-- **HTML already exists.** **Overwrite** (re-running learn-paper on the same paper means the user wants to replace). Don't touch `_drafts/`.
+- **HTML already exists.** **Overwrite** (re-running grok on the same paper means the user wants to replace). Don't touch `_drafts/`.
 - **Pin CDN versions** (`katex@0.16.11`, `prismjs@1.29.0`). **No `@latest`.**
 
 ### Interactive correctness (don't ship a blank canvas)
@@ -674,7 +674,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
   <div class="editor-note">
     <span class="label">Editor&rsquo;s Note &middot; 阅读契约</span>
     <!-- 2-3 sentences telling the reader the chapter map and what trade you're making with the page budget. -->
-    <span class="signoff">&mdash; learn-paper / <!-- ISO date -->，配茶</span>
+    <span class="signoff">&mdash; grok / <!-- ISO date -->，配茶</span>
   </div>
 
   <!-- optional hero stats -->
@@ -883,7 +883,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
     Set in Playfair Display &amp; Cormorant Garamond &amp; Inter.<br/>
     Math by KaTeX, code by Prism.<br/>
     Single file &middot; CDN-self-contained.<br/>
-    Generated <!-- ISO timestamp --> by learn-paper.
+    Generated <!-- ISO timestamp --> by grok.
   </div>
 </footer>
 
@@ -1050,7 +1050,7 @@ Start from this skeleton; expand as needed. It already contains masthead + warm-
 
 - Project-root `AGENTS.md` — reader profile, project-level hard constraints, trigger protocol.
 - Reference samples — visual ground truth for the 杂志风 default theme:
-  - `~/project/what_new/weekly/2026-19.html` — **canonical** masthead + hero + section-rule pattern; this is the look learn-paper imports.
+  - `~/project/what_new/weekly/2026-19.html` — **canonical** masthead + hero + section-rule pattern; this is the look grok imports.
   - `~/project/learn_with_agent/260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — full long-read application: 10-section paper read with accent rotation across red / indigo / slate / amber / plum / forest, three labs (DPR-scaled), afterword, colophon.
 - Reference samples — pedagogical patterns (older visual theme, read for content not visuals):
   - `~/Documents/manus_out/other_reading/Diffusion Concepts Interactive Webpage (1).html` — begin-with-why + multi-semantic callouts + timeline.
