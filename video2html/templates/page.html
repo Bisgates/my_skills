@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>__TITLE__</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { background: #0e0e10; color: #e6e6e6; margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: #8a8a93; font-size: 13px; margin-bottom: 24px; }
+  .panel { background: #18181b; border: 1px solid #2a2a30; border-radius: 12px; padding: 18px; }
+  video { width: 100%; display: block; background: #000; border-radius: 6px; }
+  .hint { color: #8a8a93; font-size: 11px; margin-top: 10px; font-family: ui-monospace, monospace; }
+  .hint kbd { background: #25252a; border: 1px solid #2a2a30; border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 5px; font-size: 10px; color: #e6e6e6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>__TITLE__</h1>
+  <p class="sub">__SUBTITLE__</p>
+  <div class="panel">
+    <video id="v" src="data:__MIME__;base64,__B64__" controls preload="auto" playsinline></video>
+    <div class="hint"><kbd>两指滑动</kbd> scrub (macOS 触控板)</div>
+  </div>
+</div>
+<script>
+(() => {
+  const v = document.getElementById('v');
+  const SCRUB_PX_PER_SEC = __SCRUB_PX_PER_SEC__;
+  const SCRUB_DIR = __SCRUB_DIR__;  // +1 = swipe right → forward, -1 = inverted
+  let wasPlaying = false, resumeTimer = null;
+  v.addEventListener('wheel', e => {
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (delta === 0) return;
+    e.preventDefault();
+    if (!v.paused) { wasPlaying = true; v.pause(); }
+    const dur = v.duration || 0;
+    v.currentTime = Math.min(Math.max(v.currentTime + SCRUB_DIR * delta / SCRUB_PX_PER_SEC, 0), dur - 1e-4);
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => { if (wasPlaying) { v.play(); wasPlaying = false; } }, 220);
+  }, { passive: false });
+})();
+</script>
+</body>
+</html>
