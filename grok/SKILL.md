@@ -44,6 +44,7 @@ Paper-grokking is naturally chunked: independent chapter drafts, separate worked
 
 1. **Locate the input and resolve the output directory.**
    - **Input.** Resolve `<folder>` (relative to project root or absolute path) when one is given. The user names the source — in the invocation, in chat, or via an obviously-named file inside `<folder>`. Read that source. Don't auto-detect: don't glob for `*.pdf` and silently pick one, don't assume a particular file extension. You may also read other files inside the same source folder (pre-extracted notes under `_drafts/`, related figures, supplementary code, sibling source files) when they help you understand. The user-named source is primary; everything else is supplementary. **Do not read other topic folders.** Strict isolation.
+   - **Scan for embeddable imagery while you read.** Note any source figures that pass the writing-principle-11 trigger ("the figure carries information the SVG + worked-example can't easily replace"). Extract them in step 4 with `pdfimages` / `pdftoppm` and inline as base64; don't leave the decision until the HTML is mostly written.
    - **Output directory** (referred to below as `<output-dir>`):
      - **Explicit folder argument** (e.g. `/grok "260506_Coding Agents_alphazero"` or `/grok ~/project/learn_with_agent/260507_OmniRe`) → `<output-dir>` = that folder. HTML lives next to the source.
      - **No folder argument**, or a bare source path that lives outside `learn_with_agent/` → `<output-dir>` = `/Users/han/project/learn_with_agent/<YYMMDD>/`, where `<YYMMDD>` is today's date (`date +%y%m%d`, e.g. `260510`). Run `mkdir -p` on it; it may not exist yet.
@@ -212,9 +213,23 @@ Reference exemplars (visual ground truth):
 - `~/project/what_new/weekly/2026-19.html` — canonical typography & hero & section-rule pattern.
 - `260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — long-read application of the system to a 9-chapter long-read with all components in use.
 
+### 11 · Source figures when they earn it
+
+A magazine runs photographs and plate reproductions next to its illustrations. When the source has imagery that's **clearly relevant** — generated samples, key result figures, dataset examples, physical-apparatus photos, named-people portraits a timeline references — embed it. Visual texture grounds the prose and gives the reader something to look at other than paragraphs and SVGs (增加趣味性).
+
+**Trigger**: the figure carries information the worked-example + SVG diagram can't easily replace. If you'd struggle to write a one-line caption that explains *why this image is here*, skip it.
+
+**Embedding** (the single-file double-click rule still holds):
+- **PDF-source figures**: extract with `pdfimages` or `pdftoppm`, then inline as `<img src="data:image/png;base64,…">`. Never reference a local file path. Quality > size; downscale to ≤ 1200px on the long edge so the file stays manageable.
+- **Web images**: only from stable pinned URLs (Wikipedia Commons, arXiv-hosted, paper supplementary, the author's project page). Anything not from the source itself goes inside `aside.external`.
+- **No AI-generated stock filler.** Decorative slop is worse than no image. Generic "abstract neural network" art especially — banned.
+- Every figure gets a `<figcaption>` (italic Cormorant 14–15px) with a mono-uppercase eyebrow like `Figure · 来源 p.7` or `External · Wikipedia`. Constrain width via CSS (`max-width: 100%; height: auto`).
+
+This is **opt-in**, not a checklist requirement. If the source genuinely has nothing photogenic worth keeping, the SVG + worked-example spine carries the page on its own — don't manufacture imagery to fill space. The bar is *clear relevance*, not *image count*.
+
 ## Hard constraints
 
-- **Single HTML file.** All CSS/JS inlined or via CDN. **No** project-root, `_lib/`, or local-asset references. Double-click to view.
+- **Single HTML file.** All CSS/JS inlined or via CDN; images either inlined as base64 data URIs or loaded from pinned public CDNs (see writing principle 11). **No** project-root, `_lib/`, or local-asset references. Double-click to view.
 - **Same stem; folder per resolution rule.** Filename always swaps the source extension to `.html`. The folder follows step 1 of the workflow: explicit `<folder>` argument → that folder; otherwise → `/Users/han/project/learn_with_agent/<YYMMDD>/` (today's date, e.g. `260510`).
 - **Math.** KaTeX (CDN, auto-render).
 - **Code.** Prism or highlight.js (CDN).
@@ -249,7 +264,7 @@ Every HTML must include the following — missing any of them and the artifact r
 7. **Math box triple** — `<div class="math-box"><div class="math-label">…</div>$$…$$<div class="math-note">…</div></div>`.
 8. **Worked example** — a `.worked-example` block per new concept (`we-label` + `we-setup` + numbered `we-steps` + 📌 `we-takeaway`).
 9. **Naive vs. Insight comparison** — `.compare` two-column grid, naive on left, the source's solution on right; at least one per HTML.
-10. **Figures** — at least 1–2 SVG / CSS / emoji-composed conceptual diagrams. "Figure missing" is not acceptable.
+10. **Figures** — at least 1–2 SVG / CSS / emoji-composed conceptual diagrams. **Source figures embedded as base64 (or pinned-CDN external images wrapped in `aside.external`) when clearly relevant** — see writing principle 11. "Figure missing" is not acceptable.
 11. **Lab block** — `.lab` container with `Field Study · Lab N · <name>` title in Inter caps + reveal line + canvas (DPR-scaled) + `.ctrl-row` + `.btn-row` + `.lab-note`.
 12. **Timeline** (strongly recommended when the source sits in a clear lineage) — historical chain with the latest item flagged `.tl-item.highlight`.
 13. **Comparison table** — paper-soft body + ink header bar; mark the source's own row with `tr.ours-row`.
