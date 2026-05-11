@@ -72,6 +72,10 @@ Paper-grokking is naturally chunked: independent chapter drafts, separate worked
    - Start from a verbatim copy of [`templates/skeleton.html`](templates/skeleton.html); fill in the placeholders. Do not hand-roll a new skeleton — the template already bakes in the masthead + warm-paper hero + progress bar + nav rail + section openers + drop-cap lede + callout matrix + math-box + worked-example + naive/insight compare + DPR-scaled lab + timeline + afterword + colophon.
    - Follow the writing principles and hard constraints below.
 
+5. **Open and hand off.**
+   - Run `open "<absolute-output-path>"` to launch the HTML in the user's default browser. This is also the moment to walk the lab QA in "Interactive correctness" § item 4 — don't `open` twice.
+   - Then print the absolute path **on a line by itself** in the final message (e.g. `/Users/han/project/learn_with_agent/260511/<name>.html`) so the user can `cmd+click` to reopen or copy it cleanly. No surrounding markdown, no trailing punctuation.
+
 ## Writing principles
 
 > Not writing a source summary. Writing a magazine-grade longread. The reader should close the page feeling "someone took the time to make this make sense to me."
