@@ -31,7 +31,7 @@
 (() => {
   const v = document.getElementById('v');
   const SCRUB_PX_PER_SEC = __SCRUB_PX_PER_SEC__;
-  const SCRUB_DIR = __SCRUB_DIR__;  // +1 = swipe right → forward, -1 = inverted
+  const SCRUB_DIR = __SCRUB_DIR__;  // -1 = QuickTime feel (swipe left → forward); +1 = natural-scroll inverted
   let wasPlaying = false, resumeTimer = null;
   v.addEventListener('wheel', e => {
     const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;

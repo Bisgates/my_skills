@@ -36,7 +36,7 @@ scripts/embed.py <video> [--out FILE] [--crf N] [--title TEXT] [--scrub-px-per-s
 |---|---|---|
 | `--crf` | 23 | Bump to 28 if the HTML must stay under ~10MB; drop to 18 only for visually critical material. All-intra burns bits — CRF moves size by ~2× per 5 steps. |
 | `--scrub-px-per-sec` | 60 | Larger = scrub feels slower / more controlled. Try 100–150 for long videos where small swipes shouldn't fly across minutes. |
-| `--invert-scroll` | off | If the user says "left/right is reversed" or runs macOS without natural scrolling. |
+| `--invert-scroll` | off | Default direction matches QuickTime (swipe left → forward, swipe right → backward). Pass this flag if the user prefers natural-scroll semantics (swipe right → forward). |
 | `--skip-reencode` | off | Use when the source is already known to be all-intra (e.g., second pass, screen recording with sparse motion). Saves time but seek smoothness depends on the input. |
 | `--out` | `<video>.html` next to source | When the caller is splicing the result into a larger pipeline. |
 
@@ -57,7 +57,7 @@ Do not just shell out and dump the standalone HTML inside the host — the stand
 The smoothness recipe lives in `templates/page.html`. The two knobs:
 
 - `SCRUB_PX_PER_SEC` — wheel pixels mapped to one second of video. Lower = more reactive, easier to overshoot. The default 60 was tuned on a 14-second clip; for a 5-minute screencast bump it to 200+.
-- `SCRUB_DIR` — `+1` follows natural-scroll semantics (swipe right → forward); `-1` inverts.
+- `SCRUB_DIR` — `-1` is the default and matches QuickTime feel (swipe **left** → forward, like dragging the playhead by the timeline beneath your fingers). `+1` flips to natural-scroll semantics (swipe right → forward).
 
 The resume-after-gesture timer is 220ms. Don't shorten it below ~180ms or trailing inertial wheel events will trigger spurious resumes mid-scrub.
 

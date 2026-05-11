@@ -60,7 +60,7 @@ def build_html(mp4: Path, *, title: str, subtitle: str,
         .replace("__SUBTITLE__", subtitle)
         .replace("__MIME__", mime)
         .replace("__SCRUB_PX_PER_SEC__", str(scrub_px_per_sec))
-        .replace("__SCRUB_DIR__", "-1" if invert_scroll else "+1")
+        .replace("__SCRUB_DIR__", "+1" if invert_scroll else "-1")
         .replace("__B64__", b64))  # b64 last — huge string, do it once
 
 
@@ -76,7 +76,7 @@ def main() -> None:
     ap.add_argument("--scrub-px-per-sec", type=int, default=60,
                     help="trackpad sensitivity: wheel pixels mapped to 1 second of video (default 60)")
     ap.add_argument("--invert-scroll", action="store_true",
-                    help="reverse two-finger scrub direction")
+                    help="reverse two-finger scrub direction (default = QuickTime: swipe left → forward)")
     ap.add_argument("--skip-reencode", action="store_true",
                     help="trust the input already has dense keyframes; embed it as-is")
     ap.add_argument("--keep-intermediate", action="store_true",
