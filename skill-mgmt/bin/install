@@ -60,6 +60,10 @@ for name in "${skill_mgmt_install_names[@]}"; do
     continue
   fi
 
+  if ! skill_mgmt_check_codex_desc_length "$name"; then
+    warned=$((warned + 1))
+  fi
+
   for t in "${TARGETS[@]}"; do
     link="$t/$name"
     if [[ -L "$link" ]]; then

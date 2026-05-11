@@ -76,6 +76,54 @@ skill_mgmt_skill_dependencies() {
   ' "$file"
 }
 
+# codex 0.128+ refuses to load a skill whose description exceeds this many
+# characters (verified empirically against the `invalid description: exceeds
+# maximum length of 1024 characters` error). Keep ours under it. Claude and
+# Antigravity have no comparable hard limit, but shorter descriptions are
+# generally also better.
+SKILL_MGMT_CODEX_DESC_MAX=1024
+
+# Extract the YAML frontmatter `description:` value for a skill. Joins folded
+# continuation lines (no leading `key:`) so multiline descriptions are measured
+# correctly, matching how codex parses the value.
+skill_mgmt_skill_description() {
+  local skill="$1"
+  local file="$REPO/$skill/SKILL.md"
+  [[ -f "$file" ]] || return 0
+
+  awk '
+    NR == 1 && $0 == "---" { in_fm = 1; next }
+    in_fm && $0 == "---" { if (have) print buf; exit }
+    in_fm {
+      if (!have && $0 ~ /^description:[[:space:]]*/) {
+        buf = $0
+        sub(/^description:[[:space:]]*/, "", buf)
+        have = 1
+        next
+      }
+      if (have) {
+        if ($0 ~ /^[A-Za-z_][A-Za-z0-9_-]*[[:space:]]*:/) { print buf; exit }
+        line = $0
+        sub(/^[[:space:]]+/, "", line)
+        if (line != "") buf = buf " " line
+      }
+    }
+  ' "$file"
+}
+
+# Warn (non-fatal) if a skill's description would be silently dropped by codex.
+skill_mgmt_check_codex_desc_length() {
+  local skill="$1"
+  local desc
+  desc="$(skill_mgmt_skill_description "$skill")"
+  local len="${#desc}"
+  if (( len > SKILL_MGMT_CODEX_DESC_MAX )); then
+    echo "WARN: $skill description is $len chars (>$SKILL_MGMT_CODEX_DESC_MAX); codex will silently drop this skill — claude/antigravity still load it" >&2
+    return 1
+  fi
+  return 0
+}
+
 # Populated by skill_mgmt_resolve_install_set.
 skill_mgmt_install_names=()
 skill_mgmt_visiting_names=()
