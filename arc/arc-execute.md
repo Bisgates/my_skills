@@ -41,11 +41,18 @@ description: Execute the arc's plan from current state, logging progress, until 
 8. After driving the last step:
    - Call `arc log "[done] all plan steps complete; ready for /arc-finalize"`.
    - Append a `[done]` reporter note (per step 5b) summarizing the final outcome vs. acceptance.
-   - **Dispatch the reporter sub-agent.** Issue **one** Agent tool call (`general-purpose`, no explicit `model`) with the self-contained prompt skeleton in `reporter.md`. The sub-agent reads `1_objective.md`, `2_plan.md`, `_tmp/report_notes.md`, `0_meta.md` (trailing log), and the layout of `output/` / `utils/` / `scripts/`, then writes a single-file CDN-self-contained magazine-style HTML to `<arc>/7_task_report.html`.
-   - When the sub-agent returns: verify the file exists and is non-empty; call `arc log "[report] 7_task_report.html generated (<size>KB)"`; run `open <arc>/7_task_report.html` from the shell.
-   - Tell the user one line: "Plan complete; report opened — see `7_task_report.html`. Suggest `/arc-finalize` next."
+   - **Dispatch the reporter sub-agent in the background.** Issue **one** Agent tool call (`general-purpose`, no explicit `model`, **`run_in_background: true`**) with the self-contained prompt skeleton in `reporter.md`. The sub-agent copies `~/.claude/skills/arc/templates/7_task_report.html` to `<arc>/7_task_report.html` and fills it from `1_objective.md`, `2_plan.md`, `_tmp/report_notes.md`, `0_meta.md` log, and the `output/` / `utils/` / `scripts/` listings.
+   - **Do not wait for it.** Background dispatch returns immediately. Hard rule: the reporter must not block the main flow. (See `reporter.md` for why and the historical incident.)
+   - Tell the user one short line: "Plan complete. Report drafting in the background — will auto-open when ready. Suggest `/arc-finalize` next." Then yield control back so the user's next message (typically `/arc-finalize`) is responded to without delay.
    - **Do not regenerate the report between steps.** It is emitted once, here, at the end. If `7_task_report.html` already exists from a prior `/arc-execute` run, overwrite it — this is the authoritative version.
-   - **If the reporter sub-agent fails:** call `arc log "[report-failed] <reason>"`, tell the user, and stop. Do not retry silently. The user decides whether to re-dispatch.
+
+9. **When the reporter completion notification arrives** (could be in the next turn, several turns later, or mid-`/arc-finalize`):
+   - Verify `<arc>/7_task_report.html` exists and is non-empty.
+   - Call `arc log "[report] 7_task_report.html generated (<size>KB)"`.
+   - Run `open <arc>/7_task_report.html` from the shell.
+   - Tell the user one line: "Report ready and opened — `7_task_report.html`."
+   - Do **not** re-orient the conversation around the report — if the user is mid-flow on something else, the line above is a notice, not a topic shift.
+   - **Failure path:** if the sub-agent reported an error or the file is missing, call `arc log "[report-failed] <reason>"`, tell the user one line, stop. Do not retry silently.
 
 ## Don't
 
