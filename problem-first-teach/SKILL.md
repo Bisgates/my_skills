@@ -134,6 +134,44 @@ These are the standards problem-designer must hit. Inline them in the subagent b
 - **Concrete before abstract.** The problem instantiates the concept; the user is computing, not just stating.
 - **One concept per problem.** Don't bundle two ideas into one test.
 - **The expected sketch is honest.** `round_N_expected.md` records the actual minimal solution path so the diagnostician can compare against the user's answer line-by-line. Not "the answer is 5"; the full move sequence.
+- **Math notation follows the channel.** See "Math notation per channel" below — problem text is read in a terminal, so Unicode, not LaTeX.
+
+## Math notation per channel
+
+The user reads chat in a terminal. Terminals don't render LaTeX — `\frac{1}{2}` prints as literal backslash garbage and reads *worse* than no formula at all. The grok HTML is rendered by KaTeX in a browser, which is the inverse channel. Match the renderer:
+
+| File / surface | Audience | Notation |
+|---|---|---|
+| `round_N_problem.md`, anything the main window posts to chat | user, in terminal | **Unicode math** |
+| `round_N_expected.md`, `round_N_diagnosis.md`, `transcript.md` | agent + occasional `cat` by user | **Unicode math** (consistency + readable when grepped) |
+| `round_N_gap.md` | grok, which emits KaTeX-rendered HTML | **LaTeX** (e.g. `\nabla \log p(x) = -x`) |
+| grok-produced `round_N_gap.html` | user, in browser | LaTeX (handled by grok) |
+
+Common Unicode atoms to keep within reach:
+
+- Superscripts: `⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ ⁺ ⁻ ⁽ ⁾ ⁿ`
+- Subscripts: `₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ ₊ ₋ ₍ ₎ ᵢ ⱼ ₖ ₙ ₓ`
+- Fractions: `½ ⅓ ⅔ ¼ ¾ ⅕ ⅙ ⅛`
+- Greek: `α β γ δ ε ζ η θ ι κ λ μ ν ξ π ρ σ τ φ χ ψ ω Δ Θ Λ Π Σ Φ Ψ Ω`
+- Operators: `∑ ∏ ∫ ∮ ∂ ∇ ∘ ∙ × · ⊗ ⊕ ⊙ √ ∛`
+- Relations: `≤ ≥ ≈ ≅ ≡ ≠ ∝ ∈ ∉ ⊂ ⊆ ⊃ ⊇ ∪ ∩ ∧ ∨`
+- Logic / arrows: `∀ ∃ ¬ ⇒ ⇔ ⟶ ⟵ ↦ ⟼`
+- Sets / bb: `ℝ ℕ ℤ ℚ ℂ`
+- Misc: `∞ ⊥ ∥ ∠ ° ′ ″ … ⋯ ⋮ ⋱`
+
+Examples of the *same expression* in the two channels:
+
+| LaTeX (grok / `round_N_gap.md`) | Unicode (chat / `round_N_problem.md`) |
+|---|---|
+| `s(x) = \nabla_x \log p(x)` | `s(x) = ∇ₓ log p(x)` |
+| `p(x) = \frac{1}{\sqrt{2\pi}} e^{-x^2/2}` | `p(x) = (1/√(2π))·e⁻ˣ²ᐟ²` |
+| `\mathbb{E}_{x \sim p}[\log p(x)]` | `𝔼ₓ~ₚ[log p(x)]` |
+| `\sum_{i=1}^{n} x_i` | `∑ᵢ₌₁ⁿ xᵢ` |
+| `\|x\|_2 \leq 1` | `‖x‖₂ ≤ 1` |
+
+When a notation genuinely needs LaTeX-only constructs (large matrices, multi-line `align`, `cases`), don't fight it in chat — keep the problem statement light, push the structural math into `round_N_gap.md` for grok, and reference it from the problem with a short verbal cue ("write the 2×2 Jacobian explicitly"). Never paste raw LaTeX into chat just to "show your work" — it punishes the reader.
+
+The problem-designer subagent's brief must include this rule; the diagnostician should preserve Unicode when quoting back from the user's answer.
 
 ## Communication contract with the user
 
