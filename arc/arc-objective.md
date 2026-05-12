@@ -41,7 +41,7 @@ description: Run grill-me to define the arc objective with crisp boundary and ac
    **Trivial route** (single concrete step, no smoke needed, no risky dependencies, acceptance is one number on one input):
    - Skip the formal `/arc-plan` flow.
    - Write a 1-3 line `2_plan.md` directly — numbered steps only, no `Strategy / Smoke Test First / Risks` sections required, just enough that `/arc-execute` knows what to run. (`2_plan.md` must exist for `/arc-finalize` to work; this is the minimum form.)
-   - Append one short note to `_drafts/report_notes.md` (mkdir on first use): `## <YYMMDD_HHMM> [plan]` + the step list.
+   - Append one short note to `_tmp/report_notes.md` (mkdir on first use): `## <YYMMDD_HHMM> [plan]` + the step list.
    - Tell the user one line: `Objective locked; task is small — wrote a minimal plan and starting execute.` Then chain into the `/arc-execute` flow per `arc-execute.md`.
 
    **Non-trivial route** (multiple goals, fuzzy acceptance, cross-system, real dependencies, risk):

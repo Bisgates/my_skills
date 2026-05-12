@@ -19,7 +19,7 @@ new concepts through a concrete worked example, magazine-style layout.
 ### Phase A — In-flight curation (cheap, by the main agent)
 
 During `/arc-plan` and `/arc-execute`, the main agent appends short bullet jots to
-`_drafts/report_notes.md` inside the canonical arc folder. This is **note-taking, not
+`_tmp/report_notes.md` inside the canonical arc folder. This is **note-taking, not
 report-writing** — the goal is to pre-stage the raw material so the final HTML
 generation in Phase B does not have to re-derive everything from `0_meta.md ## log`.
 
@@ -48,7 +48,7 @@ The notes file is freeform — the main agent does not need to obey a schema. An
 structure that lets the Phase B sub-agent quickly skim and reconstruct the journey is
 fine. Keep each note ≤ 5 lines.
 
-If `_drafts/` does not exist yet, create it on first append (`mkdir -p`).
+If `_tmp/` does not exist yet, create it on first append (`mkdir -p`).
 
 ### Phase B — Final emit (one general-purpose sub-agent at end of /arc-execute)
 
@@ -73,7 +73,7 @@ Read these files in order before writing anything:
    writing a different artifact (a task report, not a paper-grok).
 2. <arc>/1_objective.md — the goal, boundary, acceptance criteria.
 3. <arc>/2_plan.md — the route map.
-4. <arc>/_drafts/report_notes.md — the pre-staged notes (skim once for narrative).
+4. <arc>/_tmp/report_notes.md — the pre-staged notes (skim once for narrative).
 5. <arc>/0_meta.md — frontmatter (id/brief/parent/dates) and the trailing 60 lines of
    `## log` for the journey.
 6. <arc>/output/ — list directory contents to know which artifacts exist; reference
@@ -121,7 +121,7 @@ After the sub-agent returns, the main agent:
 
 - Sub-agent fails to produce the file → `arc log "[report-failed] <reason>"`, tell the
   user, do **not** retry silently. The user decides whether to re-dispatch.
-- `_drafts/report_notes.md` is missing or empty → the sub-agent reconstructs from
+- `_tmp/report_notes.md` is missing or empty → the sub-agent reconstructs from
   `0_meta.md ## log` alone. The report will be thinner; that is acceptable.
 - The arc was abandoned (not done) → reporter is **not** dispatched. Abandoned arcs
   stop at `arc abandon`; their trace lives in `0_meta.md` and that is enough.
@@ -129,7 +129,7 @@ After the sub-agent returns, the main agent:
 ## Don't
 
 - Do not regenerate `7_task_report.html` after every step — that is what
-  `_drafts/report_notes.md` is for. The HTML is emitted once, at the end.
+  `_tmp/report_notes.md` is for. The HTML is emitted once, at the end.
 - Do not let the reporter sub-agent write outside `<arc>/7_task_report.html`. No
   edits to `0_meta.md`, no `arc log` calls, no touching `utils/` or `scripts/`.
 - Do not pass an explicit `model` parameter when dispatching — `general-purpose`

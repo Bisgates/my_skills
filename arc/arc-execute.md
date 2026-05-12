@@ -16,7 +16,7 @@ description: Execute the arc's plan from current state, logging progress, until 
    - **Default is parallel, not serial.** Treat "single agent does this serially" as the exception that needs a reason. If two or more steps are independent, fan them out. **Issue all Agent tool calls in a single message** (this is a hard requirement for concurrency — splitting them across messages serializes them).
    - **Sub-agent selection:** use `general-purpose`, **do not pass an explicit `model` parameter**. `general-purpose` inherits the parent agent's model by default, which keeps "sub-agent model = main model".
    - **Each sub-agent prompt must be self-contained:** arc id and canonical path, the literal text of the step it owns, input file paths, output directory (**the main agent calls `arc output <step_name>` ahead of time and passes the path in**), what numbers / paths to report back, and a word cap (~200 words is good). Sub-agents have none of the current conversation context — give them the background up front.
-   - **Single log writer:** sub-agents **do not call `arc log`** and **do not append to `_drafts/report_notes.md`**. After all parallel results come back, the main agent **uniformly** calls `arc log "[<step>] <one-line conclusion>"` once per completed step, and appends a reporter note (see step 5b). This avoids concurrent writes shredding `## log` or the notes file.
+   - **Single log writer:** sub-agents **do not call `arc log`** and **do not append to `_tmp/report_notes.md`**. After all parallel results come back, the main agent **uniformly** calls `arc log "[<step>] <one-line conclusion>"` once per completed step, and appends a reporter note (see step 5b). This avoids concurrent writes shredding `## log` or the notes file.
    - **Cases that must be serial** (do not parallelize): step A's output is step B's input; multiple steps rewrite the same file (e.g. the same `utils/foo.py`, the same plan annotation); a step needs an interactive user decision; everything before the smoke test has run green; long-running steps (>10 min) are usually run separately too, for easier failure localization.
    - **When in doubt about a specific step, serialize that step.** "Default parallel" applies to clearly independent steps; for genuinely ambiguous cases the cost of getting parallelism wrong (poisoning downstream steps, overwriting artifacts) still outweighs the speedup.
 5. **Default to driving all the way through to the end of the plan.** Every time you complete an action that has a conclusion (ran a script, got a number, made a decision), call:
@@ -25,7 +25,7 @@ description: Execute the arc's plan from current state, logging progress, until 
    ```
    (`arc log` appends to the `## log` section of `0_meta.md` — don't hand-edit the file.)
 
-5b. **Append a reporter note when the step is load-bearing** (smoke pass/fail, key decision, an artifact under `output/` worth highlighting, all-steps-complete). Open `_drafts/report_notes.md` (`mkdir -p _drafts` on first use) and append a short block:
+5b. **Append a reporter note when the step is load-bearing** (smoke pass/fail, key decision, an artifact under `output/` worth highlighting, all-steps-complete). Open `_tmp/report_notes.md` (`mkdir -p _tmp` on first use) and append a short block:
    ```md
    ## <YYMMDD_HHMM> [<tag>]
    - <2-4 bullets, ≤ 5 lines total — numbers, paths, the why>
@@ -41,7 +41,7 @@ description: Execute the arc's plan from current state, logging progress, until 
 8. After driving the last step:
    - Call `arc log "[done] all plan steps complete; ready for /arc-finalize"`.
    - Append a `[done]` reporter note (per step 5b) summarizing the final outcome vs. acceptance.
-   - **Dispatch the reporter sub-agent.** Issue **one** Agent tool call (`general-purpose`, no explicit `model`) with the self-contained prompt skeleton in `reporter.md`. The sub-agent reads `1_objective.md`, `2_plan.md`, `_drafts/report_notes.md`, `0_meta.md` (trailing log), and the layout of `output/` / `utils/` / `scripts/`, then writes a single-file CDN-self-contained magazine-style HTML to `<arc>/7_task_report.html`.
+   - **Dispatch the reporter sub-agent.** Issue **one** Agent tool call (`general-purpose`, no explicit `model`) with the self-contained prompt skeleton in `reporter.md`. The sub-agent reads `1_objective.md`, `2_plan.md`, `_tmp/report_notes.md`, `0_meta.md` (trailing log), and the layout of `output/` / `utils/` / `scripts/`, then writes a single-file CDN-self-contained magazine-style HTML to `<arc>/7_task_report.html`.
    - When the sub-agent returns: verify the file exists and is non-empty; call `arc log "[report] 7_task_report.html generated (<size>KB)"`; run `open <arc>/7_task_report.html` from the shell.
    - Tell the user one line: "Plan complete; report opened — see `7_task_report.html`. Suggest `/arc-finalize` next."
    - **Do not regenerate the report between steps.** It is emitted once, here, at the end. If `7_task_report.html` already exists from a prior `/arc-execute` run, overwrite it — this is the authoritative version.

@@ -15,7 +15,7 @@ description: Generate 2_plan.md based on locked 1_objective.md. Use when the use
    - **The "Smoke Test First" section is required.** Validate the plan on tiny data first, then run the real experiment. This matches the workspace AGENTS.md emphasis on "data contract / preprocessing first + smoke train".
    - **The "Out-of-Scope" section is required.** "None" is acceptable, but it has to be a considered "none".
    - **Steps are free-form**, not forced into checkboxes; numbered headings with sub-items are fine.
-6. **Stage a reporter note.** Append one block to `_drafts/report_notes.md` (`mkdir -p _drafts` on first use):
+6. **Stage a reporter note.** Append one block to `_tmp/report_notes.md` (`mkdir -p _tmp` on first use):
    ```md
    ## <YYMMDD_HHMM> [plan]
    - strategy: <one line from the Strategy section>

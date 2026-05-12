@@ -68,5 +68,6 @@ Start only when the user explicitly says `approved` or equivalent. If they say `
 
 - Do not touch any main-project file during Stage 1.
 - Do not skip `9_summary.md` and call `arc status done` directly in Stage 2 — the CLI rejects it.
-- Do not promote anything from `output/` to the main project (it's gitignored by default — these are temporary artifacts).
+- Do not promote anything from `output/` to the main project (gitignored by default — temporary experiment artifacts).
+- Do not promote anything from `_tmp/` to the main project, and do not surface `_tmp/` contents in `8_handoff_plan.md` or `9_summary.md`. It is agent-internal scratch by definition.
 - Do not leave `8_*` / `9_*` sections empty — write "none" rather than omitting.
