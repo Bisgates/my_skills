@@ -10,12 +10,13 @@ description: Two-stage finalization — first draft 8_handoff_plan.md (no projec
 ## Stage 1 — Draft `8_handoff_plan.md`
 
 1. **Resolve the arc** — id or cwd.
-2. **Full sweep:**
-   - `utils/*.py` — for each file, assess promotion value: worth reusing? pure functions? does it conflict with existing code in the main project?
-   - `scripts/*.py` — skip by default, but list them and explicitly mark as skipped.
-   - `doc/*.md` — decide whether each is worth lifting up into the main project's `docs/`.
-   - `0_meta.md` `## log` — full scan for "stuck >15 min", "naming convention decided", "read a paper", "made a significant decision" → trigger `[NEW]` proposals (follows the workspace AGENTS.md "new-knowledge triggers").
-   - `1_objective.md` — has acceptance been met? → draft the Verification section.
+2. **Full sweep — default to parallel sub-agents (agent teams ON).** The four scan units below are independent (different files, different outputs, no shared mutable state), so dispatch them to `general-purpose` sub-agents in **one** Agent tool call (no explicit `model` parameter — let them inherit the parent). Each sub-agent reports its findings back as a structured block; the main agent then collates everything into a single `8_handoff_plan.md`. **Sub-agents do not write `8_handoff_plan.md` themselves and do not call `arc log`** — single writer rule, same as `/arc-execute`.
+   - **Unit A — `utils/*.py`.** For each file, assess promotion value: worth reusing? pure functions? does it conflict with existing code in the main project? Report a row per file.
+   - **Unit B — `scripts/*.py`.** Skip by default, but list them and explicitly mark as skipped. Report a list.
+   - **Unit C — `doc/*.md`.** Decide whether each is worth lifting up into the main project's `docs/`. Report `[NEW]` / `[UPDATE]` / `[STALE?]` recommendations.
+   - **Unit D — `0_meta.md ## log`.** Full scan for "stuck >15 min", "naming convention decided", "read a paper", "made a significant decision" → trigger `[NEW]` proposals (follows the workspace AGENTS.md "new-knowledge triggers"). Also cross-check `1_objective.md` acceptance: has it been met? → draft the Verification section.
+
+   **When to skip parallelism:** if `utils/`, `scripts/`, and `doc/` are all empty (or only have 1-2 trivial files), do the sweep inline serially — fan-out has overhead that is not worth it for tiny arcs. Default for normal arcs is parallel.
 3. **Generate `8_handoff_plan.md`** using `~/.claude/skills/arc/templates/8_handoff_plan.md`. **All four sections must be filled:**
    - Code promote plan (every `utils/*.py` must appear in either the promote table or the skip list, exactly once).
    - Doc proposals — `[NEW]` / `[UPDATE]` / `[STALE?]`.

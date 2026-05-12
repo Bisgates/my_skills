@@ -36,9 +36,20 @@ description: Run grill-me to define the arc objective with crisp boundary and ac
 
 6. After writing, call `arc touch <id>` (the script updates `last_active_at` and rebuilds the index).
 
-7. Finally, surface two candidate next moves to the user:
-   - `/arc-plan` to enter the planning phase.
-   - Or stop and sanity-check `1_objective.md` first.
+7. **Auto-chain — do not stop and ask "what next?".** Estimate complexity from the locked objective and route accordingly. The user gets a one-line status, not a "pick A or B" prompt.
+
+   **Trivial route** (single concrete step, no smoke needed, no risky dependencies, acceptance is one number on one input):
+   - Skip the formal `/arc-plan` flow.
+   - Write a 1-3 line `2_plan.md` directly — numbered steps only, no `Strategy / Smoke Test First / Risks` sections required, just enough that `/arc-execute` knows what to run. (`2_plan.md` must exist for `/arc-finalize` to work; this is the minimum form.)
+   - Append one short note to `_drafts/report_notes.md` (mkdir on first use): `## <YYMMDD_HHMM> [plan]` + the step list.
+   - Tell the user one line: `Objective locked; task is small — wrote a minimal plan and starting execute.` Then chain into the `/arc-execute` flow per `arc-execute.md`.
+
+   **Non-trivial route** (multiple goals, fuzzy acceptance, cross-system, real dependencies, risk):
+   - Tell the user one line: `Objective locked; entering plan phase.` Then chain into `/arc-plan` per `arc-plan.md`.
+
+   **When in doubt, take the non-trivial route.** The cost of writing a fuller plan you did not need is small; the cost of skipping a plan that was actually needed is large (downstream rework, missing smoke test, sub-agents fanning out blind).
+
+   The user can always interrupt ("hold on, let me look at the objective first") — but the default is to keep moving.
 
 ## Don't
 

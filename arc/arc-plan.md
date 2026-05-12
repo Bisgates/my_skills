@@ -15,7 +15,15 @@ description: Generate 2_plan.md based on locked 1_objective.md. Use when the use
    - **The "Smoke Test First" section is required.** Validate the plan on tiny data first, then run the real experiment. This matches the workspace AGENTS.md emphasis on "data contract / preprocessing first + smoke train".
    - **The "Out-of-Scope" section is required.** "None" is acceptable, but it has to be a considered "none".
    - **Steps are free-form**, not forced into checkboxes; numbered headings with sub-items are fine.
-6. After `arc touch <id>`, tell the user: "plan ready — run `/arc-execute` when you're ready."
+6. **Stage a reporter note.** Append one block to `_drafts/report_notes.md` (`mkdir -p _drafts` on first use):
+   ```md
+   ## <YYMMDD_HHMM> [plan]
+   - strategy: <one line from the Strategy section>
+   - steps: <comma-separated step verbs>
+   - smoke: <one line from the Smoke Test First section>
+   ```
+   This pre-stages context for the reporter sub-agent at the end of execute (see `reporter.md`).
+7. **Auto-chain into `/arc-execute`.** After `arc touch <id>`, tell the user one line — `Plan ready; entering execute.` — then chain straight into the execute flow per `arc-execute.md`. **Do not** stop and wait for "ready?". The user can interrupt if they want to review `2_plan.md` first.
 
 ## Don't
 
