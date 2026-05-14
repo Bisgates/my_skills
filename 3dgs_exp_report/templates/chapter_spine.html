@@ -1,0 +1,378 @@
+<!--
+  3dgs_exp_report — chapter spine stencil
+
+  Drop these section blocks into a copy of grok's Feynman/magazine skeleton
+  (~/.claude/skills/grok/templates/Feynman-skeleton.html) after stripping
+  the paper-learning chapters / labs / math-boxes. Class names mirror the
+  grok skeleton so the magazine chrome (paper bg, Playfair / Cormorant,
+  section-rule + Roman numeral openers, drop-cap lede, callout matrix,
+  pullquote, afterword, colophon) is inherited unchanged.
+
+  Replace every `<!-- TODO ... -->` with arc-specific content. Repeat the
+  chapter-2 sub-section block once per variant / agent. Drop optional
+  supplementary chapters in after chapter 3 if material warrants.
+-->
+
+<!-- ============================================================== -->
+<!-- HERO (drop into the existing grok hero, just retype the copy)  -->
+<!-- ============================================================== -->
+
+<header class="hero">
+  <div class="kicker">3DGS · Experiment Report · <!-- TODO arc id, e.g. 260512b --></div>
+  <h1>
+    <!-- TODO big Playfair title in Chinese, one italic <em> phrase -->
+    FABU 静态场景 <em>Boost</em> <span class="ampersand">&</span> 多方向并行实验
+  </h1>
+  <p class="subline"><!-- TODO one-sentence thesis (Chinese), <30 字 --></p>
+  <div class="editor-note">
+    <span class="label">editor's note · main agent</span>
+    <p>
+      <!-- TODO one-paragraph conclusion in Chinese. This is the lede; if
+           the reader stops here they should already know the result.
+           Include the winner, the magnitude, and the load-bearing caveat. -->
+    </p>
+    <span class="signoff">— main agent · <!-- TODO timestamp, e.g. 2026-05-12 23:24 --></span>
+  </div>
+  <div class="hero-stats">
+    <div><div class="v"><!-- 28.67 --></div><div class="l">baseline psnr · scene 002</div></div>
+    <div><div class="v"><!-- 24.44 --></div><div class="l">best variant psnr</div></div>
+    <div><div class="v"><!-- 0.865 --></div><div class="l">best ssim · scene 002</div></div>
+    <div><div class="v"><!-- 0.290 --></div><div class="l">best lpips · scene 002</div></div>
+  </div>
+  <div class="meta-line">
+    <span class="pill"><!-- arc 260512b · scenes 002 + 005 · GPU 4/5/6/7 --></span>
+    <a href="#ch1">SOTA &amp; 目标</a> · <a href="#ch2">各变体结果</a> · <a href="#ch3">综合结论</a>
+  </div>
+</header>
+
+
+<!-- ============================================================== -->
+<!-- CHAPTER 1 — SOTA 现状 / 实验目标 / 实验配置 (red accent)         -->
+<!-- ============================================================== -->
+
+<section class="branch" data-accent="red" id="ch1">
+  <hr class="section-rule" />
+  <div class="section-head">
+    <div class="numeral">I.</div>
+    <div class="titles">
+      <h2>SOTA 现状、实验 <strong>目标</strong>、本轮配置</h2>
+      <div class="branchcode">chapter_1 &middot; sota + goal + config</div>
+    </div>
+  </div>
+  <hr class="section-rule thin" />
+  <div class="ornament">&sect; &nbsp;&middot;&nbsp; &sect; &nbsp;&middot;&nbsp; &sect;</div>
+
+  <p class="ch-hook">在拍下"提升 X dB" 的目标之前，先看清基线到底卡在哪。</p>
+
+  <p class="lede">
+    <!-- TODO drop-cap opening paragraph in Chinese. Describe the
+         baseline (method, checkpoint, scenes, key metrics) and the
+         visible failure modes (栏杆 / floater / 糊面 / 远景空洞). -->
+  </p>
+
+  <h3><span class="marker">§ 1.1</span> 基线 metrics</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>variant</th>
+        <th class="text-right">PSNR ↑</th>
+        <th class="text-right">SSIM ↑</th>
+        <th class="text-right">LPIPS ↓</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>baseline · scene 002</td><td class="num">28.67</td><td class="num">0.885</td><td class="num">0.200</td></tr>
+      <tr><td>baseline · scene 005</td><td class="num">26.04</td><td class="num">0.832</td><td class="num">0.225</td></tr>
+    </tbody>
+  </table>
+
+  <h3><span class="marker">§ 1.2</span> 肉眼可见的失效模式</h3>
+  <div class="compare">
+    <div class="naive">
+      <span class="label">失效 · 细栏杆</span>
+      <!-- TODO base64 <img> showing baseline 细栏杆糊化 -->
+    </div>
+    <div class="naive">
+      <span class="label">失效 · 浮空 floater</span>
+      <!-- TODO base64 <img> showing baseline floater -->
+    </div>
+  </div>
+
+  <blockquote class="pullquote">
+    <!-- TODO 一句 thesis pullquote, italic Playfair, e.g.
+         "Anti-floater ≠ PSNR-max — 是一对必然的 trade-off。" -->
+    <span class="who">— hypothesis</span>
+  </blockquote>
+
+  <h3><span class="marker">§ 1.3</span> 实验目标</h3>
+  <p>
+    <!-- TODO one paragraph from 1_objective.md Goal — what we want to
+         fix and why these N variants are worth running this round. -->
+  </p>
+
+  <h3><span class="marker">§ 1.4</span> 本轮配置</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>variant</th>
+        <th>dimension</th>
+        <th>direction</th>
+        <th>GPU</th>
+        <th class="text-right">iters</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- TODO one row per variant -->
+      <tr><td>A · dense_init_depth_prior</td><td>data</td><td>DA3 dense init + depth loss</td><td>GPU4</td><td class="num">30k</td></tr>
+      <tr><td>B · anti_floater_reg</td><td>algo</td><td>cull / opacity entropy / smoothness</td><td>GPU5</td><td class="num">30k</td></tr>
+      <tr><td>C · perceptual_highres_long</td><td>algo</td><td>LPIPS + downscale 1 + 60k</td><td>GPU6</td><td class="num">60k</td></tr>
+      <tr><td>D · pose_refine_difix</td><td>data + post</td><td>GICP + CamPose lr×10</td><td>GPU7</td><td class="num">30k</td></tr>
+    </tbody>
+  </table>
+
+  <p class="ch-end">&middot; &nbsp;&middot;&nbsp; &middot;</p>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- CHAPTER 2 — N 组实验各自结果 (indigo accent)                    -->
+<!-- ============================================================== -->
+
+<section class="branch" data-accent="indigo" id="ch2">
+  <hr class="section-rule" />
+  <div class="section-head">
+    <div class="numeral">II.</div>
+    <div class="titles">
+      <h2>各 <strong>变体</strong> 的结果与效果</h2>
+      <div class="branchcode">chapter_2 &middot; per-variant loss + frames + videos + metrics</div>
+    </div>
+  </div>
+  <hr class="section-rule thin" />
+  <div class="ornament">&deg; &nbsp;&middot;&nbsp; &deg; &nbsp;&middot;&nbsp; &deg;</div>
+
+  <p class="ch-hook">先看每一个方向自己走到了哪——再决定谁值得继续。</p>
+
+  <p class="lede">
+    <!-- TODO chapter-2 lede: roughly 2-3 sentences orienting the
+         reader that each variant gets the same 5-block treatment
+         below — direction + loss curve + frame compare + every
+         video + per-variant metric table. -->
+  </p>
+
+  <!-- ============================================================ -->
+  <!-- Sub-section template — repeat once per variant.              -->
+  <!-- ============================================================ -->
+
+  <h3><span class="marker">§ 2.A</span> A · dense init + DA3 depth</h3>
+
+  <!-- (1) 方向说明 -->
+  <p>
+    <!-- TODO 1-2 sentences: which failure mode this attacks, the
+         hypothesised mechanism, and the config diff inline
+         (depth.w 0.01→0.1, inverse_depth=true, DA3 backproject ...). -->
+  </p>
+
+  <!-- (2) Loss 曲线 (skip silently if no plot exists) -->
+  <div class="panel">
+    <!-- TODO base64 <img> of loss curves (rgb / ssim / depth / lpips composite) -->
+    <div class="panel-cap">
+      <span class="cap-eye">Figure · agent_A · loss curves · 30k iter</span>
+      <!-- TODO 1 短句：哪条曲线最值得注意 -->
+    </div>
+  </div>
+
+  <!-- (3) 图片对比 -->
+  <div class="grid-2">
+    <div class="panel">
+      <!-- TODO base64 <img> -->
+      <div class="panel-cap"><span class="cap-eye">agent_A · scene 002 · f45 (~30%) · 上→下: baseline / variant / GT</span></div>
+    </div>
+    <div class="panel">
+      <!-- TODO base64 <img> -->
+      <div class="panel-cap"><span class="cap-eye">agent_A · scene 002 · f105 (~70%) · 上→下: baseline / variant / GT</span></div>
+    </div>
+  </div>
+
+  <!-- (4) 视频效果 — embed EVERY video that exists for this variant. -->
+  <!--     Skip block only if no video exists. Don't summarize multiple
+           videos with one embed. -->
+  <div class="panel">
+    <video src="data:video/mp4;base64,<!-- TODO base64 of all-intra mp4 -->" controls preload="metadata"></video>
+    <div class="panel-cap">
+      <span class="cap-eye">agent_A · scene 002 · 149 frames · vstack baseline / variant / GT</span>
+      <!-- TODO 1 短句肉眼可见的差别 -->
+    </div>
+  </div>
+  <div class="panel">
+    <video src="data:video/mp4;base64,<!-- TODO base64 of all-intra mp4 -->" controls preload="metadata"></video>
+    <div class="panel-cap">
+      <span class="cap-eye">agent_A · scene 005 · 149 frames · vstack baseline / variant / GT</span>
+    </div>
+  </div>
+
+  <!-- (5) 本变体 metrics -->
+  <table>
+    <thead>
+      <tr>
+        <th>row</th>
+        <th class="text-right">PSNR ↑</th>
+        <th class="text-right">SSIM ↑</th>
+        <th class="text-right">LPIPS ↓</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>baseline · scene 002</td><td class="num">28.67</td><td class="num">0.885</td><td class="num">0.200</td></tr>
+      <tr class="ours-row">
+        <td>A · scene 002</td>
+        <td class="num lose">24.31 (−4.36)</td>
+        <td class="num lose">0.841 (−0.044)</td>
+        <td class="num lose">0.256 (+0.056)</td>
+      </tr>
+      <tr><td>baseline · scene 005</td><td class="num">26.04</td><td class="num">0.832</td><td class="num">0.225</td></tr>
+      <tr class="ours-row">
+        <td>A · scene 005</td>
+        <td class="num lose">21.71 (−4.33)</td>
+        <td class="num lose">0.784 (−0.048)</td>
+        <td class="num lose">0.292 (+0.067)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="ch-end">&middot; &nbsp;&middot;&nbsp; &middot;</p>
+
+  <!-- TODO repeat the § 2.A block as § 2.B, § 2.C, § 2.D for each
+       remaining variant. Keep the 5-block order identical so the
+       reader can compare without re-orienting. -->
+
+</section>
+
+
+<!-- ============================================================== -->
+<!-- CHAPTER 3 — 综合对比及结论 (forest accent)                     -->
+<!-- ============================================================== -->
+
+<section class="branch" data-accent="forest" id="ch3">
+  <hr class="section-rule" />
+  <div class="section-head">
+    <div class="numeral">III.</div>
+    <div class="titles">
+      <h2>综合 <strong>对比</strong> 与结论</h2>
+      <div class="branchcode">chapter_3 &middot; cross-variant + verdict + limits + next</div>
+    </div>
+  </div>
+  <hr class="section-rule thin" />
+  <div class="ornament">&para; &nbsp;&middot;&nbsp; &para; &nbsp;&middot;&nbsp; &para;</div>
+
+  <p class="ch-hook">同一把尺子量到底——胜负、机制、下一步。</p>
+
+  <p class="lede">
+    <!-- TODO chapter-3 lede: declare the winner and the dominant
+         mechanism in 2-3 sentences. The body below substantiates. -->
+  </p>
+
+  <h3><span class="marker">§ 3.1</span> 全变体 × 全场景 metrics</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>variant</th>
+        <th class="text-right">PSNR ↑ · 002</th>
+        <th class="text-right">SSIM ↑ · 002</th>
+        <th class="text-right">LPIPS ↓ · 002</th>
+        <th class="text-right">PSNR ↑ · 005</th>
+        <th class="text-right">SSIM ↑ · 005</th>
+        <th class="text-right">LPIPS ↓ · 005</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>baseline</td><td class="num">28.67</td><td class="num">0.885</td><td class="num">0.200</td><td class="num">26.04</td><td class="num">0.832</td><td class="num">0.225</td></tr>
+      <tr><td>A</td><td class="num">24.31</td><td class="num">0.841</td><td class="num">0.256</td><td class="num">21.71</td><td class="num">0.784</td><td class="num">0.292</td></tr>
+      <tr><td>B</td><td class="num">24.00</td><td class="num">0.829</td><td class="num">0.301</td><td class="num">21.20</td><td class="num">0.766</td><td class="num">0.326</td></tr>
+      <tr class="ours-row"><td>C</td><td class="num win">24.44</td><td class="num win">0.865</td><td class="num win">0.290</td><td class="num win">21.80</td><td class="num win">0.807</td><td class="num win">0.305</td></tr>
+      <tr><td>D</td><td class="num">23.39</td><td class="num">0.802</td><td class="num">0.302</td><td class="num">20.82</td><td class="num">0.753</td><td class="num">0.305</td></tr>
+    </tbody>
+  </table>
+
+  <h3><span class="marker">§ 3.2</span> 关键判断</h3>
+  <ul>
+    <li><strong><!-- TODO key claim 1 --></strong>。<!-- mechanism, 1-2 sentences --></li>
+    <li><strong><!-- TODO key claim 2 --></strong>。<!-- mechanism --></li>
+    <li><strong><!-- TODO key claim 3 --></strong>。<!-- mechanism --></li>
+    <!-- TODO 3-6 bullets total, each <strong>-led -->
+  </ul>
+
+  <h3><span class="marker">§ 3.3</span> 限制与陷阱</h3>
+  <div class="danger">
+    <span class="label">caveat · dataset merge bug</span>
+    <p>
+      <!-- TODO description of test_image_stride / merge / unfair eval
+           split / OOM probe etc. One .danger per substantive limit. -->
+    </p>
+  </div>
+
+  <h3><span class="marker">§ 3.4</span> 下一步建议</h3>
+  <ol>
+    <li><strong><!-- variant + change --></strong>：<!-- expected signal --></li>
+    <li><strong><!-- variant + change --></strong>：<!-- expected signal --></li>
+    <!-- TODO 3-5 items, each naming variant + concrete change + signal -->
+  </ol>
+
+  <p class="ch-end">&middot; &nbsp;&middot;&nbsp; &middot;</p>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- (OPTIONAL) Supplementary chapters — amber / plum / slate       -->
+<!-- ============================================================== -->
+
+<!--
+<section class="branch" data-accent="amber" id="ch4">
+  <hr class="section-rule" />
+  <div class="section-head">
+    <div class="numeral">IV.</div>
+    <div class="titles">
+      <h2>补充 · <strong>对齐 / pose / 数据契约</strong></h2>
+      <div class="branchcode">supplementary_1 &middot; whatever didn't fit ch1-3</div>
+    </div>
+  </div>
+  <hr class="section-rule thin" />
+  <div class="ornament">&loz; &nbsp;&middot;&nbsp; &loz; &nbsp;&middot;&nbsp; &loz;</div>
+  <p class="ch-hook">不进主线、但下一个 arc 会需要的素材。</p>
+  <p class="lede"><!-- TODO --></p>
+  ...body...
+  <p class="ch-end">&middot; &nbsp;&middot;&nbsp; &middot;</p>
+</section>
+-->
+
+
+<!-- ============================================================== -->
+<!-- AFTERWORD + COLOPHON (drop in just before </main> / </body>)   -->
+<!-- ============================================================== -->
+
+<aside class="afterword">
+  <span class="label">afterword · main agent</span>
+  <h4><!-- TODO italic Playfair one-liner, e.g. "本轮选了什么、又主动放弃了什么" --></h4>
+  <ul>
+    <li><!-- 选了 X，因为 Y --></li>
+    <li><!-- 没做 X，因为 Y（边界 / out-of-scope / Difix3D stretch goal etc.） --></li>
+    <li><!-- 留给下个 arc 的种子 --></li>
+  </ul>
+</aside>
+
+<footer class="colophon">
+  <div class="col">
+    <h5>citation</h5>
+    <p><em>arc <!-- 260512b --> · boost_fabu_static_sota · main agent · <!-- date --></em></p>
+  </div>
+  <div class="col">
+    <h5>resources</h5>
+    <p>
+      <a href="../"><!-- arc root --></a><br />
+      <a href="../9_summary.md">9_summary.md</a><br />
+      <a href="../2_plan.md">2_plan.md</a>
+    </p>
+  </div>
+  <div class="col">
+    <h5>colophon</h5>
+    <p><em>magazine theme via grok · Playfair / Cormorant / Inter / JetBrains Mono on warm paper</em></p>
+  </div>
+</footer>

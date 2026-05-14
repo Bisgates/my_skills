@@ -8,3 +8,4 @@ grill-with-docs
 grok
 video2html
 problem-first-teach
+3dgs_exp_report
