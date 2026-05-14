@@ -5,11 +5,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title><!-- title (Chinese, ends in "— a Stanford notebook walkthrough · spelled out from scratch") --></title>
 
-<!-- KaTeX -->
+<!-- KaTeX — load deferred, render on DOMContentLoaded.
+     Do not use `<script defer ... onload="renderMathInElement(...)">`:
+     `onload` fires when the script *file* finishes downloading, which can
+     land mid-parse and skip everything that hasn't been parsed yet.
+     DOMContentLoaded waits for the parser to finish.
+     Note: inline math here uses `\(...\)` rather than `$...$` to match
+     bird-skeleton.html and dual-tab-skeleton.html — `$` collides with
+     shell / CSS / regex syntax in code-cell narration. If you change the
+     delimiter set or `ignoredTags`, mirror it in the other two skeletons. -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
-        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false }
+      ],
+      throwOnError: false,
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+      ignoredClasses: ['no-katex']
+    });
+  });
+</script>
 
 <!-- Prism — quiet (light) theme, NOT tomorrow -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css">
