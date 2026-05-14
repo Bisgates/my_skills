@@ -17,6 +17,7 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 - A skill may declare runtime dependencies in `SKILL.md` frontmatter with `dependencies:` (also accepted: `depends_on:` or `requires:`). Installing a skill installs its recursive dependency closure first.
 - Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
 - Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`.
+- **Project-local skills** under `<project>/.claude/skills/<name>/` are a separate category: Claude Code picks them up project-scoped (no symlinks), they do not belong in `manifest.txt`, and the `install / sync / adopt / new` ops do not apply. Only the **Edit** path (Op 5) applies, and commits land in the project's own git repo. See [Repo-local skills](#repo-local-skills).
 
 ## Conventions
 
@@ -110,6 +111,19 @@ The escalation looks like: "I started to make change X, but the skill has drifte
 
 **After-edit:** the same auto-commit/push rule from "Git automation" applies. Frontmatter `description` changes always count as substantive — they alter the trigger surface across all runtimes.
 
+**Repo-local skills:** if the target lives under `<project>/.claude/skills/<name>/` instead of in this `my_skills` repo, the authoring rules above are unchanged, but the commit target shifts to the project's own git repo. See [Repo-local skills](#repo-local-skills).
+
+## Repo-local skills
+
+Some skills are scoped to a single project and live at `<project>/.claude/skills/<name>/SKILL.md` rather than in the `my_skills` repo. Claude Code discovers them automatically when the agent is invoked inside that project — no symlinks, no manifest entry, no cross-runtime mirroring.
+
+Treat them as out of scope for `install / sync / adopt / new` (those are `my_skills`-only). The only operation that applies is **Edit** (Op 5), with one adjustment:
+
+- Detection: when the user asks to edit a skill, first check `<my_skills_repo>/<name>/SKILL.md`. If absent, check `<cwd>` (and its parents up to a git root) for `.claude/skills/<name>/SKILL.md`. The path determines which repo owns the skill.
+- Authoring rules (description writing, anti-overfitting, refactor escalation, etc. — see `<my_skills_repo>/write-a-skill/SKILL.md`) apply identically. Project locality changes the commit target, not the writing standard.
+- Commit target: changes land in the project repo (e.g. `git -C <project> add … && git commit …`) — never in `my_skills`. Do not append the skill to `<my_skills_repo>/manifest.txt`.
+- Do not silently migrate a project-local skill into `my_skills`. If a project-local skill turns out to be broadly useful, surface that to the user; the user decides whether to promote it.
+
 ## Dependency format
 
 Declare dependencies only when another skill must be installed for this skill to work correctly at runtime. Keep the list to skill directory names.
@@ -135,6 +149,7 @@ After successful modifying operations (`new`, `adopt`, and any direct skill edit
 - Set `SKILL_MGMT_AUTOCOMMIT=0` to disable automatic commits.
 - Set `SKILL_MGMT_AUTOPUSH=0` to commit locally but skip push.
 - `install` usually changes only symlinks outside the repo, so its auto-commit step is normally a no-op.
+- For **repo-local skill** edits, the same clean-then-commit-and-push behavior applies, but against the *project's* git repo (where `<project>/.claude/skills/<name>/SKILL.md` lives) — not `my_skills`. See [Repo-local skills](#repo-local-skills).
 
 ## Manifest format
 
