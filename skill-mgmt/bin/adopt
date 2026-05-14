@@ -122,11 +122,11 @@ fi
 
 SKILL_MGMT_AUTOCOMMIT=0 "$REPO/skill-mgmt/bin/install"
 
-skill_mgmt_auto_commit_push "adopt $name"
+skill_mgmt_auto_commit_push "adopt $name" "$name" "manifest.txt"
 
 cat <<EOF
 
 ✓ adopted: $name
 
-By default this script already auto-committed and pushed the adoption if the repo was clean at start.
+By default this script already auto-committed and pushed the new $name/ and manifest.txt paths (other dirty files in this repo were left alone).
 EOF

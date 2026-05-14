@@ -197,20 +197,46 @@ skill_mgmt_autopush_enabled() {
 
 skill_mgmt_git_state_captured=0
 skill_mgmt_git_dirty_at_start=0
+skill_mgmt_git_dirty_paths_at_start=()
 
 skill_mgmt_capture_git_state() {
   skill_mgmt_git_state_captured=1
   skill_mgmt_git_dirty_at_start=0
+  skill_mgmt_git_dirty_paths_at_start=()
   if ! git -C "$REPO" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     return 0
   fi
-  if [[ -n "$(git -C "$REPO" status --porcelain)" ]]; then
-    skill_mgmt_git_dirty_at_start=1
-  fi
+  local porcelain
+  porcelain="$(git -C "$REPO" status --porcelain)"
+  [[ -z "$porcelain" ]] && return 0
+  skill_mgmt_git_dirty_at_start=1
+  # Each line: "XY path" or "XY old -> new" for renames. Record both old and new for renames.
+  local line path old new
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    path="${line:3}"
+    if [[ "$path" == *" -> "* ]]; then
+      old="${path%% -> *}"
+      new="${path##* -> }"
+      skill_mgmt_git_dirty_paths_at_start+=("$old" "$new")
+    else
+      skill_mgmt_git_dirty_paths_at_start+=("$path")
+    fi
+  done <<< "$porcelain"
 }
 
+# Usage: skill_mgmt_auto_commit_push <message> [<path> ...]
+# Path-scoped commit. If paths are passed, only those are staged; other dirty
+# files in the repo (e.g. unrelated in-progress edits to other skills) are
+# left alone. Refuses to commit only on real conflicts:
+#   (a) any target path was already dirty before this op started, or
+#   (b) repo is mid-merge / mid-rebase / mid-cherry-pick / mid-revert.
+# With no paths (legacy), falls back to "git add -A and refuse if repo was
+# dirty at start" so old callers don't silently change behavior.
 skill_mgmt_auto_commit_push() {
   local message="$1"
+  shift || true
+  local -a paths=("$@")
 
   if ! skill_mgmt_autocommit_enabled; then
     echo "auto-commit: disabled by SKILL_MGMT_AUTOCOMMIT"
@@ -231,19 +257,53 @@ skill_mgmt_auto_commit_push() {
     return 0
   fi
 
-  if [[ "$skill_mgmt_git_dirty_at_start" -eq 1 ]]; then
-    echo "auto-commit: skipped because repo was already dirty at script start" >&2
-    echo "             review manually: cd $REPO && git status --short" >&2
+  local git_dir
+  git_dir="$(git -C "$REPO" rev-parse --git-dir)"
+  if [[ -e "$git_dir/MERGE_HEAD" || -e "$git_dir/CHERRY_PICK_HEAD" || -e "$git_dir/REVERT_HEAD" \
+        || -d "$git_dir/rebase-apply" || -d "$git_dir/rebase-merge" ]]; then
+    echo "auto-commit: skipped, repo is mid-merge/rebase/cherry-pick — resolve first" >&2
+    echo "             review: cd $REPO && git status --short" >&2
     return 0
   fi
 
-  echo "auto-commit: committing repo changes"
-  git -C "$REPO" add -A
+  if [[ "${#paths[@]}" -eq 0 ]]; then
+    # Legacy: no paths specified → keep old global guard.
+    if [[ "$skill_mgmt_git_dirty_at_start" -eq 1 ]]; then
+      echo "auto-commit: skipped because repo was already dirty and no paths were specified" >&2
+      echo "             review: cd $REPO && git status --short" >&2
+      return 0
+    fi
+    git -C "$REPO" add -A
+  else
+    # Path-scoped: refuse only if any target path was already dirty pre-op.
+    local -a conflicting=()
+    local p dirty
+    for p in "${paths[@]}"; do
+      for dirty in "${skill_mgmt_git_dirty_paths_at_start[@]:-}"; do
+        [[ -z "$dirty" ]] && continue
+        if [[ "$dirty" == "$p" || "$dirty" == "$p/"* || "$p" == "$dirty/"* ]]; then
+          conflicting+=("$p (prior uncommitted: $dirty)")
+          break
+        fi
+      done
+    done
+    if [[ "${#conflicting[@]}" -gt 0 ]]; then
+      echo "auto-commit: skipped, target path(s) had prior uncommitted changes:" >&2
+      for p in "${conflicting[@]}"; do
+        echo "             - $p" >&2
+      done
+      echo "             resolve those manually, then re-run." >&2
+      return 0
+    fi
+    git -C "$REPO" add -- "${paths[@]}"
+  fi
+
   if git -C "$REPO" diff --cached --quiet; then
     echo "auto-commit: no staged changes"
     return 0
   fi
 
+  echo "auto-commit: committing repo changes"
   git -C "$REPO" commit -m "$message"
 
   if skill_mgmt_autopush_enabled; then

@@ -142,14 +142,15 @@ Supported keys are `dependencies:`, `depends_on:`, and `requires:`. Supported va
 
 ## Git automation
 
-After successful modifying operations (`new`, `adopt`, and any direct skill edits performed by an agent), commit and push by default. The scripts implement this rule safely:
+After successful modifying operations (`new`, `adopt`, and any direct skill edits performed by an agent), commit and push by default — **path-scoped** to what the operation actually touched.
 
-- If the repo was clean when the script started and the operation created repo changes, run `git add -A`, `git commit -m "..."`, `git pull --rebase`, then `git push`.
-- If the repo was already dirty when the script started, skip auto-commit to avoid mixing unrelated edits; report `git status --short` for manual review.
+- **Path-scoped commits.** The scripts `git add -- <only the paths this op touched>` (e.g. `<name>/` for the new/edited skill plus `manifest.txt` for `new`/`adopt`), then `git commit`, `git pull --rebase`, `git push`. Other dirty files elsewhere in the repo are left untouched — uncommitted changes in *other* skills do not block this commit.
+- **Refuse only on real conflicts.** Skip auto-commit when (a) any target path was already dirty before this operation started (committing it would silently absorb someone else's in-progress work), or (b) the repo is mid-merge / mid-rebase / mid-cherry-pick / mid-revert. In both cases, print `git status --short` and let the user resolve manually.
+- **Agent edits (Op 5)** apply the same rule by hand: `git add -- <path/to/changed/SKILL.md and any bundled files you touched>`, then commit. Do not `git add -A`; do not refuse just because unrelated files are dirty.
 - Set `SKILL_MGMT_AUTOCOMMIT=0` to disable automatic commits.
 - Set `SKILL_MGMT_AUTOPUSH=0` to commit locally but skip push.
 - `install` usually changes only symlinks outside the repo, so its auto-commit step is normally a no-op.
-- For **repo-local skill** edits, the same clean-then-commit-and-push behavior applies, but against the *project's* git repo (where `<project>/.claude/skills/<name>/SKILL.md` lives) — not `my_skills`. See [Repo-local skills](#repo-local-skills).
+- For **repo-local skill** edits, the same path-scoped commit/push behavior applies, but against the *project's* git repo (where `<project>/.claude/skills/<name>/SKILL.md` lives) — not `my_skills`. See [Repo-local skills](#repo-local-skills).
 
 ## Manifest format
 

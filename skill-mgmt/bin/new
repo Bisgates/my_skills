@@ -48,7 +48,7 @@ fi
 
 SKILL_MGMT_AUTOCOMMIT=0 "$REPO/skill-mgmt/bin/install"
 
-skill_mgmt_auto_commit_push "add $name"
+skill_mgmt_auto_commit_push "add $name" "$name" "manifest.txt"
 
 cat <<EOF
 
@@ -57,5 +57,5 @@ cat <<EOF
 Next:
   - Read $REPO/write-a-skill/SKILL.md for authoring conventions.
   - Edit $dest/SKILL.md (refine description triggers, fill workflows).
-  - By default this script already auto-committed and pushed the scaffold if the repo was clean at start.
+  - By default this script already auto-committed and pushed the new $name/ and manifest.txt paths (other dirty files in this repo were left alone).
 EOF
