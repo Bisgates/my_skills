@@ -53,7 +53,7 @@ The user usually points at an arc id (`260512b`) or an arc folder path. From the
 
 2. **Collect artifacts.** Read `0_meta.md`, `1_objective.md`, `2_plan.md`, the latest `9_*.md` if present. List script outputs under `agent_<X>/output/<ts>_*/` and `output/<...>/`. Glob, don't guess.
 
-3. **Start from grok's MIT/magazine skeleton.** Copy `~/.claude/skills/grok/templates/MIT-skeleton.html` to `<arc>/exp_report.html`. That file is the canonical magazine chrome — masthead, warm-paper hero with editor-note, top progress bar, right-rail nav dots, ruled section openers with Roman numerals + accent rotation, drop-cap lede, callout matrix, math-box, pull-quote, afterword, three-column colophon. Then **prune** what doesn't apply to an experiment report:
+3. **Start from grok's bird/magazine skeleton.** Copy `~/.claude/skills/grok/templates/bird-skeleton.html` to `<arc>/exp_report.html`. That file is the canonical magazine chrome — masthead, warm-paper hero with editor-note, top progress bar, right-rail nav dots, ruled section openers with Roman numerals + accent rotation, drop-cap lede, callout matrix, math-box, pull-quote, afterword, three-column colophon. Then **prune** what doesn't apply to an experiment report:
    - Remove `.lab` / `.canvas` / `.btn-row` blocks (no interactive sandboxes here).
    - Remove `.worked-example` / `.math-box` if there's no formula being walked through (usually there isn't).
    - Remove the IIFE-wrapped `<script>` for lab demos. Keep IntersectionObserver for the nav rail + the progress bar.
@@ -158,8 +158,8 @@ For the canonical visual ground truth, open `~/project/what_new/weekly/2026-19.h
 
 ## See also
 
-- `~/.claude/skills/grok/templates/MIT-skeleton.html` — **canonical magazine skeleton** (was `Feynman-skeleton.html` before grok renamed its style packs to MIT / Stanford). Start every report from a copy of this file, then prune lab/math-box and fill the 3-chapter spine.
-- `~/.claude/skills/grok/references/styles/MIT.md` — full magazine style contract (component checklist, CSS class reference, visual gotchas) that this skill's chrome inherits.
+- `~/.claude/skills/grok/templates/bird-skeleton.html` — **canonical magazine skeleton** (renamed across grok's style-pack iterations: `skeleton.html` → `Feynman-skeleton.html` → `MIT-skeleton.html` → `bird-skeleton.html`; current name follows Dyson's *Birds and Frogs*). Start every report from a copy of this file, then prune lab/math-box and fill the 3-chapter spine.
+- `~/.claude/skills/grok/references/styles/bird.md` — full magazine style contract (component checklist, CSS class reference, visual gotchas) that this skill's chrome inherits. The voice contract is Hamming-style top-down — but for experiment reports the focus is on results / metrics / videos, so the visual is reused while the voice content is the report itself, not a Hamming-style essay.
 - [`templates/chapter_spine.html`](templates/chapter_spine.html) — fill-in stencil for the 3 required chapters (and an optional supplementary chapter) in magazine markup.
 - `~/.claude/skills/video2html/SKILL.md` — video embedding pipeline. Use its "video inside something bigger" workflow.
 - `~/.claude/skills/grok/SKILL.md` — paper-learning HTML skill that defines the magazine theme this skill inherits. Different surface (it learns a source; we report an experiment); same chrome.
