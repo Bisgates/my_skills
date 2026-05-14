@@ -1,15 +1,17 @@
-# Style pack · Stanford (default visual: Jupyter notebook)
+# Style pack · frog (default visual: Jupyter notebook)
 
-Pedagogical posture: **bottom-up, worked-example first; build / compute / observe, abstraction emerges**. The lineage is the Stanford teaching tradition. Two exemplars, two valid spines:
+Pedagogical posture: **bottom-up, worked-example first; build / compute / observe, abstraction emerges**. The lineage is **Karpathy** + **Andrew Ng**. Two exemplars, two valid spines:
 
 - **Karpathy "zero to hero" — code-as-spine.** Open with a code cell of the actual artifact (the command, the function, the data). Each cell takes the smallest next step. The reader watches the abstraction get built in front of them, and every claim is backed by a concrete computation they could redo themselves. Notebook rhythm: `In [N]:` / `Out[N]:` pairs with markdown narration between.
 - **Andrew Ng CS229 — math-as-spine.** Start from the simplest concrete problem (one-feature linear regression on a tiny dataset). Derive: likelihood → log-likelihood → gradient → update rule → algorithm. Each line of math is a small next step the reader could have taken. Generalize only after the simplest case is fully chewed. In this style the page leans more on `.chalk` blocks tracing the derivation, less on `In [N]:` cells running code — but the same bottom-up spine.
 
 A page can lean fully Karpathy (code-only, no derivation), fully Ng (derivation-only, no runnable code), or mix the two (derive then run, or run then derive). The notebook visual layer hosts both. The reader closes the page feeling they *could write this themselves now*.
 
-Default skeleton: [`templates/Stanford-skeleton.html`](../../templates/Stanford-skeleton.html). Copy verbatim and fill placeholders; do not hand-roll.
+The name "frog" follows Freeman Dyson's *Birds and Frogs*: a frog sits in the mud, sees the flowers up close, and solves problems one at a time. This is the page voice — close-range, example-by-example, comfortable across many domains because it always grounds in a specific computation first.
 
-## Voice (the Stanford delta)
+Default skeleton: [`templates/frog-skeleton.html`](../../templates/frog-skeleton.html). Copy verbatim and fill placeholders; do not hand-roll.
+
+## Voice (the frog delta)
 
 - **Example before abstraction.** Open with a concrete instance — either a code cell of the actual artifact (Karpathy mode) or the smallest numerical problem the algorithm solves (Ng mode). The narration explains what just happened, not what's about to happen. The abstraction emerges, it is not declared upfront.
 - **Spelled out.** "Let's just write this from scratch and see" (Karpathy) / "Let's derive this from the likelihood" (Ng). Each cell or each line of math takes the smallest next step. Never reference unwritten future cells / derivations; build forward.
@@ -43,7 +45,7 @@ Reads like a Jupyter notebook rendered to HTML, not a magazine spread.
 
 ## Required components — checklist
 
-Every Stanford/notebook HTML must include the following — missing any of them and the artifact regresses to "wall of text":
+Every frog/notebook HTML must include the following — missing any of them and the artifact regresses to "wall of text":
 
 1. **Title block** — kicker in mono caps + Inter h1 + `.sub` one-liner + `in [1]:` meta line + 1px bottom rule.
 2. **Cold-open code cell** — the very first content under the title is `In [1]:` showing the *actual* code or command being explained. Not a TOC, not an abstract, not background. Code first.
@@ -58,7 +60,7 @@ Every Stanford/notebook HTML must include the following — missing any of them 
 11. **At least one worked example** — either inline (`In [N]:` cell computing the smallest concrete instance + `Out[N]:` showing the result) or as a chalk trace block stepping through the same calculation by hand.
 12. **A diff or compare block** when there's a "naive vs. insight" or "before vs. after" to show (`.diff` two-column or two adjacent code cells with comments).
 13. **Footer `.nb-foot`** — mono caps, lists the source files used and any numbers-source notes ("numbers verbatim from `uv run python demo.py`").
-14. **Source figures inline when they earn it** — same rule as the MIT style: base64-inline a source figure when it carries information the worked-example + diagram can't replace. Render with a `<figure>` + mono caps caption.
+14. **Source figures inline when they earn it** — same rule as the bird pack: base64-inline a source figure when it carries information the worked-example + diagram can't replace. Render with a `<figure>` + mono caps caption.
 
 ## CSS class quick reference
 
@@ -103,10 +105,10 @@ Every Stanford/notebook HTML must include the following — missing any of them 
 
 ## Style-specific gotchas
 
-- **Don't paint a magazine in notebook clothes** — if you find yourself wanting a Roman numeral, an ornament glyph row, a drop cap, or a warm-paper background, the user asked for the wrong style. Go back to the MIT pack.
+- **Don't paint a magazine in notebook clothes** — if you find yourself wanting a Roman numeral, an ornament glyph row, a drop cap, or a warm-paper background, the user asked for the wrong style. Go back to the bird pack.
 - **Don't fake the output cells** — if you don't have real stdout, make it clearly synthesized ("typical" / "illustrative") in the surrounding narration. Don't paste numbers that look real but aren't.
-- **Don't pile cells without narration** — every 2–3 code cells need a `cell markdown` between them explaining what just happened or setting up the next step. Wall of code without commentary is *not* the Stanford notebook style — that's a script dump.
-- **Lab control ids must be lab-prefixed** — Stanford notebook pages typically have 2–4 labs; control ids collide easily. Use `lab2-yaw`, `lab3-gt`, never `r1` / `slider`.
+- **Don't pile cells without narration** — every 2–3 code cells need a `cell markdown` between them explaining what just happened or setting up the next step. Wall of code without commentary is *not* the frog notebook style — that's a script dump.
+- **Lab control ids must be lab-prefixed** — frog notebook pages typically have 2–4 labs; control ids collide easily. Use `lab2-yaw`, `lab3-gt`, never `r1` / `slider`.
 - **Keep callouts to one paragraph** — they're punctuation, not paragraphs. If you have 5 paragraphs to say, that's a markdown cell or a new section, not a callout.
 - **Don't number sections with `I. II. III.`** — those belong to magazine. Notebook uses `§1`, `§2`, … in mono.
 

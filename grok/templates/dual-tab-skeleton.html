@@ -7,32 +7,32 @@
 
 <!--
   ============================================================
-  Dual-tab grok skeleton — outer shell for MIT + Stanford halves.
+  Dual-tab grok skeleton — outer shell for bird + frog halves.
 
-  Read references/styles/MIT.md and references/styles/Stanford.md
+  Read references/styles/bird.md and references/styles/frog.md
   before filling this in. Fill order:
-    1. Drop the MIT skeleton's CSS into the MIT-SCOPED CSS block,
-       wrapping every selector under `.tab-mit ...` (no un-scoped
-       rules — they will bleed into the Stanford tab).
-    2. Drop the Stanford skeleton's CSS into the STANFORD-SCOPED
-       CSS block, wrapping every selector under `.tab-stanford ...`.
-    3. Drop the MIT body content (everything that lived inside
-       `<body>` of MIT-skeleton.html — masthead, hero, sections,
-       afterword, colophon) into <main id="tab-mit">.
-       Rewrite section-level ids: `id="x"` → `id="mit-x"`.
+    1. Drop the bird skeleton's CSS into the BIRD-SCOPED CSS block,
+       wrapping every selector under `.tab-bird ...` (no un-scoped
+       rules — they will bleed into the frog tab).
+    2. Drop the frog skeleton's CSS into the FROG-SCOPED CSS block,
+       wrapping every selector under `.tab-frog ...`.
+    3. Drop the bird body content (everything that lived inside
+       `<body>` of bird-skeleton.html — masthead, hero, sections,
+       afterword, colophon) into <main id="tab-bird">.
+       Rewrite section-level ids: `id="x"` → `id="bird-x"`.
        Add a `↔ 另一视角` jump button on each major section heading
        (see .xref-jump example below).
-    4. Same for Stanford into <main id="tab-stanford">. Section ids:
-       `id="x"` → `id="stanford-x"`. Match the slug `x` across tabs
+    4. Same for frog into <main id="tab-frog">. Section ids:
+       `id="x"` → `id="frog-x"`. Match the slug `x` across tabs
        so the cross-anchor jump lands on the corresponding section.
     5. Inline any per-skeleton JS at the bottom of <body>, wrapped
-       in IIFEs that scope DOM queries to .tab-mit or .tab-stanford
+       in IIFEs that scope DOM queries to .tab-bird or .tab-frog
        so the inactive tab's labs don't error on hidden elements.
 
   Hard constraints — see grok/SKILL.md:
     - Shared CDN deps load once here.
     - Prism uses the light theme (prism.css) for both tabs in the
-      dual-tab shell — MIT's dark prism-tomorrow is single-style-only.
+      dual-tab shell — bird's dark prism-tomorrow is single-style-only.
     - Color-coded variable hex codes must match across both tabs.
   ============================================================
 -->
@@ -118,21 +118,21 @@
   }
 
   /* ============================================================
-     MIT-scoped styles — paste MIT-skeleton.html CSS here.
-     Wrap every selector under `.tab-mit ...`.
+     bird-scoped styles — paste bird-skeleton.html CSS here.
+     Wrap every selector under `.tab-bird ...`.
      ============================================================ */
-  .tab-mit {
-    /* page-level rules from MIT-skeleton (body bg, type stack, etc.) */
-    /* PASTE MIT CSS HERE, namespaced */
+  .tab-bird {
+    /* page-level rules from bird-skeleton (body bg, type stack, etc.) */
+    /* PASTE BIRD CSS HERE, namespaced */
   }
 
   /* ============================================================
-     Stanford-scoped styles — paste Stanford-skeleton.html CSS here.
-     Wrap every selector under `.tab-stanford ...`.
+     frog-scoped styles — paste frog-skeleton.html CSS here.
+     Wrap every selector under `.tab-frog ...`.
      ============================================================ */
-  .tab-stanford {
-    /* page-level rules from Stanford-skeleton (body bg, type stack, etc.) */
-    /* PASTE STANFORD CSS HERE, namespaced */
+  .tab-frog {
+    /* page-level rules from frog-skeleton (body bg, type stack, etc.) */
+    /* PASTE FROG CSS HERE, namespaced */
   }
 </style>
 </head>
@@ -141,41 +141,43 @@
 <nav class="tabbar">
   <div class="brand"><!-- short source name / kicker (Chinese) — one phrase, italic --></div>
   <div class="tabs">
-    <button class="tab-btn active" data-target="tab-mit">MIT &middot; 抽象先行</button>
-    <button class="tab-btn" data-target="tab-stanford">Stanford &middot; 由例而抽象</button>
+    <button class="tab-btn active" data-target="tab-bird">🐦 Bird view &middot; 抽象先行</button>
+    <button class="tab-btn" data-target="tab-frog">🐸 Frog view &middot; 由例而抽象</button>
   </div>
 </nav>
 
 <!-- ============================================================
-     MIT tab body — paste MIT-skeleton.html's <body> contents here.
-     Rewrite section ids: <section id="x"> → <section id="mit-x">.
+     bird tab body — paste bird-skeleton.html's <body> contents here.
+     Rewrite section ids: <section id="x"> → <section id="bird-x">.
      On each major <h2>, append:
-       <a class="xref-jump" href="#stanford-x">↔ 另一视角</a>
-     Drop the MIT skeleton's <script> tags here too, wrapped in IIFEs
-     that scope DOM queries to `.tab-mit` so they don't touch the
-     Stanford tab.
+       <a class="xref-jump" href="#frog-x">↔ 另一视角</a>
+     Drop the bird skeleton's <script> tags here too, wrapped in IIFEs
+     that scope DOM queries to `.tab-bird` so they don't touch the
+     frog tab.
      ============================================================ -->
-<main id="tab-mit" class="tab-pane tab-mit active">
-  <!-- MIT BODY HERE -->
+<main id="tab-bird" class="tab-pane tab-bird active">
+  <!-- BIRD BODY HERE -->
 </main>
 
 <!-- ============================================================
-     Stanford tab body — paste Stanford-skeleton.html's <body>
-     contents here. Section ids: <h2 id="x"> → <h2 id="stanford-x">.
+     frog tab body — paste frog-skeleton.html's <body>
+     contents here. Section ids: <h2 id="x"> → <h2 id="frog-x">.
      On each major <h2>, append:
-       <a class="xref-jump" href="#mit-x">↔ 另一视角</a>
-     Drop the Stanford skeleton's <script> tags here too, wrapped
-     in IIFEs scoped to `.tab-stanford`.
+       <a class="xref-jump" href="#bird-x">↔ 另一视角</a>
+     Drop the frog skeleton's <script> tags here too, wrapped
+     in IIFEs scoped to `.tab-frog`.
      ============================================================ -->
-<main id="tab-stanford" class="tab-pane tab-stanford">
-  <!-- STANFORD BODY HERE -->
+<main id="tab-frog" class="tab-pane tab-frog">
+  <!-- FROG BODY HERE -->
 </main>
 
 <script>
   // Tab switching + hash routing.
-  // - #mit-<slug>     → activate MIT tab, scroll to #mit-<slug>
-  // - #stanford-<slug> → activate Stanford tab, scroll to #stanford-<slug>
-  // - No hash         → MIT tab active (default).
+  // - #bird-<slug>  → activate bird tab, scroll to #bird-<slug>
+  // - #frog-<slug>  → activate frog tab, scroll to #frog-<slug>
+  // - Legacy hashes #mit-<slug> / #stanford-<slug> are remapped to
+  //   #bird-<slug> / #frog-<slug> so old links keep working.
+  // - No hash       → bird tab active (default).
   (function () {
     const tabs = document.querySelectorAll('.tab-btn');
     const panes = document.querySelectorAll('.tab-pane');
@@ -188,11 +190,14 @@
     tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.target)));
 
     function syncFromHash() {
-      const h = location.hash.slice(1);
+      let h = location.hash.slice(1);
       if (!h) return;
+      // Legacy alias remapping — old MIT/Stanford anchor links keep working
+      if (h.startsWith('mit-'))      h = 'bird-' + h.slice(4);
+      if (h.startsWith('stanford-')) h = 'frog-' + h.slice(9);
       let target = null;
-      if (h.startsWith('mit-'))           target = 'tab-mit';
-      else if (h.startsWith('stanford-')) target = 'tab-stanford';
+      if (h.startsWith('bird-')) target = 'tab-bird';
+      else if (h.startsWith('frog-')) target = 'tab-frog';
       if (!target) return;
       activate(target);
       // wait one frame so display:block settles before scrollIntoView

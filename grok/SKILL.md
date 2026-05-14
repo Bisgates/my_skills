@@ -1,22 +1,26 @@
 ---
 name: grok
-description: Convert a target folder — paper PDF, book chapter, concept note, codebase entry-point — into a single-file CDN-self-contained interactive learning HTML. Default output is a two-tab HTML: the MIT tab (top-down, abstraction-first, derived from first principles, magazine longread) and the Stanford tab (bottom-up, worked-example-driven a la Karpathy & Andrew Ng, Jupyter notebook). Same scope on both tabs, cross-anchor jumps between matching concepts; ship only one tab if the source genuinely has nothing for the other lens. Opens with "begin with why", walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights. Generated HTML is in Chinese; the skill spec stays English. Use when the user runs `/grok <folder>`, asks to "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside `learn_with_agent`, or explicitly asks for an MIT / Stanford / Karpathy / Andrew Ng / SICP / notebook / magazine-style explainer.
+description: Convert a target folder — paper PDF, book chapter, concept note, codebase entry-point — into a single-file CDN-self-contained interactive learning HTML. Default output is a two-tab HTML: the bird tab (top-down, abstraction-first, Hamming-lineage, magazine longread) and the frog tab (bottom-up, worked-example-driven, Karpathy + Andrew Ng lineage, Jupyter notebook). Same scope on both tabs, cross-anchor jumps between matching concepts; ship only one tab if the source genuinely has nothing for the other lens. Opens with "begin with why", walks every new concept through a concrete minimal worked example, 80% of the page goes to the core insights. Generated HTML is in Chinese; the skill spec stays English. Use when the user runs `/grok <folder>`, asks to "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside `learn_with_agent`, or explicitly asks for a bird / frog / Hamming / Karpathy / Andrew Ng / SICP / notebook / magazine-style explainer.
 ---
 
 # grok
 
 > **Languages.** This skill spec is written in English. The artifact it produces — the interactive HTML — has Chinese natural-language content (chapter titles, prose, callouts, captions). Treat this asymmetry as load-bearing: instructions, comments, and reasoning happen in English; everything the human reader sees in the rendered page is in Chinese.
 
+> **Why "bird" and "frog".** Naming follows Freeman Dyson's *Birds and Frogs* essay (Notices of the AMS, 2009). A bird flies high and surveys broad vistas; a frog sits in the mud and sees flowers up close. Neither is superior — Dyson's whole point is that healthy work needs both. The two tabs of the dual-tab default are exactly these two altitudes on the same source. Earlier names (MIT / Stanford) were factually messy (Feynman ≠ MIT; Strang's MIT 18.06 is bottom-up) and carried a prestige connotation the packs don't actually have. `bird` and `frog` are precise about *altitude*, neutral about *institution*.
+
 ## Quick start
 
 ```
-/grok "260506_Coding Agents_alphazero"                       # default: dual-tab (MIT + Stanford)
-/grok "260506_Coding Agents_alphazero" --style mit           # MIT only (magazine longread)
-/grok "260506_Coding Agents_alphazero" --style stanford      # Stanford only (notebook walkthrough)
+/grok "260506_Coding Agents_alphazero"                       # default: dual-tab (bird + frog)
+/grok "260506_Coding Agents_alphazero" --style bird          # bird only (magazine longread, Hamming voice)
+/grok "260506_Coding Agents_alphazero" --style frog          # frog only (notebook walkthrough, Karpathy + Ng voice)
 /grok "260506_Coding Agents_alphazero" --align               # alignment checkpoint first
 ```
 
-Natural-language equivalents: "用 MIT/SICP 风格讲" / "自顶向下" / "杂志风" all select MIT; "用 Karpathy 风格" / "Andrew Ng 风格" / "notebook 形式" / "spelled out from scratch" / "自底向上" all select Stanford; saying nothing keeps the dual-tab default. Legacy aliases `--style feynman` and `--style karpathy` still resolve (to MIT and Stanford respectively) without warnings. See **Style selection** below.
+Natural-language equivalents: "用 bird 风格 / Hamming 风格 / 自顶向下 / 抽象先行 / 杂志风讲" all select bird; "用 frog 风格 / Karpathy 风格 / Andrew Ng 风格 / notebook 形式 / spelled out from scratch / 自底向上 / 例子先行" all select frog; saying nothing keeps the dual-tab default.
+
+**Legacy aliases (kept silently for backward compatibility):** `--style mit` / `--style feynman` resolve to `bird`; `--style stanford` / `--style karpathy` resolve to `frog`. All Chinese phrases like "MIT 风格 / SICP 风格 / 费曼风格 / Stanford 风格" still trigger the right pack. See **Style selection** below.
 
 Output:
 - **Default** (no folder argument, or source path lives outside `learn_with_agent/`): `/Users/han/project/learn_with_agent/<YYMMDD>/<source-name>.html` — today's date folder under `learn_with_agent`, in `YYMMDD` form. Created on demand with `mkdir -p`.
@@ -26,68 +30,80 @@ Filename always = source stem with extension swapped to `.html`. Single file, al
 
 ## Dual-tab default — why the default is two halves
 
-The default `/grok <folder>` is **one HTML with two tabs**, not a single-style page. This is load-bearing: the reader gets MIT and Stanford as two complete lenses on the same source and picks whichever entry point fits their current cognitive state, switching mid-read when stuck. The pattern echoes how a careful learner already works — book in one hand (MIT: SICP / Strang, top-down, abstraction-first, "here is the interface we wish we had, now we'll implement it"), notebook on the desk (Stanford: Karpathy + Andrew Ng, bottom-up, "let's compute the smallest case by hand and watch the abstraction emerge").
+The default `/grok <folder>` is **one HTML with two tabs**, not a single-style page. This is load-bearing: the reader gets bird and frog as two complete lenses on the same source and picks whichever entry point fits their current cognitive state, switching mid-read when stuck. The pattern echoes how a careful learner already works — book in one hand (bird: Hamming, top-down, "what's the question behind the question, and what does the method look like once we strip everything away?"), notebook on the desk (frog: Karpathy + Ng, bottom-up, "let's compute the smallest case by hand and watch the abstraction emerge").
 
 **Three principles govern the dual-tab assembly. They are not negotiable defaults that fade after Quick start; they're the contract.**
 
 1. **Same scope, different lens.** Both tabs cover the **entire source**. Reading either tab alone must be a complete artifact — never split coverage between tabs ("tab A covers framework, tab B covers implementation" is forbidden, that's a single-tab book with two chapters). The other tab is "switch when stuck," not "read next."
-2. **Cross-tab anchor jumps between matching concepts.** Each top-level concept gets parallel anchors on both sides — convention is `id="mit-<slug>"` on the MIT side and `id="stanford-<slug>"` on the Stanford side, with the `<slug>` shared. Every major section heading carries a small "↔ 另一视角" affordance that jumps to the matching slug on the other tab (URL hash becomes `#mit-attention` or `#stanford-attention`, tab switches automatically, scroll lands on the anchor). One affordance per section is enough — don't over-engineer; this is for the reader who got stuck on the formula and wants the worked example, not for cross-referencing every paragraph.
-3. **Don't force-fill — ship one tab if the other lens has nothing.** Most ML/CV papers have both clean abstract structure (good for MIT) and concrete worked examples (good for Stanford), and the dual-tab pays off. But a pure complexity result, a pure mathematical existence theorem, or a code-only refactor may have no real MIT story (no abstraction barrier to declare) or no real Stanford story (no numerical example to compute). When one tab would be force-filled, **drop it**: emit a single-style HTML with no tab bar and note in the editor-note / `.nb-foot` that the other lens didn't apply (one sentence, e.g. "Stanford 视角因没有可手算的例子被略去"). Forcing a half-empty tab is worse than honest absence.
+2. **Cross-tab anchor jumps between matching concepts.** Each top-level concept gets parallel anchors on both sides — convention is `id="bird-<slug>"` on the bird side and `id="frog-<slug>"` on the frog side, with the `<slug>` shared. Every major section heading carries a small "↔ 另一视角" affordance that jumps to the matching slug on the other tab (URL hash becomes `#bird-attention` or `#frog-attention`, tab switches automatically, scroll lands on the anchor). One affordance per section is enough — don't over-engineer; this is for the reader who got stuck on the formula and wants the worked example, not for cross-referencing every paragraph.
+3. **Don't force-fill — ship one tab if the other lens has nothing.** Most ML/CV papers have both clean abstract structure (good for bird) and concrete worked examples (good for frog), and the dual-tab pays off. But a pure complexity result, a pure mathematical existence theorem, or a code-only refactor may have no real bird story (no question worth lifting above the method) or no real frog story (no numerical example to compute). When one tab would be force-filled, **drop it**: emit a single-style HTML with no tab bar and note in the editor-note / `.nb-foot` that the other lens didn't apply (one sentence, e.g. "frog 视角因没有可手算的例子被略去"). Forcing a half-empty tab is worse than honest absence.
 
-The tab assembly itself is implemented by [`templates/dual-tab-skeleton.html`](templates/dual-tab-skeleton.html) (the outer shell — tab bar, hash routing, namespaced CSS scopes, shared CDN deps). The MIT and Stanford bodies inside each tab are still built from their respective skeletons under `templates/`. See **Workflow step 5**.
+The tab assembly itself is implemented by [`templates/dual-tab-skeleton.html`](templates/dual-tab-skeleton.html) (the outer shell — tab bar, hash routing, namespaced CSS scopes, shared CDN deps, legacy `mit-` / `stanford-` anchor remapping). The bird and frog bodies inside each tab are still built from their respective skeletons under `templates/`. See **Workflow step 5**.
 
 ## Trigger discipline
 
-Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natural-language "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码", or an explicit style request ("用 MIT / Stanford 风格…", "Karpathy 风格的 walkthrough…", "自顶向下讲一下…"). Seeing a PDF, Markdown note, e-book, or unfamiliar source folder in the workspace is **not** a trigger — don't proactively start writing.
+Enter this skill **only** on explicit user invocation: `/grok <folder>`, or natural-language "学习 / 讲解 / 拆解 / 搞懂 X 文件夹里的 paper / 书 / 概念 / 代码", or an explicit style request ("用 bird / frog / Hamming / Karpathy 风格…", "自顶向下讲一下…", "spelled out from scratch…"). Seeing a PDF, Markdown note, e-book, or unfamiliar source folder in the workspace is **not** a trigger — don't proactively start writing.
 
 ## Style selection
 
 Each style pack is a pair: a **pedagogical posture** (how the page reasons) + a **default visual layer** (how it looks). The pedagogy is the primary identity; the visual is its default rendering. The two packs below are the inputs to the dual-tab default and the targets for the single-style `--style` flags.
 
-| Style    | Pedagogical posture                          | Lineage / exemplars                  | Default visual          | Spec                                          | Skeleton                                        |
-|----------|----------------------------------------------|--------------------------------------|-------------------------|-----------------------------------------------|-------------------------------------------------|
-| MIT      | Top-down, abstraction-first, first principles; declare the interface, then derive | SICP (Abelson/Sussman), Strang, Feynman-style revelation | magazine longread       | [`references/styles/MIT.md`](references/styles/MIT.md)         | [`templates/MIT-skeleton.html`](templates/MIT-skeleton.html)           |
-| Stanford | Bottom-up, worked-example first; build / compute / observe, abstraction emerges       | Karpathy "zero to hero", Andrew Ng CS229 | Jupyter notebook        | [`references/styles/Stanford.md`](references/styles/Stanford.md) | [`templates/Stanford-skeleton.html`](templates/Stanford-skeleton.html) |
+| Style | Pedagogical posture | Lineage / exemplars | Default visual | Spec | Skeleton |
+|---|---|---|---|---|---|
+| **bird** 🐦 | Top-down, abstraction-first, derived from first principles; lift the meta-question, strip the details, derive the method from the goal, close with the principle to remember | Richard Hamming, *The Art of Doing Science and Engineering* | magazine longread | [`references/styles/bird.md`](references/styles/bird.md) | [`templates/bird-skeleton.html`](templates/bird-skeleton.html) |
+| **frog** 🐸 | Bottom-up, worked-example first; build / compute / observe, abstraction emerges | Karpathy "zero to hero" + Andrew Ng CS229 | Jupyter notebook | [`references/styles/frog.md`](references/styles/frog.md) | [`templates/frog-skeleton.html`](templates/frog-skeleton.html) |
 
 **Default.** No `--style` flag → **dual-tab** (both packs, assembled via [`templates/dual-tab-skeleton.html`](templates/dual-tab-skeleton.html)). See § Dual-tab default for the contract.
 
-**Trigger phrases that select MIT only** (`--style mit`): explicit `--style mit`; "MIT 风格" / "SICP 风格" / "Strang 风格"; "杂志风 / magazine 风格 / longread"; "自顶向下 / top-down / 抽象先行 / interface-first"; "第一性原理讲解 / first-principles walkthrough". Legacy `--style feynman` and "费曼风格 / Feynman style" still resolve here without warnings (Feynman's revelation voice is the canonical MIT exemplar, so the alias is honest).
+**Trigger phrases that select bird only** (`--style bird`):
+- Explicit: `--style bird` · "bird 风格" · "鸟瞰视角"
+- Lineage: "Hamming 风格" · "*Art of Doing Science and Engineering*" style
+- Direction: "自顶向下" / "top-down" / "抽象先行" / "interface-first"
+- Method-from-goal: "第一性原理讲解" / "first-principles walkthrough" / "meta-question first"
+- Visual: "杂志风" / "magazine 风格" / "longread"
+- **Legacy aliases (silently honored):** `--style mit` · `--style feynman` · "MIT 风格" · "SICP 风格" · "费曼风格" · "Strang 风格"
 
-**Trigger phrases that select Stanford only** (`--style stanford`): explicit `--style stanford`; "Stanford 风格" / "Karpathy 风格" / "Andrew Ng 风格 / Ng 风格"; "notebook 风格 / jupyter 风格 / notebook 形式"; "spelled out from scratch"; "代码为核心 / 代码主导讲解 / code-first walkthrough"; "自底向上 / bottom-up / 例子先行 / example-first / worked-example-driven"; reference to a known notebook-style exemplar file. Legacy `--style karpathy` still resolves here without warnings.
+**Trigger phrases that select frog only** (`--style frog`):
+- Explicit: `--style frog` · "frog 风格" · "青蛙视角"
+- Lineage: "Karpathy 风格" · "Karpathy zero to hero" · "Andrew Ng 风格 / Ng 风格" · "CS229 风格"
+- Direction: "自底向上" / "bottom-up" / "例子先行" / "example-first" / "worked-example-driven"
+- Code-first: "spelled out from scratch" / "代码为核心" / "代码主导讲解" / "code-first walkthrough"
+- Visual: "notebook 风格" / "jupyter 风格" / "notebook 形式"
+- **Legacy aliases (silently honored):** `--style stanford` · `--style karpathy` · "Stanford 风格"
 
 **Resolving the visual** when the user mixes a pedagogy with a non-default visual:
-- `MIT + notebook`: "MIT 风格但放进 notebook 排版" → top-down voice rendered as cells. Rare but allowed.
-- `Stanford + magazine`: "Karpathy 风格写一篇杂志" → bottom-up voice rendered in warm-paper magazine layout. Rare but allowed.
+- `bird + notebook`: "bird 风格但放进 notebook 排版" → top-down Hamming voice rendered as cells. Rare but allowed.
+- `frog + magazine`: "Karpathy 风格写一篇杂志" → bottom-up voice rendered in warm-paper magazine layout. Rare but allowed.
 
-For the dual-tab default, the MIT tab is always magazine and the Stanford tab is always notebook — mixing visuals across tabs defeats the "visual reinforces cognitive mode" point. Single-style mode is where mixing makes sense.
+For the dual-tab default, the bird tab is always magazine and the frog tab is always notebook — mixing visuals across tabs defeats the "visual reinforces cognitive mode" point. Single-style mode is where mixing makes sense.
 
-When the user asks for a single style but is ambiguous which one, ask once — *MIT (top-down) or Stanford (bottom-up)?* — before generating. Don't silently default to dual-tab if the user clearly wanted a single style.
+When the user asks for a single style but is ambiguous which one, ask once — *bird (top-down) or frog (bottom-up)?* — before generating. Don't silently default to dual-tab if the user clearly wanted a single style.
 
 **Adding a new style** (this is expected to happen often). Three things:
-1. Add `references/styles/<NewStyle>.md` following the schema established by `MIT.md` and `Stanford.md` — pedagogical posture, lineage / exemplars, voice deltas, visual contract, required components, CSS class quick reference, style-specific self-audit, style-specific gotchas, reference exemplars.
+1. Add `references/styles/<NewStyle>.md` following the schema established by `bird.md` and `frog.md` — pedagogical posture, lineage / exemplars, voice deltas, visual contract, required components, CSS class quick reference, style-specific self-audit, style-specific gotchas, reference exemplars.
 2. Add `templates/<NewStyle>-skeleton.html` containing the full layout with placeholders. Use the existing skeletons as patterns; do not hand-roll a new aesthetic from scratch.
-3. Register the style in the table above (pedagogical posture, lineage, default visual, plus the two file pointers) and add its trigger phrases under "Trigger phrases that select \<NewStyle\>". Decide whether it joins the dual-tab default rotation (rare — defaults expand slowly) or stays single-style-only.
+3. Register the style in the table above (pedagogical posture, lineage, default visual, plus the two file pointers) and add its trigger phrases. Decide whether it joins the dual-tab default rotation (rare — defaults expand slowly) or stays single-style-only.
 
-Keep style packs **mutually distinguishable**. If a new style is "magazine but with two columns," don't make it a new style — propose an extension to MIT. New styles earn their place by having a *meaningfully different pedagogical posture*.
+Keep style packs **mutually distinguishable**. If a new style is "magazine but with two columns," don't make it a new style — propose an extension to bird. New styles earn their place by having a *meaningfully different pedagogical posture*.
 
 ## Parallel sub-agents (default on for fan-out work)
 
 Paper-grokking is naturally chunked: independent chapter / section drafts, separate worked-example research, several lab-visualization sketches, multiple external-source lookups. Fan those units out into sub-agents — one Agent tool call per unit, fired in a single message so they run concurrently. Cuts wall-clock time roughly proportional to the number of independent units; the reader still receives one HTML.
 
-**Top-level fan-out for the dual-tab default.** The MIT half and the Stanford half are independent learning artifacts that happen to share scope. Treat them as **two parallel agent groups**: one group drafts the MIT magazine body, one group drafts the Stanford notebook body. Both groups can run concurrently after the alignment outline is locked. Inside each group, sections / labs / external supplements fan out as the next concurrent layer. The parent assembles all returned bodies into the dual-tab shell after both groups complete. Single-style mode is one group instead of two.
+**Top-level fan-out for the dual-tab default.** The bird half and the frog half are independent learning artifacts that happen to share scope. Treat them as **two parallel agent groups**: one group drafts the bird magazine body, one group drafts the frog notebook body. Both groups can run concurrently after the alignment outline is locked. Inside each group, sections / labs / external supplements fan out as the next concurrent layer. The parent assembles all returned bodies into the dual-tab shell after both groups complete. Single-style mode is one group instead of two.
 
 **Concrete fan-out units in this skill:**
 
-- **Top level (dual-tab only):** MIT-half agent group + Stanford-half agent group. Each receives the shared alignment outline + the cross-anchor slug map (so anchors line up between halves).
+- **Top level (dual-tab only):** bird-half agent group + frog-half agent group. Each receives the shared alignment outline + the cross-anchor slug map (so anchors line up between halves).
 - Prior-work research for chapter 0 / cold open — one agent per family (VAE / GAN / Flow / …). Run once at the top level; both halves consume the same research output.
 - Section drafting after the outline is locked — one agent per section per half, each with its spec + the writing principles + the relevant source excerpts + **the style pack's voice and component contract** + **the assigned cross-anchor slug**.
 - External supplements (`aside.external` in magazine, `aside.external` or external-callout in notebook) — one agent per topic per half (or shared across halves when the supplement is identical, e.g. an author bio).
 - Lab visualizations — one agent per lab to write the IIFE + DPR-scaled canvas code. Labs typically appear in only one half (notebooks lean lab-heavy; magazine labs are more selective), so most lab agents fan out under one group.
-- Worked examples across distinct concepts — one agent per concept per half. The MIT worked example is the "interface contract made concrete"; the Stanford worked example is the "compute it by hand and read off the answer."
+- Worked examples across distinct concepts — one agent per concept per half. The bird worked example is "the principle, instantiated on the smallest case that exercises it"; the frog worked example is "compute it by hand and read off the answer."
 
-**Don't parallelize the linear spine.** Anything with a sequential dependency stays serial: chapter 0 / cold open must be drafted before later sections can reference its predicament; the `--align` outline must be confirmed before drafts begin; the cross-anchor slug map must be agreed between MIT and Stanford halves before their section agents fan out; the master HTML stitch-together happens once on the parent after both groups return.
+**Don't parallelize the linear spine.** Anything with a sequential dependency stays serial: chapter 0 / cold open must be drafted before later sections can reference its predicament; the `--align` outline must be confirmed before drafts begin; the cross-anchor slug map must be agreed between bird and frog halves before their section agents fan out; the master HTML stitch-together happens once on the parent after both groups return.
 
-**Pass the style choice — and the tab assignment — to every child.** When you delegate a section, the prompt to the child must include: the style pack name (MIT / Stanford), a pointer to the corresponding `references/styles/<X>.md`, the visual layer to use, and (in dual-tab mode) which tab this section belongs to so the child writes the correct `id="mit-<slug>"` or `id="stanford-<slug>"` anchor. A child that doesn't know its tab will write in a generic register that breaks the cross-anchor map.
+**Pass the style choice — and the tab assignment — to every child.** When you delegate a section, the prompt to the child must include: the style pack name (bird / frog), a pointer to the corresponding `references/styles/<X>.md`, the visual layer to use, and (in dual-tab mode) which tab this section belongs to so the child writes the correct `id="bird-<slug>"` or `id="frog-<slug>"` anchor. A child that doesn't know its tab will write in a generic register that breaks the cross-anchor map.
 
 **Match the parent's model and reasoning depth.** A child on a smaller model writes shallower prose and breaks the voice — same reader (CS PhD, 8 years vision/DL — see `AGENTS.md`), same bar. Pass the parent's `model` explicitly to the Agent tool (Opus stays Opus, Sonnet stays Sonnet); never omit and let the runtime auto-pick a cheaper one. If the parent is in extended-thinking mode, the child should be too. Mismatch is a regression, not an optimization.
 
@@ -101,9 +117,9 @@ Paper-grokking is naturally chunked: independent chapter / section drafts, separ
      - **No folder argument**, or a bare source path that lives outside `learn_with_agent/` → `<output-dir>` = `/Users/han/project/learn_with_agent/<YYMMDD>/`, where `<YYMMDD>` is today's date (`date +%y%m%d`). Run `mkdir -p` on it; it may not exist yet.
 
 2. **Resolve the style and mode.** Pick the style pack(s) as described in **Style selection** above. Three outcomes:
-   - **Dual-tab (default, no `--style` flag):** load **both** `references/styles/MIT.md` and `references/styles/Stanford.md` into context. Plan for two parallel agent groups in step 5.
-   - **Single MIT** (`--style mit` or any MIT trigger phrase): load only `references/styles/MIT.md`. Visual = magazine unless explicitly overridden.
-   - **Single Stanford** (`--style stanford` or any Stanford trigger phrase): load only `references/styles/Stanford.md`. Visual = notebook unless explicitly overridden.
+   - **Dual-tab (default, no `--style` flag):** load **both** `references/styles/bird.md` and `references/styles/frog.md` into context. Plan for two parallel agent groups in step 5.
+   - **Single bird** (`--style bird` or any bird trigger phrase, or any legacy alias like `--style mit` / `--style feynman`): load only `references/styles/bird.md`. Visual = magazine unless explicitly overridden.
+   - **Single frog** (`--style frog` or any frog trigger phrase, or any legacy alias like `--style stanford` / `--style karpathy`): load only `references/styles/frog.md`. Visual = notebook unless explicitly overridden.
 
    Each style pack owns the voice, the component checklist, the CSS class reference, the style-specific self-audit, and the gotchas — do not paraphrase from memory.
 
@@ -115,23 +131,23 @@ Paper-grokking is naturally chunked: independent chapter / section drafts, separ
    Output the following in chat **and** write to `<output-dir>/_drafts/outline.md`. The natural-language content of these items is **in Chinese** because they preview the HTML's content:
    1. **Begin-with-why paragraph.** What was the whole field stuck on before this source? What's the obvious approach? Why doesn't it work? (Shared across both tabs in dual-tab mode — the predicament is the same; only the *voice* differs in the two halves.)
    2. **One-paragraph thesis.** The source's key insight, and what fundamentally separates it from prior solutions.
-   3. **Mode + style plan.** Whether the output is dual-tab, single MIT, or single Stanford. In dual-tab mode, one or two sentences per half explaining how each voice will land (e.g. MIT: "open with the abstraction barrier — declare the score-function interface, then show why it must look the way it does"; Stanford: "open with the actual training command + Out cell, then unfold the 8 actions of the train loop").
-   4. **Cross-anchor slug map (dual-tab only).** A table of `<slug> · MIT section title · Stanford section title`. The slug is the shared id across both tabs (the MIT side becomes `id="mit-<slug>"`, the Stanford side `id="stanford-<slug>"`). Most sections should have a matching slug on both sides; if a section exists only on one side, mark it explicitly (e.g. `stanford-only` for a pure lab walkthrough that has no MIT counterpart).
+   3. **Mode + style plan.** Whether the output is dual-tab, single bird, or single frog. In dual-tab mode, one or two sentences per half explaining how each voice will land (e.g. bird: "open with the meta-question — what does score-based generation actually try to solve once we strip away the network choices? — then derive the score-function interface as the unique answer"; frog: "open with the actual training command + Out cell, then unfold the 8 actions of the train loop").
+   4. **Cross-anchor slug map (dual-tab only).** A table of `<slug> · bird section title · frog section title`. The slug is the shared id across both tabs (the bird side becomes `id="bird-<slug>"`, the frog side `id="frog-<slug>"`). Most sections should have a matching slug on both sides; if a section exists only on one side, mark it explicitly (e.g. `frog-only` for a pure lab walkthrough that has no bird counterpart).
    5. **Tab-pruning decision (dual-tab only).** Audit each tab: is one of the two halves going to be force-filled? If yes, drop it now — switch to single-style mode and note the omitted lens. This is the place to act on **Dual-tab principle 3 (don't force-fill)**, before any drafting starts.
    6. **Section / chapter outline.** Per section per active tab: title (with one `<strong>` emphasis word in magazine, or a mono-cap section number in notebook), one-line italic-feel hook, percent of page budget.
    7. **80% allocation.** Name the 1–3 core concepts that consume 80% of the page. Justify why everything else collapses to 20% (cite reader background — see `AGENTS.md`).
    8. **Color-code plan.** Enumerate the recurring key variables / objects in the source. Assign a fixed color to each (red / blue / green / purple / orange). Reuse it in every formula, SVG, code highlight, and inline `<span>` — **including across both tabs** so a reader switching tabs keys the variables without relearning.
    9. **Per-topic accent (magazine only, optional).** If the source has 2–3 parallel core concepts, assign each section an accent stripe color.
-   10. **Worked-example plan.** For each new concept introduced, name the smallest concrete instance you'll walk the reader through. See § Writing principle 3. In dual-tab mode, the MIT and Stanford worked examples for the same concept should ideally share the numbers / setup (so the cross-anchor jump lands on the *same* example seen through different lenses).
+   10. **Worked-example plan.** For each new concept introduced, name the smallest concrete instance you'll walk the reader through. See § Writing principle 3. In dual-tab mode, the bird and frog worked examples for the same concept should ideally share the numbers / setup (so the cross-anchor jump lands on the *same* example seen through different lenses).
    11. **Interactive module list.** Each lab block: what insight it reveals + the visualization form + the corresponding source section + which tab it lives on.
 
    Wait for user confirmation or revision before proceeding to step 5.
 
 5. **Generate the HTML.**
    - Output path = `<output-dir>/<source-stem>.html` (source filename with extension swapped to `.html`).
-   - Intermediate notes and external references go in `<output-dir>/_drafts/`. In dual-tab mode, drafts go in `_drafts/mit/` and `_drafts/stanford/` so the two halves don't trample each other.
-   - **Single-style mode:** start from a verbatim copy of the chosen skeleton (`templates/MIT-skeleton.html` or `templates/Stanford-skeleton.html`). Fill in the placeholders. Do not hand-roll a new skeleton — the templates already bake in the layout, type stack, lab IIFE / DPR-scaling pattern, and required components.
-   - **Dual-tab mode:** fan out two parallel agent groups (see § Parallel sub-agents — top-level fan-out). Each group generates the body of its half against its own skeleton, *without* the outer `<html>/<head>/<body>` boilerplate (return only the inner content that lives inside `<body>`). Then the parent merges both bodies into [`templates/dual-tab-skeleton.html`](templates/dual-tab-skeleton.html) — the wrapper provides the tab bar, hash routing, namespaced CSS scopes (`.tab-mit { … }` and `.tab-stanford { … }`), and the shared CDN deps loaded once. Each tab's body content gets dropped inside the corresponding `<main id="tab-mit">` / `<main id="tab-stanford">` container; the per-skeleton CSS is wrapped in its scope selector so MIT's magazine type stack and Stanford's notebook type stack don't collide.
+   - Intermediate notes and external references go in `<output-dir>/_drafts/`. In dual-tab mode, drafts go in `_drafts/bird/` and `_drafts/frog/` so the two halves don't trample each other.
+   - **Single-style mode:** start from a verbatim copy of the chosen skeleton (`templates/bird-skeleton.html` or `templates/frog-skeleton.html`). Fill in the placeholders. Do not hand-roll a new skeleton — the templates already bake in the layout, type stack, lab IIFE / DPR-scaling pattern, and required components.
+   - **Dual-tab mode:** fan out two parallel agent groups (see § Parallel sub-agents — top-level fan-out). Each group generates the body of its half against its own skeleton, *without* the outer `<html>/<head>/<body>` boilerplate (return only the inner content that lives inside `<body>`). Then the parent merges both bodies into [`templates/dual-tab-skeleton.html`](templates/dual-tab-skeleton.html) — the wrapper provides the tab bar, hash routing, namespaced CSS scopes (`.tab-bird { … }` and `.tab-frog { … }`), and the shared CDN deps loaded once. Each tab's body content gets dropped inside the corresponding `<main id="tab-bird">` / `<main id="tab-frog">` container; the per-skeleton CSS is wrapped in its scope selector so bird's magazine type stack and frog's notebook type stack don't collide.
    - In all modes: follow the **shared pedagogical principles** below, the **hard constraints** below, **and** the style-specific contract in `references/styles/<Style>.md`.
 
 6. **Open and hand off.**
@@ -151,7 +167,7 @@ The first thing the reader sees is **never** "overview of our method." It must b
 - Ground the predicament in a concrete physical scenario ("假设你有一万张猫的图片"), then translate it to math, code, or data.
 - Drop a comparison of how prior families dodge the issue (VAE / GAN / Flow / this work). In magazine: a `.compare` block or a comparison table. In notebook: a markdown cell with a table or a `.diff` two-pane.
 
-In MIT style, this is a full chapter 0 with a `.danger` callout titled "致命问题" and a closing meta-line. In Stanford style, this is a markdown cell + a code cell showing the *actual failure* (the dispatch hell, the broken loop, the wrong output) before the rescue. The form differs; the move is the same. In dual-tab mode, the predicament is shared (same field-level stuck-point) but each tab uses its own callout / cell form to land it.
+In bird style, this is a full chapter 0 with a `.danger` callout titled "致命问题" and a closing meta-line. In frog style, this is a markdown cell + a code cell showing the *actual failure* (the dispatch hell, the broken loop, the wrong output) before the rescue. The form differs; the move is the same. In dual-tab mode, the predicament is shared (same field-level stuck-point) but each tab uses its own callout / cell form to land it.
 
 **Banned**: "Section 1 介绍 / Section 2 相关工作 / Section 3 方法" — that's the structure of the source, not of pedagogy.
 
@@ -174,8 +190,8 @@ This is not "here is an illustrative figure." This is "here is the same calculat
 - **Attention.** Don't just write `softmax(QK^T)V`. Take 2 tokens of dim 2, set `Q = K = V = I_2`. Compute `QK^T = I_2`, softmax row-wise, multiply with V. Result: identity attention (each token attends to itself). Then perturb `Q[0]` to `[0.5, 0.5]` and watch the row mix.
 
 **Rendering depends on style:**
-- **MIT**: a `.worked-example` block with `we-label` + `we-setup` + numbered `we-steps` + 📌 `we-takeaway`. The example follows an "interface contract → simplest input that exercises it → observe the contract holds" arc.
-- **Stanford**: a code cell (`In [N]:`) that computes the example + an output cell (`Out[N]:`) showing the result, then a markdown cell naming the takeaway. Or, for Ng-style derivations, a `.chalk` block tracing the steps by hand from likelihood → gradient → update rule.
+- **bird**: a `.worked-example` block with `we-label` + `we-setup` + numbered `we-steps` + 📌 `we-takeaway`. The example follows a "method-from-goal → simplest input that exercises it → observe the goal is met" arc.
+- **frog**: a code cell (`In [N]:`) that computes the example + an output cell (`Out[N]:`) showing the result, then a markdown cell naming the takeaway. Or, for Ng-style derivations, a `.chalk` block tracing the steps by hand from likelihood → gradient → update rule.
 
 **Constraints on the example:**
 - Smallest dimension that's not degenerate (1D or 2D, not 7D).
@@ -209,8 +225,8 @@ The HTML's content is Chinese. **Banned template phrases** (search and remove be
 **去 AI 味。** 读着要像一个语言天赋极强的人写的——自然、通顺、悦耳。**少用**"不是 X，而是 Y"这种工整对仗句式；其他被反复吐槽的模型腔（机械三段排比、空洞的"值得深思 / 综合来看 / 让我们一起"、整齐到僵硬的并列、过度收尾总结）一并避开。
 
 **Voice differences across styles** (the actual delta — see each style's spec for the long form):
-- **MIT** is *revelation through abstraction* — "here is the interface we wish we had; now we'll show why it must look this way, because Z"; physical-intuition anchors; magazine register; pull-quotes; editor's note; SICP-style wishful thinking ("假装我们已经有了 `score(x)`, 它的契约是…").
-- **Stanford** is *spelled-out from the example up* — "okay 接下来 / 好我们直接看一下"; code-cell ↔ output-cell as the page's spine (Karpathy); or likelihood → gradient → algorithm derivation (Ng); "stop & think" pauses; analogies to things the reader has already written; lowercase conversational openers.
+- **bird** is *the meta-question first* — "what are we really trying to accomplish here?", strip the noise, derive the method from the goal, close with the principle to remember when details fade; long-form magazine pacing; warm-paper layout; cross-domain transfer and asymptotic-case observations are signature beats (Hamming).
+- **frog** is *spelled-out from the example up* — "okay 接下来 / 好我们直接看一下"; code-cell ↔ output-cell as the page's spine (Karpathy); or likelihood → gradient → algorithm derivation (Ng); "stop & think" pauses; analogies to things the reader has already written; lowercase conversational openers.
 
 ### 7 · Color-coded variables (define once, reuse everywhere)
 
@@ -229,7 +245,7 @@ Reference: MIT 18.06's `vec-col1/2/3/b` keeps three column vectors and the targe
 
 ### 8 · Revealing interactivity (not knob-pushing demos)
 
-Every lab block leads with a single line: **"此 lab 揭示：…（对应来源章节）"** (or its Stanford notebook equivalent under the `.lab-sub` text). Useless interactions (input box → display number, slider that only changes a color) are banned. Useful forms include:
+Every lab block leads with a single line: **"此 lab 揭示：…（对应来源章节）"** (or its frog notebook equivalent under the `.lab-sub` text). Useless interactions (input box → display number, slider that only changes a color) are banned. Useful forms include:
 
 - Vector field / manifold visualization (click to drop particles, watch them follow the score).
 - Parameter slider → geometric object morphs (two lines' intersection, planes' intersection line, singular vs. non-singular).
@@ -264,8 +280,8 @@ This is **opt-in**, not a checklist requirement. If the source genuinely has not
 - **When unsure**, search the web first. If still uncertain, write the section anyway and mark the spot with `<div class="uncertain">⚠ 此处未充分消化：[原因]</div>`. **Do not interrupt the user with questions.**
 - **HTML already exists.** **Overwrite** (re-running grok on the same source means the user wants to replace). Don't touch `_drafts/`.
 - **Pin CDN versions** (`katex@0.16.11`, `prismjs@1.29.0`). **No `@latest`.**
-- **Dual-tab cross-anchor contract.** Every concept that exists on both tabs gets an anchor pair: `id="mit-<slug>"` on the MIT side and `id="stanford-<slug>"` on the Stanford side, with `<slug>` shared. A small "↔ 另一视角" affordance on each major section heading jumps to the matching slug on the other tab; the hash-routing JS in `templates/dual-tab-skeleton.html` handles tab switching + scroll. Single-style mode has no `mit-` / `stanford-` prefix on anchors — just `<slug>`.
-- **Dual-tab CSS namespacing.** When merging the two halves into the dual-tab shell, all CSS rules from the MIT skeleton must be scoped under `.tab-mit { … }` and all rules from the Stanford skeleton under `.tab-stanford { … }`. The two skeletons share class names (`.lab`, `.callout`, `.cell`, etc.) but mean different things — un-namespaced rules will cross-wire. Shared CDN deps (KaTeX, Prism, fonts) load once at the document level, outside both tab scopes.
+- **Dual-tab cross-anchor contract.** Every concept that exists on both tabs gets an anchor pair: `id="bird-<slug>"` on the bird side and `id="frog-<slug>"` on the frog side, with `<slug>` shared. A small "↔ 另一视角" affordance on each major section heading jumps to the matching slug on the other tab; the hash-routing JS in `templates/dual-tab-skeleton.html` handles tab switching + scroll, and silently remaps legacy `mit-` / `stanford-` hashes so old links keep working. Single-style mode has no `bird-` / `frog-` prefix on anchors — just `<slug>`.
+- **Dual-tab CSS namespacing.** When merging the two halves into the dual-tab shell, all CSS rules from the bird skeleton must be scoped under `.tab-bird { … }` and all rules from the frog skeleton under `.tab-frog { … }`. The two skeletons share class names (`.lab`, `.callout`, `.cell`, etc.) but mean different things — un-namespaced rules will cross-wire. Shared CDN deps (KaTeX, Prism, fonts) load once at the document level, outside both tab scopes.
 
 ### Interactive correctness (don't ship a blank canvas)
 
@@ -297,11 +313,11 @@ The two failure modes that show up most often: **blank canvas** (lab block rende
 
 **Dual-tab specific (only when the output is dual-tab)**
 - [ ] Both tabs cover the **full source scope** — neither is a fragment that requires the other to make sense.
-- [ ] Every cross-tab pair shares a `<slug>`; MIT side is `id="mit-<slug>"`, Stanford side is `id="stanford-<slug>"`. Mismatches break the ↔ jump.
+- [ ] Every cross-tab pair shares a `<slug>`; bird side is `id="bird-<slug>"`, frog side is `id="frog-<slug>"`. Mismatches break the ↔ jump.
 - [ ] Every major section heading carries the "↔ 另一视角" affordance (or its style-equivalent button); hash routing switches tabs correctly.
-- [ ] CSS rules from both skeletons are namespaced under `.tab-mit` / `.tab-stanford` — no un-scoped rule leaks across tabs.
+- [ ] CSS rules from both skeletons are namespaced under `.tab-bird` / `.tab-frog` — no un-scoped rule leaks across tabs.
 - [ ] If one tab was force-filled (principle 3 violation), it was dropped in step 4 and the page is now single-style with an editor-note explaining the omitted lens. The page does **not** ship a half-empty tab.
-- [ ] Color-code palette is consistent across both tabs — a variable's hex on the MIT side equals its hex on the Stanford side.
+- [ ] Color-code palette is consistent across both tabs — a variable's hex on the bird side equals its hex on the frog side.
 
 Run the **style-specific** half of the audit from `references/styles/<Style>.md` before declaring done.
 
@@ -314,19 +330,21 @@ Run the **style-specific** half of the audit from `references/styles/<Style>.md`
 - **Don't leave silent TODO placeholders** — fully write the section, or mark it explicitly with `.uncertain`.
 - **Worked-example pitfalls** — if the example takes more than ~5 steps, it's too big. If you can't extract a one-line takeaway, the example wasn't well-chosen. If the numbers aren't tiny (1, 2, 0, ½, π/4), pick smaller ones. The whole point is "the reader could redo this on a napkin."
 - **Self-audit "text on a page"** — if the page is mostly `<p>` and a few `<pre>`, with none of the style's required components, that's not a delivery. Go back to the style pack's checklist.
-- **Wrong-style trap** — if you find yourself wanting a Roman numeral inside a Stanford-style page, or a code-cell-and-output pair inside an MIT-style page, you're rendering the wrong style. Re-check the user's request, and if uncertain, ask before continuing.
+- **Wrong-style trap** — if you find yourself wanting a Roman numeral inside a frog-style page, or a code-cell-and-output pair inside a bird-style page, you're rendering the wrong style. Re-check the user's request, and if uncertain, ask before continuing.
 - **Don't mix style components silently** — magazine's `section.branch[data-accent]` and notebook's `.cell` / `.chalk` / `.nums` are not interchangeable. The two CSS systems use different fonts, different page backgrounds, different spacing. If you need a hybrid, write it down in the alignment outline and confirm with the user first.
 - **Blank canvas / blurry canvas** — see "Interactive correctness" above. Both skeleton templates already bake the fixes in; copy them verbatim instead of hand-rolling a new lab from scratch.
-- **Dual-tab principle violations** — the three most common slips: (a) splitting coverage across tabs ("MIT tab covers theory, Stanford tab covers the implementation") — that's one book in two chapters, not two lenses; revert to single-style or rewrite both halves to be standalone; (b) over-engineering cross-anchors with one affordance per paragraph instead of one per section — the reader is switching to escape a stuck moment, not to chase footnotes; (c) shipping a half-empty Stanford tab on a pure mathematical-existence-theorem paper "because the default is dual-tab" — that's exactly the case principle 3 says to drop; emit single-tab MIT with an editor-note.
-- **Cross-anchor slug drift** — if the MIT side renames a section heading mid-draft, the Stanford side's `id="stanford-<slug>"` must update too. The cross-anchor map from the alignment outline is the source of truth; revisit it whenever a section title changes.
-- **Dual-tab CSS bleed** — without proper `.tab-mit` / `.tab-stanford` scoping, magazine's body background (warm paper) will bleed into Stanford's notebook surface, or notebook's blue cell stripe will appear behind magazine pull-quotes. The dual-tab skeleton's namespacing is structural — do not strip it.
+- **Dual-tab principle violations** — the three most common slips: (a) splitting coverage across tabs ("bird tab covers theory, frog tab covers the implementation") — that's one book in two chapters, not two lenses; revert to single-style or rewrite both halves to be standalone; (b) over-engineering cross-anchors with one affordance per paragraph instead of one per section — the reader is switching to escape a stuck moment, not to chase footnotes; (c) shipping a half-empty frog tab on a pure mathematical-existence-theorem paper "because the default is dual-tab" — that's exactly the case principle 3 says to drop; emit single-tab bird with an editor-note.
+- **Cross-anchor slug drift** — if the bird side renames a section heading mid-draft, the frog side's `id="frog-<slug>"` must update too. The cross-anchor map from the alignment outline is the source of truth; revisit it whenever a section title changes.
+- **Dual-tab CSS bleed** — without proper `.tab-bird` / `.tab-frog` scoping, magazine's body background (warm paper) will bleed into frog's notebook surface, or notebook's blue cell stripe will appear behind magazine pull-quotes. The dual-tab skeleton's namespacing is structural — do not strip it.
+- **Legacy aliases are honored, not deprecated** — `--style mit` / `--style stanford` / `--style feynman` / `--style karpathy` keep working silently. Don't print warnings; don't try to "correct" the user. The aliases exist because old project notes / chat history / cross-skill references (e.g. `3dgs_exp_report`) sometimes still use the old names, and we want those to keep working without a flag-day migration.
 
 ## See also
 
-- [`references/styles/MIT.md`](references/styles/MIT.md) — magazine-longread style pack (top-down, abstraction-first; SICP / Strang / Feynman exemplars).
-- [`references/styles/Stanford.md`](references/styles/Stanford.md) — Jupyter-notebook style pack (bottom-up, example-first; Karpathy / Andrew Ng exemplars).
-- [`templates/MIT-skeleton.html`](templates/MIT-skeleton.html) — magazine skeleton.
-- [`templates/Stanford-skeleton.html`](templates/Stanford-skeleton.html) — notebook skeleton.
-- [`templates/dual-tab-skeleton.html`](templates/dual-tab-skeleton.html) — outer shell for the dual-tab default: tab bar, hash routing, namespaced CSS scopes, shared CDN deps.
+- [`references/styles/bird.md`](references/styles/bird.md) — bird (magazine-longread) style pack; top-down, Hamming lineage.
+- [`references/styles/frog.md`](references/styles/frog.md) — frog (Jupyter-notebook) style pack; bottom-up, Karpathy + Andrew Ng lineage.
+- [`templates/bird-skeleton.html`](templates/bird-skeleton.html) — magazine skeleton.
+- [`templates/frog-skeleton.html`](templates/frog-skeleton.html) — notebook skeleton.
+- [`templates/dual-tab-skeleton.html`](templates/dual-tab-skeleton.html) — outer shell for the dual-tab default: tab bar, hash routing, namespaced CSS scopes, shared CDN deps, legacy hash remapping.
 - Project-root `AGENTS.md` — reader profile, project-level hard constraints, trigger protocol.
 - `write-a-skill/SKILL.md` — authoring rules for editing this skill or adding new style packs.
+- Freeman Dyson, "Birds and Frogs," *Notices of the AMS* 56(2), 2009 — the essay this skill's pack names lift from.
