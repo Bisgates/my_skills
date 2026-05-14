@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title><!-- title (Chinese, ends in "— a Karpathy-style walkthrough") --></title>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+
+<!-- Prism — quiet (light) theme, NOT tomorrow -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css">
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<!-- Fonts: Inter (body / narration / headings) + JetBrains Mono (code / prompts / labels) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:           #fafafa;
+    --bg-cell:     #ffffff;
+    --bg-soft:     #f5f5f5;
+    --bg-out:      #f9fbfd;
+    --bg-chalk:    #1c2330;
+    --ink:         #1f2328;
+    --ink-soft:    #57606a;
+    --ink-faint:   #8c959f;
+    --rule:        #e5e7eb;
+    --rule-strong: #d0d7de;
+    --blue:        #0969da;
+    --blue-soft:   #ddf4ff;
+    --green:       #1f883d;
+    --green-soft:  #dafbe1;
+    --red:         #cf222e;
+    --red-soft:    #ffebe9;
+    --orange:      #bf8700;
+    --orange-soft: #fff8c5;
+    --purple:      #8250df;
+    --in-stripe:   #4b78cc;
+    --out-stripe:  #cf222e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    font-size:16px; line-height:1.65;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .nb{ max-width:920px; margin:0 auto; padding:56px 32px 120px; }
+  .nb-title{ border-bottom:1px solid var(--rule-strong); padding-bottom:18px; margin-bottom:32px; }
+  .nb-title .kicker{
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    color:var(--ink-faint); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px;
+  }
+  .nb-title h1{ font-size:30px; line-height:1.25; font-weight:700; margin:0 0 10px; letter-spacing:-0.01em; }
+  .nb-title .sub{ color:var(--ink-soft); font-size:15px; font-weight:400; }
+  .nb-title .meta{ margin-top:18px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--ink-faint); }
+  .nb-title .meta a{ color:var(--ink-soft); text-decoration:none; border-bottom:1px dotted var(--ink-faint); }
+
+  p{ margin:14px 0; }
+  p code, li code{
+    font-family:'JetBrains Mono',monospace; font-size:13.5px;
+    background:var(--bg-soft); padding:1px 6px; border-radius:4px; color:var(--ink);
+  }
+  h2{ font-size:22px; font-weight:700; margin:56px 0 6px; letter-spacing:-0.005em; }
+  h2 .num{ font-family:'JetBrains Mono',monospace; color:var(--ink-faint); font-weight:500; margin-right:10px; font-size:18px; }
+  h3{ font-size:17px; font-weight:600; margin:30px 0 4px; color:var(--ink); }
+  h2 + .lede, h3 + .lede{ color:var(--ink-soft); font-size:14.5px; margin-top:4px; margin-bottom:18px; }
+  a{ color:var(--blue); text-decoration:none; }
+  a:hover{ text-decoration:underline; }
+
+  /* jupyter cells */
+  .cell{ display:grid; grid-template-columns:70px 1fr; gap:0; margin:18px 0; }
+  .cell .prompt{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--in-stripe);
+    padding-top:8px; text-align:right; padding-right:12px; user-select:none;
+  }
+  .cell.out .prompt{ color:var(--out-stripe); }
+  .cell .body{
+    border-left:2px solid var(--in-stripe); background:var(--bg-cell);
+    padding:8px 14px; border-radius:0 6px 6px 0; overflow-x:auto;
+  }
+  .cell.out .body{
+    border-left-color:var(--out-stripe); background:var(--bg-out); color:var(--ink-soft);
+    font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.55; white-space:pre;
+  }
+  .cell .body pre{ margin:0; background:transparent; padding:0; }
+  .cell .body pre code{ font-family:'JetBrains Mono',monospace; font-size:13.5px; line-height:1.55; background:transparent; }
+  .cell.markdown{ grid-template-columns:70px 1fr; }
+  .cell.markdown .prompt{ color:var(--ink-faint); }
+  .cell.markdown .body{ border-left-color:var(--rule); background:transparent; padding:0 14px; }
+
+  /* dark "chalk board" — for signature formulas / traces / punchlines */
+  .chalk{
+    background:var(--bg-chalk); color:#e7eef8; border-radius:10px;
+    padding:22px 26px; margin:22px 0;
+    font-family:'JetBrains Mono',monospace; font-size:14px; line-height:1.7; white-space:pre-wrap;
+  }
+  .chalk .label{ color:#88c0ff; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:8px; }
+  .chalk .katex{ color:#e7eef8; }
+  .chalk strong{ color:#ffd97a; font-weight:600; }
+  .chalk .yel{ color:#ffd97a; } .chalk .grn{ color:#a3e635; } .chalk .red{ color:#ff8a8a; } .chalk .blu{ color:#88c0ff; }
+
+  /* callouts (default blue / green / warn / red) */
+  .callout{
+    display:flex; gap:14px; border-left:3px solid var(--blue);
+    background:var(--blue-soft); padding:14px 18px; border-radius:0 8px 8px 0;
+    margin:18px 0; font-size:14.5px;
+  }
+  .callout .tag{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
+    letter-spacing:0.08em; color:var(--blue); text-transform:uppercase;
+    flex-shrink:0; padding-top:2px;
+  }
+  .callout.green{ border-color:var(--green); background:var(--green-soft); }
+  .callout.green .tag{ color:var(--green); }
+  .callout.warn{ border-color:var(--orange); background:var(--orange-soft); }
+  .callout.warn .tag{ color:var(--orange); }
+  .callout.red{ border-color:var(--red); background:var(--red-soft); }
+  .callout.red .tag{ color:var(--red); }
+  .callout .text{ flex:1; }
+  .callout p:first-child{ margin-top:0; } .callout p:last-child{ margin-bottom:0; }
+
+  /* TOC */
+  .toc{
+    background:var(--bg-cell); border:1px solid var(--rule); border-radius:8px;
+    padding:16px 20px; margin:24px 0 36px; font-family:'JetBrains Mono',monospace; font-size:13px;
+  }
+  .toc .toc-h{ color:var(--ink-faint); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; }
+  .toc ol{ margin:0; padding-left:18px; } .toc li{ margin:4px 0; }
+  .toc a{ color:var(--ink); } .toc a:hover{ color:var(--blue); }
+
+  /* numeric punchline boxes */
+  .nums{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:16px 0 24px; }
+  .num-box{ background:var(--bg-cell); border:1px solid var(--rule); border-radius:8px; padding:14px 16px; }
+  .num-box .k{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.06em; }
+  .num-box .v{ font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; color:var(--ink); margin-top:4px; line-height:1.2; }
+  .num-box .v .arrow{ color:var(--ink-faint); margin:0 4px; }
+  .num-box .v .strike{ color:var(--ink-faint); text-decoration:line-through; }
+  .num-box .v .hi{ color:var(--green); } .num-box .v .lo{ color:var(--red); }
+  .num-box .v.sm{ font-size:16px; }
+
+  /* tables */
+  table.tbl{ width:100%; border-collapse:collapse; margin:16px 0 24px; font-size:14px; }
+  table.tbl th, table.tbl td{ border-bottom:1px solid var(--rule); padding:8px 10px; text-align:left; vertical-align:top; }
+  table.tbl th{ color:var(--ink-faint); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; border-bottom:1.5px solid var(--rule-strong); }
+  table.tbl td.mono, table.tbl th.mono{ font-family:'JetBrains Mono',monospace; font-size:13px; }
+  table.tbl td.hl-bad{ color:var(--red); } table.tbl td.hl-good{ color:var(--green); font-weight:500; }
+
+  /* labs */
+  .lab{ border:1px solid var(--rule); border-radius:10px; background:var(--bg-cell); padding:18px 18px 16px; margin:22px 0; }
+  .lab .lab-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .lab .lab-title{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--purple); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
+  .lab .lab-sub{ font-size:12.5px; color:var(--ink-faint); }
+  .lab input[type=text], .lab textarea, .lab select{
+    font-family:'JetBrains Mono',monospace; font-size:13.5px;
+    border:1px solid var(--rule-strong); border-radius:6px; padding:8px 10px;
+    background:var(--bg); color:var(--ink); width:100%;
+  }
+  .lab input[type=range]{ flex:1; min-width:140px; accent-color:var(--purple); }
+  .lab input[type=text]:focus, .lab textarea:focus{ outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  .lab .btn{
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:500;
+    border:1px solid var(--rule-strong); background:var(--bg); color:var(--ink);
+    border-radius:6px; padding:6px 12px; cursor:pointer; transition:all 0.15s;
+  }
+  .lab .btn:hover{ border-color:var(--blue); color:var(--blue); }
+  .lab .btn.primary{ background:var(--blue); color:white; border-color:var(--blue); }
+  .lab .btn.primary:hover{ background:#0858ba; color:white; }
+  .lab .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .lab .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+  .lab .row > *{ flex-shrink:0; } .lab .row .grow{ flex:1; min-width:200px; }
+  .lab .row label{ font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--ink-soft); min-width:110px; }
+  .lab .row .v{ font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--purple); font-weight:600; min-width:60px; text-align:right; }
+  .lab canvas{ width:100%; display:block; background:var(--bg); border-radius:6px; margin-top:10px; }
+  .lab .panel{
+    background:var(--bg); border:1px dashed var(--rule-strong); border-radius:6px;
+    padding:10px 12px; font-family:'JetBrains Mono',monospace; font-size:12.5px;
+    color:var(--ink-soft); min-height:36px; margin-top:10px; white-space:pre-wrap; word-break:break-word;
+  }
+  .lab .step-trace{ font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.7; }
+  .lab .step-trace .step{ padding:6px 10px; border-left:2px solid var(--rule); margin:2px 0; color:var(--ink-soft); transition:all 0.2s; }
+  .lab .step-trace .step.active{ border-left-color:var(--blue); background:var(--blue-soft); color:var(--ink); }
+  .lab .step-trace .step.done{ border-left-color:var(--green); color:var(--ink); }
+  .lab .step-trace .step .pc{ color:var(--purple); font-weight:600; }
+  .lab .step-trace .step .ret{ color:var(--green); font-weight:600; }
+  .lab .step-trace .step .err{ color:var(--red); }
+
+  /* before / after diff */
+  .diff{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:18px 0; }
+  .diff .pane{ background:var(--bg-cell); border:1px solid var(--rule); border-radius:8px; overflow:hidden; }
+  .diff .pane .pane-head{
+    background:var(--bg-soft); padding:8px 12px;
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-soft);
+    border-bottom:1px solid var(--rule); display:flex; justify-content:space-between;
+  }
+  .diff .pane .pane-head .badge{ font-size:11px; padding:1px 6px; border-radius:3px; background:var(--bg); }
+  .diff .pane .pane-head .badge.bad{ color:var(--red); }
+  .diff .pane .pane-head .badge.good{ color:var(--green); }
+  .diff pre{ margin:0; padding:12px 14px; font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.5; overflow-x:auto; }
+  .diff pre code .hl{ background:#fff5b1; padding:0 2px; }
+  .diff pre code .hl-blue{ background:var(--blue-soft); padding:0 2px; }
+
+  /* nn.Module tree */
+  .modtree{
+    font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.7;
+    background:var(--bg-cell); border:1px solid var(--rule); border-radius:8px;
+    padding:14px 18px; margin:16px 0; color:var(--ink);
+  }
+  .modtree .root{ color:var(--purple); font-weight:600; }
+  .modtree .leaf{ color:var(--ink-soft); }
+  .modtree .pram{ color:var(--blue); }
+  .modtree .ann{ color:var(--ink-faint); }
+
+  /* footer */
+  .nb-foot{
+    margin-top:80px; padding-top:22px; border-top:1px solid var(--rule);
+    color:var(--ink-faint); font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.7;
+  }
+
+  @media (max-width:720px){
+    .nb{ padding:32px 16px 80px; }
+    .cell{ grid-template-columns:50px 1fr; }
+    .cell .prompt{ padding-right:8px; font-size:10.5px; }
+    .nb-title h1{ font-size:24px; }
+    h2{ font-size:20px; }
+    .diff{ grid-template-columns:1fr; }
+    .nums{ grid-template-columns:repeat(2,1fr); }
+  }
+
+  /* Prism — light theme, quiet tokens */
+  code[class*="language-"], pre[class*="language-"]{
+    text-shadow:none !important; font-family:'JetBrains Mono',monospace !important; background:transparent;
+  }
+  .token.comment{ color:#6e7781; font-style:italic; }
+  .token.string{ color:#0a3069; }
+  .token.keyword{ color:#cf222e; }
+  .token.function{ color:#8250df; }
+  .token.number{ color:#0550ae; }
+  .token.operator{ color:#1f2328; background:transparent; }
+  .token.punctuation{ color:#57606a; }
+  .token.builtin{ color:#953800; }
+  .token.decorator{ color:#8250df; }
+</style>
+</head>
+<body>
+
+<div class="nb">
+
+<!-- ============================================================ -->
+<!-- TITLE BLOCK -->
+<!-- ============================================================ -->
+<div class="nb-title">
+  <div class="kicker">notebook &middot; <!-- short source handle --> &middot; spelled out from scratch</div>
+  <h1><!-- title (Chinese, sentence-case, no period) --></h1>
+  <div class="sub"><!-- one-sentence thesis: what the page will spell out, and in what register (Chinese) --></div>
+  <div class="meta">in [1]: <span style="color:var(--ink-soft)">a Karpathy-style walkthrough &middot; <!-- short tags: framework · model · runtime --></span></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- COLD OPEN — code first, output second, numbers third -->
+<!-- ============================================================ -->
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p>好，我们直接来看一下这段<!-- 命令 / 函数 / 文件 --> —— 这就是<!-- 目标系统 -->的入口。</p>
+  </div>
+</div>
+
+<div class="cell">
+  <div class="prompt">In&nbsp;[1]:</div>
+  <div class="body">
+<pre><code class="language-bash"><!-- the actual command / function / minimal-but-real code that launches the artifact --></code></pre>
+  </div>
+</div>
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p><!-- 1-2 sentences: what this command/code actually does, what's about to come out --></p>
+  </div>
+</div>
+
+<div class="cell out">
+  <div class="prompt">Out[1]:</div>
+  <div class="body"><!-- verbatim stdout (or clearly labeled "typical") --></div>
+</div>
+
+<div class="nums">
+  <div class="num-box"><div class="k"><!-- metric --></div><div class="v"><!-- value --></div></div>
+  <div class="num-box"><div class="k"><!-- metric --></div><div class="v"><!-- value --></div></div>
+  <div class="num-box"><div class="k"><!-- metric --></div><div class="v"><span class="hi"><!-- highlighted value --></span></div></div>
+  <div class="num-box"><div class="k"><!-- metric --></div><div class="v sm"><!-- small-text value --></div></div>
+</div>
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p>okay 接下来我们就从这<!-- 命令 / 函数 -->开始一行一行往里钻 — 直到看清楚<!-- 关键问题，一句话 -->。</p>
+    <p><!-- 一段 ~5 行的 roadmap：哪些章节，按什么顺序，每节解决什么。不急，慢慢来。 --></p>
+
+    <div class="toc">
+      <div class="toc-h">这一篇里我们会看的代码路径</div>
+      <ol>
+        <li><a href="#sec-1"><!-- §1 标题 --></a></li>
+        <li><a href="#sec-2"><!-- §2 标题 --></a></li>
+        <li><a href="#sec-3"><!-- §3 标题 --></a></li>
+        <!-- … -->
+        <li><a href="#sec-take">takeaways</a></li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="sec-1"><span class="num">§1</span><!-- 第一节标题 --></h2>
+<div class="lede"><!-- italic-feel one-liner that frames the section --></div>
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p><!-- narration: motivate this section --></p>
+  </div>
+</div>
+
+<div class="cell">
+  <div class="prompt">In&nbsp;[2]:</div>
+  <div class="body">
+<pre><code class="language-python"><!-- code that exercises this section's concept --></code></pre>
+  </div>
+</div>
+
+<div class="cell out">
+  <div class="prompt">Out[2]:</div>
+  <div class="body"><!-- output (verbatim or clearly synthesized) --></div>
+</div>
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p>停一下。<!-- explain what just happened in 1-2 short sentences --></p>
+
+    <div class="callout">
+      <div class="tag">stop &amp; think</div>
+      <div class="text"><p><!-- non-obvious observation that earns its keep --></p></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="sec-2"><span class="num">§2</span><!-- 第二节标题 --></h2>
+<div class="lede"><!-- one-liner --></div>
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p><!-- "好，我们先看一下…" / "okay 接下来…" — keep the conversational register --></p>
+  </div>
+</div>
+
+<div class="cell">
+  <div class="prompt">In&nbsp;[3]:</div>
+  <div class="body">
+<pre><code class="language-python"><!-- the smallest concrete worked example that exercises this concept --></code></pre>
+  </div>
+</div>
+
+<div class="cell out">
+  <div class="prompt">Out[3]:</div>
+  <div class="body"><!-- the result, line by line --></div>
+</div>
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p><!-- name the takeaway: what does the example reveal about the abstract form? --></p>
+
+    <div class="callout green">
+      <div class="tag">类比</div>
+      <div class="text"><p><!-- map this to something the reader has already written. PyTorch autograd, decorator, __radd__, etc. --></p></div>
+    </div>
+  </div>
+</div>
+
+<!-- a signature chalk block — at most 1-2 of these per page -->
+<div class="chalk">
+<span class="label"><!-- one-line mono-caps label --></span>
+<!-- a key formula (KaTeX inline $…$ allowed), a manually-traced state, or a punchline.
+     Use spans .grn / .yel / .red / .blu for inline color. -->
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="sec-N"><span class="num">§N</span><!-- 后续章节 --></h2>
+<div class="lede"><!-- one-liner --></div>
+
+<!-- Repeat the pattern:
+     markdown (motivation) → input cell (code) → output cell → markdown (analysis + callouts)
+
+     Optionally, when comparing naive vs. insight or before vs. after, use .diff:           -->
+
+<div class="diff">
+  <div class="pane">
+    <div class="pane-head"><span><!-- before / naive --></span><span class="badge bad"><!-- e.g. "9 cond. jumps" --></span></div>
+<pre><code class="language-python"><!-- the naive / kernel-v1 version, with optional <span class="hl"> highlights --></code></pre>
+  </div>
+  <div class="pane">
+    <div class="pane-head"><span><!-- after / insight --></span><span class="badge good"><!-- e.g. "4 cond. jumps" --></span></div>
+<pre><code class="language-python"><!-- the insight / compiled version, with <span class="hl-blue"> highlights --></code></pre>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- LAB BLOCK — at least one per page -->
+<!-- ============================================================ -->
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <p>下面这个 lab 让你<!-- specific insight the lab reveals -->：</p>
+  </div>
+</div>
+
+<div class="lab">
+  <div class="lab-head">
+    <div class="lab-title">lab &middot; <!-- short lab name --></div>
+    <div class="lab-sub"><!-- one-line subtitle: what to do, what to look for --></div>
+  </div>
+  <div class="row">
+    <label><!-- control name --></label>
+    <input type="range" id="labA-knob" min="0" max="100" step="1" value="50" class="grow">
+    <span class="v" id="labA-knobV">50</span>
+  </div>
+  <div class="row">
+    <button class="btn primary" id="labA-go">run</button>
+    <button class="btn" id="labA-reset">reset</button>
+  </div>
+  <canvas id="labA-canvas" width="800" height="300"></canvas>
+  <div class="panel" id="labA-info"><!-- initial hint / status --></div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="sec-take"><span class="num">§N+1</span>takeaways</h2>
+<div class="lede">okay 总结一下你应该带走的几件事。</div>
+
+<div class="cell markdown">
+  <div class="prompt">md</div>
+  <div class="body">
+    <ol>
+      <li><p><strong><!-- takeaway 1, one-line --></strong> <!-- short body --></p></li>
+      <li><p><strong><!-- takeaway 2 --></strong> <!-- short body --></p></li>
+      <li><p><strong><!-- takeaway 3 --></strong> <!-- short body --></p></li>
+    </ol>
+
+    <p><!-- one closing line — "okay 这一篇就到这里。" + a concrete next step the reader can take to internalize. --></p>
+  </div>
+</div>
+
+<div class="cell out">
+  <div class="prompt">Out[*]:</div>
+  <div class="body">&gt;&gt;&gt; <!-- final stdout-style summary block (verbatim or labeled "typical"): the headline numbers, where the artifact landed, etc. --></div>
+</div>
+
+<div class="nb-foot">
+  notebook &middot; <!-- file slug --> &middot; sources: <!-- list of files / commits / runs the numbers came from --><br>
+  numbers <!-- "verbatim from <command>" / "typical, not from a specific run" --><br>
+  style: spelled out, from scratch — no manifesto, just code + a notebook
+</div>
+
+</div><!-- /.nb -->
+
+
+<!-- ============================================================ -->
+<!-- INTERACTIVE LABS — every lab IIFE follows this contract:
+     (1) IIFE so it doesn't leak globals or collide on var names with other labs.
+     (2) `if (!c) return` so a missing element doesn't break the rest of the page.
+     (3) DPR-scale the canvas — set c.style.width / c.style.height, multiply c.width/c.height
+         by devicePixelRatio, then ctx.setTransform(dpr, 0, 0, dpr, 0, 0). Drawing then uses
+         CSS pixels but stays sharp on retina.
+     (4) End the IIFE with a bare `draw()` call so the canvas renders on first paint —
+         do NOT rely on the user touching a slider for the first frame.
+     (5) Lab-prefixed ids on every control (labA-knob, lab2-yaw, …) so two labs never
+         silently cross-wire.
+-->
+<!-- ============================================================ -->
+<script>
+(function(){
+  const c = document.getElementById('labA-canvas');
+  if (!c) return;
+
+  function fitDPR(){
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = c.clientWidth || c.width;
+    const cssH = c.height;
+    c.style.height = cssH + 'px';
+    c.width  = cssW * dpr;
+    c.height = cssH * dpr;
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, cssW, cssH };
+  }
+
+  const knob = document.getElementById('labA-knob');
+  const knobV = document.getElementById('labA-knobV');
+  const btnGo = document.getElementById('labA-go');
+  const btnRst = document.getElementById('labA-reset');
+  const info = document.getElementById('labA-info');
+
+  function draw(){
+    const v = parseFloat(knob.value);
+    knobV.textContent = v;
+    const { ctx, cssW, cssH } = fitDPR();
+    ctx.clearRect(0, 0, cssW, cssH);
+    // …source-specific drawing in CSS pixels, using `v`…
+    info.textContent = '当前值: ' + v;
+  }
+
+  knob.addEventListener('input', draw);
+  btnGo.addEventListener('click', draw);
+  btnRst.addEventListener('click', () => { knob.value = 50; draw(); });
+  window.addEventListener('resize', draw);
+
+  draw();   // render immediately — never ship a blank canvas
+})();
+</script>
+
+</body>
+</html>
