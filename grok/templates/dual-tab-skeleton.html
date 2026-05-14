@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title><!-- shared title (Chinese, no tab suffix) — same title is shown for both tabs --></title>
+
+<!--
+  ============================================================
+  Dual-tab grok skeleton — outer shell for MIT + Stanford halves.
+
+  Read references/styles/MIT.md and references/styles/Stanford.md
+  before filling this in. Fill order:
+    1. Drop the MIT skeleton's CSS into the MIT-SCOPED CSS block,
+       wrapping every selector under `.tab-mit ...` (no un-scoped
+       rules — they will bleed into the Stanford tab).
+    2. Drop the Stanford skeleton's CSS into the STANFORD-SCOPED
+       CSS block, wrapping every selector under `.tab-stanford ...`.
+    3. Drop the MIT body content (everything that lived inside
+       `<body>` of MIT-skeleton.html — masthead, hero, sections,
+       afterword, colophon) into <main id="tab-mit">.
+       Rewrite section-level ids: `id="x"` → `id="mit-x"`.
+       Add a `↔ 另一视角` jump button on each major section heading
+       (see .xref-jump example below).
+    4. Same for Stanford into <main id="tab-stanford">. Section ids:
+       `id="x"` → `id="stanford-x"`. Match the slug `x` across tabs
+       so the cross-anchor jump lands on the corresponding section.
+    5. Inline any per-skeleton JS at the bottom of <body>, wrapped
+       in IIFEs that scope DOM queries to .tab-mit or .tab-stanford
+       so the inactive tab's labs don't error on hidden elements.
+
+  Hard constraints — see grok/SKILL.md:
+    - Shared CDN deps load once here.
+    - Prism uses the light theme (prism.css) for both tabs in the
+      dual-tab shell — MIT's dark prism-tomorrow is single-style-only.
+    - Color-coded variable hex codes must match across both tabs.
+  ============================================================
+-->
+
+<!-- Shared fonts (cover both tab type stacks in one request) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- KaTeX (shared) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+
+<!-- Prism (light theme, shared across both tabs) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css">
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<style>
+  /* ============================================================
+     Shell-level styles (apply to both tabs)
+     ============================================================ */
+  :root {
+    --shell-ink: #1a1a1a;
+    --shell-ink-soft: #555;
+    --shell-rule: #d8d2c2;
+    --shell-bg: #f4ecdd;
+    --shell-accent: #c0392b;
+  }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--shell-bg); color: var(--shell-ink); font-family: 'Inter', system-ui, sans-serif; }
+
+  /* Tab bar — sticky top, paper-toned */
+  .tabbar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--shell-bg);
+    border-bottom: 1px solid var(--shell-rule);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .tabbar .brand {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic; font-size: 16px; color: var(--shell-ink);
+    margin-right: auto;
+  }
+  .tabbar .tabs { display: flex; gap: 8px; }
+  .tab-btn {
+    background: transparent; border: 1px solid var(--shell-rule);
+    padding: 6px 14px; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--shell-ink-soft); cursor: pointer;
+    transition: background 120ms, color 120ms, border-color 120ms;
+  }
+  .tab-btn:hover { color: var(--shell-ink); border-color: var(--shell-ink); }
+  .tab-btn.active { background: var(--shell-ink); color: #fff; border-color: var(--shell-ink); }
+
+  /* Tab panes */
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Cross-anchor jump affordance — appears next to major section headings */
+  .xref-jump {
+    display: inline-block; margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--shell-accent); text-decoration: none;
+    padding: 2px 8px; border: 1px solid var(--shell-accent);
+    vertical-align: middle;
+    transition: background 120ms, color 120ms;
+  }
+  .xref-jump:hover { background: var(--shell-accent); color: #fff; }
+
+  /* Editor-note for dropped-tab mode (see SKILL.md Dual-tab principle 3) */
+  .tab-omitted-note {
+    max-width: 880px; margin: 24px auto; padding: 12px 18px;
+    border-left: 3px solid var(--shell-ink-soft);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic; font-size: 15px; color: var(--shell-ink-soft);
+    background: rgba(255,255,255,0.4);
+  }
+
+  /* ============================================================
+     MIT-scoped styles — paste MIT-skeleton.html CSS here.
+     Wrap every selector under `.tab-mit ...`.
+     ============================================================ */
+  .tab-mit {
+    /* page-level rules from MIT-skeleton (body bg, type stack, etc.) */
+    /* PASTE MIT CSS HERE, namespaced */
+  }
+
+  /* ============================================================
+     Stanford-scoped styles — paste Stanford-skeleton.html CSS here.
+     Wrap every selector under `.tab-stanford ...`.
+     ============================================================ */
+  .tab-stanford {
+    /* page-level rules from Stanford-skeleton (body bg, type stack, etc.) */
+    /* PASTE STANFORD CSS HERE, namespaced */
+  }
+</style>
+</head>
+<body>
+
+<nav class="tabbar">
+  <div class="brand"><!-- short source name / kicker (Chinese) — one phrase, italic --></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="tab-mit">MIT &middot; 抽象先行</button>
+    <button class="tab-btn" data-target="tab-stanford">Stanford &middot; 由例而抽象</button>
+  </div>
+</nav>
+
+<!-- ============================================================
+     MIT tab body — paste MIT-skeleton.html's <body> contents here.
+     Rewrite section ids: <section id="x"> → <section id="mit-x">.
+     On each major <h2>, append:
+       <a class="xref-jump" href="#stanford-x">↔ 另一视角</a>
+     Drop the MIT skeleton's <script> tags here too, wrapped in IIFEs
+     that scope DOM queries to `.tab-mit` so they don't touch the
+     Stanford tab.
+     ============================================================ -->
+<main id="tab-mit" class="tab-pane tab-mit active">
+  <!-- MIT BODY HERE -->
+</main>
+
+<!-- ============================================================
+     Stanford tab body — paste Stanford-skeleton.html's <body>
+     contents here. Section ids: <h2 id="x"> → <h2 id="stanford-x">.
+     On each major <h2>, append:
+       <a class="xref-jump" href="#mit-x">↔ 另一视角</a>
+     Drop the Stanford skeleton's <script> tags here too, wrapped
+     in IIFEs scoped to `.tab-stanford`.
+     ============================================================ -->
+<main id="tab-stanford" class="tab-pane tab-stanford">
+  <!-- STANFORD BODY HERE -->
+</main>
+
+<script>
+  // Tab switching + hash routing.
+  // - #mit-<slug>     → activate MIT tab, scroll to #mit-<slug>
+  // - #stanford-<slug> → activate Stanford tab, scroll to #stanford-<slug>
+  // - No hash         → MIT tab active (default).
+  (function () {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panes = document.querySelectorAll('.tab-pane');
+
+    function activate(paneId) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.target === paneId));
+      panes.forEach(p => p.classList.toggle('active', p.id === paneId));
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.target)));
+
+    function syncFromHash() {
+      const h = location.hash.slice(1);
+      if (!h) return;
+      let target = null;
+      if (h.startsWith('mit-'))           target = 'tab-mit';
+      else if (h.startsWith('stanford-')) target = 'tab-stanford';
+      if (!target) return;
+      activate(target);
+      // wait one frame so display:block settles before scrollIntoView
+      requestAnimationFrame(() => {
+        const el = document.getElementById(h);
+        if (el) el.scrollIntoView({ block: 'start' });
+      });
+    }
+    window.addEventListener('hashchange', syncFromHash);
+    syncFromHash();
+  })();
+</script>
+
+</body>
+</html>

@@ -1,13 +1,18 @@
-# Style pack · Feynman (default visual: magazine longread)
+# Style pack · MIT (default visual: magazine longread)
 
-Pedagogical posture: **revelation through first principles**. The page reads like a Sunday magazine feature — the kind of long-form essay where a careful editor walks you from "why this problem was stuck" to "and here is the one trick that broke it loose," in a single seven-thousand-word arc. The reader closes the page feeling someone *figured it out* for them, then *wrote it down* for them.
+Pedagogical posture: **top-down, abstraction-first, derived from first principles**. The lineage is the MIT teaching tradition — SICP (Abelson / Sussman) makes "abstraction barriers" and "wishful thinking" load-bearing pedagogical moves; Strang's 18.06 opens with the geometric picture before the algebra; Feynman's lectures earn revelation by *predicting then verifying*. The shared move: **state the contract or the principle first, then derive why it must look that way**, so the reader closes the page feeling the result was *uncovered*, not *announced*.
 
-Default skeleton: [`templates/Feynman-skeleton.html`](../../templates/Feynman-skeleton.html) (~710 lines, magazine layout). Copy verbatim and fill placeholders; do not hand-roll.
+This pack reads like a Sunday magazine feature — the kind of long-form essay where a careful editor walks you from "why this problem was stuck" to "and here is the one trick that broke it loose," in a single seven-thousand-word arc.
 
-## Voice (the Feynman delta)
+Default skeleton: [`templates/MIT-skeleton.html`](../../templates/MIT-skeleton.html) (~710 lines, magazine layout). Copy verbatim and fill placeholders; do not hand-roll.
 
+> The `.feynman` CSS class for the dark plum meta-insight callout card is **preserved** for backward compatibility (every prior generated HTML uses it). It names a UI element, not the pedagogical posture — and Feynman's revelation voice is still one of the canonical MIT exemplars, so the class name is honest.
+
+## Voice (the MIT delta)
+
+- **Wishful thinking / interface-first.** Before showing how a thing works, declare what it's *supposed to do*: "假装我们已经有了 `score(x)` — 它的契约是输入一个 ${x}$, 输出指向高密度区的方向." Then implement and watch the contract be honored. This is the SICP move; it is the central authoring beat of the MIT pack.
 - **Revelation over recitation.** Not "X equals Y." "Why X must equal Y — because Z." The reader should always feel a thing was *uncovered*, not *announced*.
-- **Predict-then-verify.** "If this were really true, we'd see Y in the data — and the experiments do show Y." This is the same move Feynman makes when he plants a prediction, then turns the page and confirms it.
+- **Predict-then-verify.** "If this were really true, we'd see Y in the data — and the experiments do show Y." This is Feynman planting a prediction, then turning the page and confirming it.
 - **Physical intuition anchors.** Score function = "uphill direction." Adding noise = "smearing the ridge." Normalization constant Z = "volume integral over all of space." Every abstract symbol gets a concrete physical metaphor *before* its formula.
 - **Long-form rhythm.** Magazine pacing — alternate long reasoning paragraphs with one-line breath punches. Pull-quotes interrupt the body. The drop cap and the editor-note set the contract.
 
@@ -38,7 +43,7 @@ Reads like a Sunday-magazine longread typeset, not Markdown rendered to HTML.
 
 ## Required components — checklist
 
-Every Feynman/magazine HTML must include the following — missing any of them and the artifact regresses to "text on a page":
+Every MIT/magazine HTML must include the following — missing any of them and the artifact regresses to "text on a page":
 
 1. **Masthead** — thin black-ruled top bar: italic Playfair logo left ("A Deep Understanding — Private Edition") + uppercase letterspaced volume info right.
 2. **Hero on warm paper** (no dark gradient) — kicker → big Playfair `<h1>` with one italic `<em>` and a warm-red ampersand → italic Cormorant `.subline` → `.editor-note` framed by double-rule + thin-rule with `.label` and `.signoff` → optional `.hero-stats` row → `.meta-line` with `.pill` chip and warm-red links.
