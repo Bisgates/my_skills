@@ -20,11 +20,14 @@
        `<body>` of bird-skeleton.html — masthead, hero, sections,
        afterword, colophon) into <main id="tab-bird">.
        Rewrite section-level ids: `id="x"` → `id="bird-x"`.
-       Add a `↔ 另一视角` jump button on each major section heading
-       (see .xref-jump example below).
     4. Same for frog into <main id="tab-frog">. Section ids:
        `id="x"` → `id="frog-x"`. Match the slug `x` across tabs
-       so the cross-anchor jump lands on the corresponding section.
+       so a deep link like `#frog-densify` lands on the matching
+       section's counterpart when the reader switches tabs by hand,
+       and so shared links resolve via the hash-routing JS below.
+       NOTE: no per-section "↔ 另一视角" UI affordance — tab switching
+       is the global control at the top of the page. Cluttering each
+       heading with a jump button distracts from reading.
     5. Inline any per-skeleton JS at the bottom of <body>, wrapped
        in IIFEs that scope DOM queries to .tab-bird or .tab-frog
        so the inactive tab's labs don't error on hidden elements.
@@ -88,7 +91,10 @@
   html, body { margin: 0; padding: 0; }
   body { background: var(--shell-bg); color: var(--shell-ink); font-family: 'Inter', system-ui, sans-serif; }
 
-  /* Tab bar — sticky top, paper-toned */
+  /* Tab bar — sticky top, theme-aware via `:has()`.
+     Default (bird active): warm-paper bar, warm-red active button.
+     When frog is active:    off-white bar, notebook-blue active button.
+     The shift gives each view a coherent surface from masthead down. */
   .tabbar {
     position: sticky; top: 0; z-index: 100;
     background: var(--shell-bg);
@@ -96,11 +102,13 @@
     padding: 12px 24px;
     display: flex; align-items: center; gap: 16px;
     font-family: 'Inter', system-ui, sans-serif;
+    transition: background 160ms ease, border-bottom-color 160ms ease;
   }
   .tabbar .brand {
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic; font-size: 16px; color: var(--shell-ink);
     margin-right: auto;
+    transition: color 160ms ease;
   }
   .tabbar .tabs { display: flex; gap: 8px; }
   .tab-btn {
@@ -111,23 +119,29 @@
     transition: background 120ms, color 120ms, border-color 120ms;
   }
   .tab-btn:hover { color: var(--shell-ink); border-color: var(--shell-ink); }
-  .tab-btn.active { background: var(--shell-ink); color: #fff; border-color: var(--shell-ink); }
+  /* Default active = bird → warm-red accent. */
+  .tab-btn.active {
+    background: var(--shell-accent);
+    color: #fff;
+    border-color: var(--shell-accent);
+  }
+  /* When frog tab is active, the bar follows the notebook surface. */
+  body:has(#tab-frog.active) .tabbar {
+    background: #fafafa;
+    border-bottom-color: #e5e7eb;
+  }
+  body:has(#tab-frog.active) .tabbar .brand { color: #374151; }
+  body:has(#tab-frog.active) .tab-btn { border-color: #d1d5db; color: #6b7280; }
+  body:has(#tab-frog.active) .tab-btn:hover { color: #111827; border-color: #111827; }
+  body:has(#tab-frog.active) .tab-btn.active {
+    background: #4b78cc;
+    color: #fff;
+    border-color: #4b78cc;
+  }
 
   /* Tab panes */
   .tab-pane { display: none; }
   .tab-pane.active { display: block; }
-
-  /* Cross-anchor jump affordance — appears next to major section headings */
-  .xref-jump {
-    display: inline-block; margin-left: 12px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--shell-accent); text-decoration: none;
-    padding: 2px 8px; border: 1px solid var(--shell-accent);
-    vertical-align: middle;
-    transition: background 120ms, color 120ms;
-  }
-  .xref-jump:hover { background: var(--shell-accent); color: #fff; }
 
   /* Editor-note for dropped-tab mode (see SKILL.md Dual-tab principle 3) */
   .tab-omitted-note {
@@ -170,8 +184,11 @@
 <!-- ============================================================
      bird tab body — paste bird-skeleton.html's <body> contents here.
      Rewrite section ids: <section id="x"> → <section id="bird-x">.
-     On each major <h2>, append:
-       <a class="xref-jump" href="#frog-x">↔ 另一视角</a>
+     Do NOT add per-section "↔ 另一视角" jump buttons — the tab bar at
+     the top is the only cross-tab affordance. Shared slugs across tabs
+     still matter (the hash-routing JS below uses them for deep links
+     like `#frog-densify` shared in chat), they just don't manifest in
+     the body UI.
      Drop the bird skeleton's <script> tags here too, wrapped in IIFEs
      that scope DOM queries to `.tab-bird` so they don't touch the
      frog tab.
@@ -183,8 +200,8 @@
 <!-- ============================================================
      frog tab body — paste frog-skeleton.html's <body>
      contents here. Section ids: <h2 id="x"> → <h2 id="frog-x">.
-     On each major <h2>, append:
-       <a class="xref-jump" href="#bird-x">↔ 另一视角</a>
+     Same "no per-section jump button" rule as the bird half — see
+     the comment above. Match the slug `x` across tabs.
      Drop the frog skeleton's <script> tags here too, wrapped
      in IIFEs scoped to `.tab-frog`.
      ============================================================ -->
