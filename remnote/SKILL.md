@@ -1,6 +1,6 @@
 ---
 name: remnote
-description: Read RemNote rems and append children or create new docs in the user's local RemNote DB on this machine, via the sync_server+plugin bridge under /Users/han/project/life/notes. Use when the user wants to read / dump / search a RemNote rem or document (often referenced by an ID-prefix like '6s3c - grok skill' or '6L1a - todo'), append a child rem under an existing one, or create a new top-level RemNote doc. Do NOT trigger for the Flomo→RemNote or RemNote→Todoist batch sync scripts (those have their own CLIs under scripts/ and remnote-sync-plugin/), for RemNote plugin development (webpack/TypeScript work on the sync_plugin source), or for non-RemNote note systems (Obsidian, Apple Notes, Bear, flomo, generic markdown). Reads use direct SQLite read-only mode (works while RemNote is running); writes route through sync_client → sync_server → RemNote plugin so the SDK assigns the fractional-index `f` field and the UI updates without a manual refresh.
+description: Read RemNote rems and append children, create new top-level docs, insert clickable [[references]], or load a Linear board view snapshot into a new RemNote summary doc linked from today's daily note (auto-numbered `YYMMDD<letter>_<slug>` titles, section auto-picked by hour), via the sync_server+plugin bridge at /Users/han/project/life/notes on this machine. Use when the user wants to read / dump / search a RemNote rem (IDs often look like '6s3c - grok skill'), append a child rem, create a new RemNote doc, insert a [[link]] in a daily-note section, or load today's Linear board into RemNote. Do NOT trigger for the Flomo→RemNote or RemNote→Todoist batch sync CLIs, for plugin source work (webpack/TypeScript), or for non-RemNote note systems (Obsidian/Apple Notes/Bear/flomo/markdown). Reads use direct SQLite (works while RemNote runs); writes route through sync_client → sync_server → in-app plugin so the SDK assigns the fractional-index `f` and the UI updates live.
 ---
 
 # Remnote
@@ -122,25 +122,72 @@ client.create_rem('hello from opus')                                    # parent
 client.create_rem('hello', parent_id='<id printed from previous call>') # child
 ```
 
-`sync_client.create_rem` returns a command ID, not the new Rem ID. To recover the Rem ID, after the queue drains, query SQLite for rems where `parent IS NULL` and `key = [text]` and `m > <pre-call timestamp>`. Example:
+`sync_client.create_rem` returns a command ID, not the new Rem ID. Recover the Rem ID by querying SQLite for `(parent, key[0])` after the queue drains, **with a poll loop** — RemNote uses WAL and a fresh read-only connection may not see the write for 1–3 s after the plugin ACKs (see Gotchas).
 
 ```python
-import time, json
-cutoff = int(time.time() * 1000) - 60_000
-r.cursor.execute(
-    "SELECT _id FROM quanta WHERE json_extract(doc,'$.parent') IS NULL "
-    "AND doc LIKE ? AND json_extract(doc,'$.m') > ?",
-    (f'%{text}%', cutoff))
-new_id = r.cursor.fetchone()[0]
+import time, sqlite3
+def find_new_id(parent_id, text, timeout=10):
+    q = ("SELECT _id FROM quanta WHERE json_extract(doc,'$.parent') IS ? "
+         "AND json_extract(doc,'$.key[0]') = ? "
+         "ORDER BY json_extract(doc,'$.m') DESC LIMIT 1")
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        conn = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
+        row = conn.execute(q, (parent_id, text)).fetchone()
+        conn.close()
+        if row: return row[0]
+        time.sleep(0.4)
+    raise TimeoutError(f'lost create: {text!r}')
 ```
 
-### 6. Verify a write landed
+### 6. Insert a clickable `[[ref]]` (not literal `[[…]]` text)
+
+The plugin's `create` handler does `await rem.setText([cmd.text])` — it wraps the incoming `text` field into a single-element richText array. A string makes a text rem; **a richText reference element makes a real link**:
 
 ```python
-# 1. pending queue cleared
-import urllib.request, json
-assert json.load(urllib.request.urlopen('http://127.0.0.1:9321/pending'))['commands'] == []
-# 2. new rem exists with the expected parent and f > all siblings
+import requests, sync_client  # sync_client import side-effect-sets NO_PROXY=*
+requests.post('http://127.0.0.1:9321/create', json={
+    'text': {'i': 'q', '_id': '<target_rem_id>'},   # ← dict, NOT a string
+    'parentId': '<where to place the link>',
+})
+```
+
+Sending `'text': '[[Some Doc]]'` (a plain string) stores the literal characters and renders as un-linked text. Sending the dict produces an actual `[[Some Doc]]` reference that resolves to whatever `<target_rem_id>` currently names — survives renames.
+
+### 7. Load a Linear board view into today's daily note (auto-numbered title)
+
+Use the bundled script `scripts/load_board_to_remnote.py`. It reads the active view from `/Users/han/project/life/linear_board_view/public/data/working_on/views.json`, summarizes the node tree (separating done items into "今日已完成"), creates a new top-level RemNote doc, and inserts `[[<title>]]` into today's daily note.
+
+```bash
+python3 ~/.claude/skills/remnote/scripts/load_board_to_remnote.py
+python3 ~/.claude/skills/remnote/scripts/load_board_to_remnote.py --slug grok_review --section 早
+```
+
+**Title scheme**: `YYMMDD<letter>_<slug>` where the letter is the first unused one today (a, b, c…). Reasoning: lets you call this multiple times per day without collision, and keeps the doc-name prefix sortable. The "next unused letter" is found by scanning top-level rems whose `key[0]` matches `^YYMMDD[a-z]_`. Reusable primitive if you need it elsewhere:
+
+```python
+import re, sqlite3
+from datetime import datetime
+def next_letter_today(db):
+    yymmdd = datetime.now().strftime('%y%m%d')
+    conn = sqlite3.connect(f'file:{db}?mode=ro', uri=True)
+    rows = conn.execute(
+        "SELECT json_extract(doc,'$.key[0]') FROM quanta "
+        "WHERE json_extract(doc,'$.parent') IS NULL "
+        "AND json_extract(doc,'$.key[0]') LIKE ?", (f'{yymmdd}%',)).fetchall()
+    conn.close()
+    used = {m.group(1) for (k,) in rows for m in [re.match(rf'^{yymmdd}([a-z])_', k or '')] if m}
+    return yymmdd, next(c for c in 'abcdefghijklmnopqrstuvwxyz' if c not in used)
+```
+
+**Destination section**: argument `--section` is one of `auto | 早 | 下午 | 晚上 | root`. `auto` picks by current hour (<12 → 早, 12-17 → 下午, ≥18 → 晚上). The daily note for `YYYY-MM-DD` is the rem whose `key[0]` equals today's ISO date — sync_server's `get_today_daily_doc_id()` helper does this lookup.
+
+### 8. Verify a write landed
+
+```python
+import requests  # via sync_client → NO_PROXY=* is set; or pass proxies={'http':None,'https':None}
+assert not requests.get('http://127.0.0.1:9321/pending').json()['commands']
+# Then read back via SQLite and confirm: new rem exists with expected parent and largest f.
 ```
 
 If `/pending` stays non-empty past ~5 s, the plugin isn't polling — see Preflight.
@@ -165,8 +212,17 @@ If `/pending` stays non-empty past ~5 s, the plugin isn't polling — see Prefli
 
 - **The DB is the user's real notes.** Always read first when uncertain about a target rem, and prefer reversible operations. Don't `delete_rem` to "clean up" anything not explicitly requested.
 
+- **WAL read-after-write visibility lag.** RemNote runs SQLite in WAL mode. After the plugin acks a create, a fresh `mode=ro` SQLite connection from a separate process may not see the new rem for 1–3 s. Always poll with retry (0.4 s × ~10 s budget) before declaring a write lost — never trust the first empty result. The bundled `scripts/load_board_to_remnote.py` carries a reference `find_rem(parent, text, timeout=10)` helper.
+
+- **Localhost proxy interception.** The user runs an HTTP proxy via `HTTP_PROXY=http://121.4.45.119:31878`; raw `urllib`/`requests` calls to `http://127.0.0.1:9321` get routed through it and return 502. Two fixes: (a) `import sync_client` first — it sets `os.environ['NO_PROXY']='*'` at module load and that bypasses the proxy for all subsequent requests in this process; (b) pass `proxies={'http': None, 'https': None}` to each call. The `NO_PROXY=.fabu.ai,fabu.ai` envvar does NOT cover localhost.
+
+- **References are stored as richText elements, not bracket text.** A clickable `[[Name]]` link in `key` is a dict `{"i": "q", "_id": "<target>"}`, not the literal characters `"[[Name]]"`. To create a reference rem via the bridge, POST `/create` with `text` set to that dict (see Workflow 6) — the plugin wraps it: `setText([{i:"q",_id:"..."}])`. Same trick works for `/update` with `newText`. Storing the literal bracket text won't auto-resolve later — RemNote only links via the SDK / autocomplete path.
+
 ## See also
 
+- `scripts/load_board_to_remnote.py` (bundled) — end-to-end loader for the Linear board → RemNote daily-note flow. Reference implementation for `wait_drained`, `find_rem` (WAL-tolerant), `create_reference` (richText hack), and `next_letter_today`.
 - `/Users/han/project/life/notes/CLAUDE.md` — same machine, deeper detail on the three access patterns, the `remnote_to_todoist.py` task sync, and the Flomo sync.
 - `/Users/han/project/life/notes/remnote-sync-plugin/CLAUDE.md` — plugin internals (polling loop, command types, image compression).
+- `/Users/han/project/life/notes/remnote-sync-plugin/src/widgets/index.tsx` — plugin source; see the `create`/`update` cases to understand exactly how `cmd.text` / `cmd.newText` get passed to `rem.setText`.
 - `/Users/han/project/life/notes/remnote/{reader_live,writer,live_api}.py` — the three Python entry points.
+- `/Users/han/project/life/linear_board_view/AGENTS.md` — board-view app schema (`SnapshotFile`, `noteNodes`, `edges`, `issueMembers`) consumed by the bundled loader.
