@@ -94,7 +94,7 @@ up — but the default is to keep moving.
 ## CLI cheatsheet (for direct agent use)
 
 ```bash
-arc init                              # one-time bootstrap; auto-writes the AGENTS.md hook
+arc init                              # bootstrap or migrate; ensures CLAUDE.md (real) + AGENTS.md → CLAUDE.md, appends Arc Protocol hook
 arc new <brief...>                    # create skeleton
 arc spawn <brief...> [--parent <id>]  # child task
 arc pause <id?> --note "..."

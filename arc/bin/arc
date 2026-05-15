@@ -480,57 +480,86 @@ def _merge_md(primary: str, secondary: str) -> str:
         return (s + "\n") if s else ""
     if not s:
         return p + "\n"
-    return p + "\n\n<!-- merged from CLAUDE.md -->\n\n" + s + "\n"
+    return p + "\n\n<!-- merged from AGENTS.md -->\n\n" + s + "\n"
 
 
 def _ensure_agents_claude(root: Path) -> None:
+    """Ensure CLAUDE.md is the real file and AGENTS.md → CLAUDE.md.
+
+    Migrates legacy setups where AGENTS.md was the real file (CLAUDE.md
+    symlinked to it). When both are real files with diverging content,
+    merges AGENTS.md into CLAUDE.md (CLAUDE.md primary).
+    """
     agents = root / "AGENTS.md"
     claude = root / "CLAUDE.md"
 
-    if claude.is_symlink() or agents.is_symlink():
-        if claude.is_symlink() and not agents.exists():
-            try:
-                target_name = os.readlink(claude)
-            except OSError:
-                target_name = ""
-            if target_name == "AGENTS.md":
-                agents.write_text("", encoding="utf-8")
-        return
+    # Already in target shape: AGENTS.md → CLAUDE.md with CLAUDE.md a real file.
+    if agents.is_symlink():
+        try:
+            target = os.readlink(agents)
+        except OSError:
+            target = ""
+        if (
+            target == "CLAUDE.md"
+            and claude.is_file()
+            and not claude.is_symlink()
+        ):
+            return
+        # Stale/wrong-pointing symlink — drop and rebuild from whatever remains.
+        agents.unlink()
 
-    a_exists = agents.is_file()
-    c_exists = claude.is_file()
+    # Legacy: CLAUDE.md → AGENTS.md. Flip in place.
+    if claude.is_symlink():
+        try:
+            target = os.readlink(claude)
+        except OSError:
+            target = ""
+        claude.unlink()
+        if (
+            target == "AGENTS.md"
+            and agents.is_file()
+            and not agents.is_symlink()
+        ):
+            agents.rename(claude)
+            agents.symlink_to("CLAUDE.md")
+            err("migrated: renamed AGENTS.md to CLAUDE.md; symlinked AGENTS.md -> CLAUDE.md.")
+            return
+        # Dangling or unexpected target — fall through to real-file handling.
+
+    a_exists = agents.is_file() and not agents.is_symlink()
+    c_exists = claude.is_file() and not claude.is_symlink()
 
     if not a_exists and not c_exists:
-        agents.write_text("", encoding="utf-8")
-        claude.symlink_to("AGENTS.md")
-        err("created empty AGENTS.md; symlinked CLAUDE.md -> AGENTS.md.")
-        return
-
-    if a_exists and not c_exists:
-        claude.symlink_to("AGENTS.md")
-        err("symlinked CLAUDE.md -> AGENTS.md.")
+        claude.write_text("", encoding="utf-8")
+        agents.symlink_to("CLAUDE.md")
+        err("created empty CLAUDE.md; symlinked AGENTS.md -> CLAUDE.md.")
         return
 
     if c_exists and not a_exists:
-        claude.rename(agents)
-        claude.symlink_to("AGENTS.md")
-        err("renamed CLAUDE.md to AGENTS.md; symlinked CLAUDE.md -> AGENTS.md.")
+        agents.symlink_to("CLAUDE.md")
+        err("symlinked AGENTS.md -> CLAUDE.md.")
+        return
+
+    if a_exists and not c_exists:
+        agents.rename(claude)
+        agents.symlink_to("CLAUDE.md")
+        err("renamed AGENTS.md to CLAUDE.md; symlinked AGENTS.md -> CLAUDE.md.")
         return
 
     a_content = agents.read_text(encoding="utf-8")
     c_content = claude.read_text(encoding="utf-8")
 
     if a_content == c_content:
-        claude.unlink()
-        claude.symlink_to("AGENTS.md")
-        err("CLAUDE.md == AGENTS.md; symlinked CLAUDE.md -> AGENTS.md.")
+        agents.unlink()
+        agents.symlink_to("CLAUDE.md")
+        err("AGENTS.md == CLAUDE.md; symlinked AGENTS.md -> CLAUDE.md.")
         return
 
-    merged = _merge_md(a_content, c_content)
-    agents.write_text(merged, encoding="utf-8")
-    claude.unlink()
-    claude.symlink_to("AGENTS.md")
-    err("merged CLAUDE.md into AGENTS.md; symlinked CLAUDE.md -> AGENTS.md.")
+    merged = _merge_md(c_content, a_content)
+    claude.write_text(merged, encoding="utf-8")
+    agents.unlink()
+    agents.symlink_to("CLAUDE.md")
+    err("merged AGENTS.md into CLAUDE.md; symlinked AGENTS.md -> CLAUDE.md.")
 
 
 def cmd_init(args: argparse.Namespace) -> None:
@@ -554,14 +583,14 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     _ensure_agents_claude(root)
 
-    agents = root / "AGENTS.md"
-    if agents.exists():
-        content = agents.read_text(encoding="utf-8")
+    claude = root / "CLAUDE.md"
+    if claude.exists():
+        content = claude.read_text(encoding="utf-8")
         if ARC_PROTOCOL_HEADER not in content:
             if content and not content.endswith("\n"):
                 content += "\n"
-            agents.write_text(content + AGENTS_HOOK, encoding="utf-8")
-            err("appended Arc Protocol hook to AGENTS.md.")
+            claude.write_text(content + AGENTS_HOOK, encoding="utf-8")
+            err("appended Arc Protocol hook to CLAUDE.md.")
 
 
 def _create_arc(args: argparse.Namespace, parent: Optional[str]) -> None:
