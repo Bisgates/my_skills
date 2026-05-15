@@ -39,20 +39,28 @@ description: Execute the arc's plan from current state, logging progress, until 
 7. **When the plan does not anticipate the situation** (errors, contradictions, decisions needed, the objective wants to change): **stop and ask the user.** For example:
    - "Step 3 came back with RMSE worse than baseline. The plan does not specify what to do when the threshold is missed — how would you like to handle it?"
 8. After driving the last step:
-   - Call `arc log "[done] all plan steps complete; ready for /arc-finalize"`.
+   - Call `arc log "[done] all plan steps complete"`.
    - Append a `[done]` reporter note (per step 5b) summarizing the final outcome vs. acceptance.
-   - **Dispatch the reporter sub-agent in the background.** Issue **one** Agent tool call (`general-purpose`, no explicit `model`, **`run_in_background: true`**) with the self-contained prompt skeleton in `reporter.md`. The sub-agent copies `~/.claude/skills/arc/templates/7_task_report.html` to `<arc>/7_task_report.html` and fills it from `1_objective.md`, `2_plan.md`, `_tmp/report_notes.md`, `0_meta.md` log, and the `output/` / `utils/` / `scripts/` listings.
-   - **Do not wait for it.** Background dispatch returns immediately. Hard rule: the reporter must not block the main flow. (See `reporter.md` for why and the historical incident.)
-   - Tell the user one short line: "Plan complete. Report drafting in the background — will auto-open when ready. Suggest `/arc-finalize` next." Then yield control back so the user's next message (typically `/arc-finalize`) is responded to without delay.
-   - **Do not regenerate the report between steps.** It is emitted once, here, at the end. If `7_task_report.html` already exists from a prior `/arc-execute` run, overwrite it — this is the authoritative version.
+   - **Route the arc.** Decide between two paths — when in doubt, take the formal `/arc-finalize` route. The cost of running a finalize you did not need is small; the cost of skipping one you needed is lost promotion work.
 
-9. **When the reporter completion notification arrives** (could be in the next turn, several turns later, or mid-`/arc-finalize`):
-   - Verify `<arc>/7_task_report.html` exists and is non-empty.
-   - Call `arc log "[report] 7_task_report.html generated (<size>KB)"`.
-   - Run `open <arc>/7_task_report.html` from the shell.
-   - Tell the user one line: "Report ready and opened — `7_task_report.html`."
-   - Do **not** re-orient the conversation around the report — if the user is mid-flow on something else, the line above is a notice, not a topic shift.
-   - **Failure path:** if the sub-agent reported an error or the file is missing, call `arc log "[report-failed] <reason>"`, tell the user one line, stop. Do not retry silently.
+   **Fast-done route.** Eligible only when **all** of these hold:
+   - `1_objective.md` acceptance is unambiguously met by what is already logged in `0_meta.md` (numbers / paths visible, not "probably good").
+   - `utils/` is empty or contains only files clearly not worth promoting.
+   - `scripts/` is empty or one-shot only (skipped by default anyway).
+   - `doc/` is empty.
+   - No outstanding `STALE?` or follow-up items.
+
+   On fast-done eligibility:
+   - Tell the user one short line: "Plan complete; acceptance met. OK to mark this arc done? (I'll generate `9_summary.html` and auto-open.)"
+   - **Wait for a one-line confirmation only** — `yes` / `ok` / `好` / `确认` / `approved`. Do **not** open a review pass; the point of fast-done is no further confirmation overhead beyond a yes.
+   - If the user declines (`no, let me check first` / `let's finalize properly`), do **not** dispatch the reporter. Suggest `/arc-finalize` and yield.
+   - On confirmation: dispatch the reporter per `reporter.md` Phase B (background, `general-purpose`, no explicit `model`, `run_in_background: true`). Tell the user one line: "Drafting `9_summary.html` in the background; will mark done and auto-open when ready." Then yield. The completion notification handler (`reporter.md` Phase C) flips the status and opens the file.
+
+   **Finalize route.** Anything else — substantive code/docs to promote, acceptance ambiguous, the user prefers the formal flow.
+   - Tell the user one short line: "Plan complete. Suggest `/arc-finalize` next." Yield.
+   - **Do not** dispatch the reporter here. Finalize Stage 2 will dispatch it after promotion (`arc-finalize.md`).
+
+9. **Reporter completion notification handling.** See `reporter.md` Phase C — single shared handler for both routes. The handler verifies the file, calls `arc status <id> done`, runs `open`, and tells the user one line. Do not duplicate the logic here.
 
 ## Don't
 

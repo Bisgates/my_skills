@@ -11,7 +11,7 @@ description: Run grill-me to define the arc objective with crisp boundary and ac
    - User gave an id? Run `arc cd <id>` to get the path.
    - No id? Use cwd (should be `arcs/all/<id>_*/`). If not, error out and ask for an id.
 
-2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.md` and `9_summary.md` (if present) to use as constraint context.
+2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.md` and `9_summary.html` (if present) to use as constraint context.
 
 3. **Estimate complexity, then choose interrogation depth.** grill-me inside arc is **adaptive**, not a fixed question count:
    - **Simple task** (single goal, narrow scope, acceptance readable straight off the brief, no ambiguous branches): **ask less**. Clarify only the 0–2 points that are genuinely missing; the moment you can write a crisp goal + checkable acceptance, **commit it to disk**. Do not pad questions just to "follow the flow".

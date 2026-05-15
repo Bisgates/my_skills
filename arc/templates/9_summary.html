@@ -53,15 +53,25 @@
 
 <!--
   Reporter sub-agent: this file is the SKELETON.
-  Copy it to <arc>/7_task_report.html, then replace tokens and FILL blocks.
+  Copy it to <arc>/9_summary.html, then replace tokens and FILL blocks.
+
+  This is the arc's DONE-state artifact. The `arc status <id> done` gate
+  requires <arc>/9_summary.html to exist and be non-empty. Two entry points
+  produce it (same template, same reporter sub-agent):
+    - Fast-done path (end of /arc-execute, trivial arcs): main agent asks
+      the user to confirm, then dispatches the reporter. No 8_handoff_plan.md
+      exists; the 留下的产物 / 接下来 sections come from the arc itself.
+    - Formal finalize path (/arc-finalize Stage 2): after promotion completes,
+      the reporter pulls promoted-code / doc-changes from 8_handoff_plan.md
+      and surfaces them in 留下的产物 / 接下来.
 
   Tokens: {{TITLE}} {{SUBTITLE}} {{ID}} {{DATE}}
     TITLE    = the arc's brief, prose-cleaned (e.g. "把 board view 接到 Linear API")
     SUBTITLE = one-line problem statement, ≤ 18 字
     ID       = 7-char arc id (e.g. 260512c)
-    DATE     = report generation date in YYYY-MM-DD
+    DATE     = summary generation date in YYYY-MM-DD
 
-  Section budget (the whole report should feel light — closer to a one-pager
+  Section budget (the whole summary should feel light — closer to a one-pager
   than a long essay):
     §1 结果      mandatory; the headline number(s) + did we hit acceptance.
     §2 过程      mandatory; SHORT narrative, 3-5 short paragraphs max.

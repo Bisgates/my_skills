@@ -1,6 +1,6 @@
 ---
 name: arc-finalize
-description: Two-stage finalization — first draft 8_handoff_plan.md (no project changes), then after user "approved", actually promote code/docs and write 9_summary.md. Use when the user says "/arc-finalize" or "/arc-finalize 260430c".
+description: Two-stage finalization — first draft 8_handoff_plan.md (no project changes), then after user "approved", actually promote code/docs and dispatch the reporter sub-agent to write 9_summary.html. The completion notification handler flips the arc to done. Use when the user says "/arc-finalize" or "/arc-finalize 260430c".
 ---
 
 # /arc-finalize — Two-stage wrap-up
@@ -37,37 +37,30 @@ Start only when the user explicitly says `approved` or equivalent. If they say `
 2. **Doc changes:**
    - `[NEW]` — create the file with the required YAML front-matter (`id / type / domain / summary / status / last_verified / related_code / related_docs`).
    - `[UPDATE]` — apply precise edits; preserve the original YAML front-matter; bump `last_verified` to today.
-   - `[STALE?]` — **flag only, do not touch the file**; surface it in the `9_summary.md` "for the user to decide" section.
+   - `[STALE?]` — **flag only, do not touch the file**; record it in `8_handoff_plan.md` so the reporter sub-agent surfaces it in the 接下来 section of `9_summary.html`.
 
 3. **Do not run a git commit** (the project has no git wired up yet; once it does, this skill needs to extend).
 
-4. **Write `9_summary.md`** using `~/.claude/skills/arc/templates/9_summary.md`. **All six fields must be filled:**
-   - TL;DR (≤ 3 lines).
-   - Promoted Code (write "none" if applicable).
-   - Doc Changes (including unhandled `STALE?` items).
-   - Verification (L1 + L2, against `1_objective.md` acceptance).
-   - Follow-ups.
-   - Doc Suggestions.
+4. **Dispatch the reporter sub-agent (background).** Per `reporter.md` Phase B — `general-purpose`, no explicit `model`, `run_in_background: true`. The reporter writes `<arc>/9_summary.html` from the canonical inputs (`1_objective.md`, `2_plan.md`, `_tmp/report_notes.md`, `0_meta.md` log, `output/` listing) **plus** `8_handoff_plan.md` if it exists — the finalize-specific content (promoted code, doc changes, verification against acceptance, follow-ups, surviving `STALE?` items) flows into the template's 留下的产物 / 接下来 / 关键决策 candidate sections. Do **not** hand-craft any `9_*.md` file; that artifact is gone.
 
-5. **Flip status:**
-   ```bash
-   arc status <id> done
-   ```
-   If `9_summary.md` does not exist or is empty, the CLI rejects this — you missed step 4.
+5. **Do not flip status here.** The reporter is background. When the completion notification arrives (could be later this turn, several turns later, or mid-conversation), the shared handler in `reporter.md` Phase C verifies the file, calls `arc status <id> done` (gate now passes), runs `open`, and tells the user one line. If you call `arc status <id> done` here, the CLI rejects it because `9_summary.html` does not exist yet.
 
-6. **Report:** done + summary of what changed + any `STALE?` items left for the user.
+6. **Report to the user one short line:** "Promotion done. Drafting `9_summary.html` in the background; will mark done and auto-open when ready." Then yield — the user can move on; the notification handler closes the loop.
 
 ## On failure mid-Stage-2
 
 - If a promote step errors out:
   - **Do not** call `arc status done` (the arc stays `active`).
+  - **Do not** dispatch the reporter — `9_summary.html` should reflect a finished arc, not a half-promoted one.
   - `arc log "[finalize-failed] <what broke> <what was done so far>"`.
   - Report to the user and wait for instructions (fix / roll back / skip).
+- If the reporter sub-agent fails on the notification: see `reporter.md` Phase C failure path. The arc stays `active`; the user decides whether to re-dispatch.
 
 ## Don't
 
 - Do not touch any main-project file during Stage 1.
-- Do not skip `9_summary.md` and call `arc status done` directly in Stage 2 — the CLI rejects it.
+- Do not call `arc status done` inline in Stage 2 — the CLI rejects it until `9_summary.html` exists, and the notification handler in `reporter.md` Phase C is the only place that flips it.
 - Do not promote anything from `output/` to the main project (gitignored by default — temporary experiment artifacts).
-- Do not promote anything from `_tmp/` to the main project, and do not surface `_tmp/` contents in `8_handoff_plan.md` or `9_summary.md`. It is agent-internal scratch by definition.
-- Do not leave `8_*` / `9_*` sections empty — write "none" rather than omitting.
+- Do not promote anything from `_tmp/` to the main project, and do not surface `_tmp/` contents in `8_handoff_plan.md` or the reporter brief. It is agent-internal scratch by definition.
+- Do not leave `8_*` sections empty — write "none" rather than omitting.
+- Do not hand-craft `9_summary.md` or any other `9_*.md` file. The reporter sub-agent owns the `9_*` slot now, and only the HTML artifact satisfies the `done` gate.

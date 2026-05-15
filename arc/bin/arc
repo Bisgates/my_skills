@@ -37,7 +37,7 @@ AGENTS_HOOK = """
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
 - 触发 CLI：arc {new,spawn,pause,resume,status,abandon,delete,touch,log,output,list,cd,rebuild,init}。
 - ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/all/<id>_*`；状态权威在 `0_meta.md`。
-- `done` 必须存在 `9_*.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删（直接全删，不留 trace）。
+- `done` 必须存在 `9_summary.html`；`abandoned` 必须有 `--reason`；`delete` 是硬删（直接全删，不留 trace）。
 """
 
 
@@ -303,8 +303,12 @@ def hint_for(arc: Path, fm: Dict[str, str]) -> str:
         return "needs 1_objective.md"
     if not (arc / "2_plan.md").exists():
         return "needs 2_plan.md"
-    sums = [p for p in arc.glob("9_*.md") if p.is_file()]
-    if any(p.stat().st_size > 0 for p in sums) and fm.get("status") == "active":
+    summary_html = arc / "9_summary.html"
+    if (
+        summary_html.is_file()
+        and summary_html.stat().st_size > 0
+        and fm.get("status") == "active"
+    ):
         return "ready to mark done"
     last = fm.get("last_active_at", "")
     try:
@@ -429,9 +433,9 @@ def update_status(
     if old == new_status:
         die(f"arc already in status {new_status}.")
     if new_status == "done":
-        sums = [p for p in arc_dir.glob("9_*.md") if p.is_file()]
-        if not any(p.stat().st_size > 0 for p in sums):
-            die("cannot mark done: no non-empty 9_*.md found.")
+        summary_html = arc_dir / "9_summary.html"
+        if not (summary_html.is_file() and summary_html.stat().st_size > 0):
+            die("cannot mark done: no non-empty 9_summary.html found.")
     if new_status == "abandoned":
         if not reason:
             die("--reason required for abandoned.")
