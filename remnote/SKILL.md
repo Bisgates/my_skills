@@ -1,6 +1,6 @@
 ---
 name: remnote
-description: Read RemNote rems and append children, create new top-level docs, insert clickable [[references]], or load a Linear board view snapshot into a new RemNote summary doc linked from today's daily note (auto-numbered `YYMMDD<letter>_<slug>` titles, section auto-picked by hour), via the sync_server+plugin bridge at /Users/han/project/life/notes on this machine. Use when the user wants to read / dump / search a RemNote rem (IDs often look like '6s3c - grok skill'), append a child rem, create a new RemNote doc, insert a [[link]] in a daily-note section, or load today's Linear board into RemNote. Do NOT trigger for the Flomo→RemNote or RemNote→Todoist batch sync CLIs, for plugin source work (webpack/TypeScript), or for non-RemNote note systems (Obsidian/Apple Notes/Bear/flomo/markdown). Reads use direct SQLite (works while RemNote runs); writes route through sync_client → sync_server → in-app plugin so the SDK assigns the fractional-index `f` and the UI updates live.
+description: Read RemNote rems and append children, create new top-level docs, insert clickable [[references]], set a RemNote tag on a rem (write `tp` directly — e.g. tag a doc with `[[7a1 -- person]]`), or load a Linear board view snapshot into a new RemNote summary doc linked from today's daily note (auto-numbered `YYMMDD<letter>_<slug>` titles, section auto-picked by hour), via the sync_server+plugin bridge at /Users/han/project/life/notes on this machine. Use when the user wants to read / dump / search a RemNote rem (IDs often look like '6s3c - grok skill'), append a child rem, create a new RemNote doc, insert a [[link]] in a daily-note section, tag a rem with another rem (RemNote-native tag chip, distinct from a reference child), or load today's Linear board into RemNote. Do NOT trigger for the Flomo→RemNote or RemNote→Todoist batch sync CLIs, for plugin source work (webpack/TypeScript), or for non-RemNote note systems (Obsidian/Apple Notes/Bear/flomo/markdown).
 ---
 
 # Remnote
@@ -192,6 +192,38 @@ assert not requests.get('http://127.0.0.1:9321/pending').json()['commands']
 
 If `/pending` stays non-empty past ~5 s, the plugin isn't polling — see Preflight.
 
+### 9. Tag a rem with another rem (write `tp`)
+
+A RemNote-native tag (the chip RemNote shows at the top of a rem, e.g. `[[Dario Amodei]]` tagged with `[[7a1 -- person]]`) lives in the target rem's `tp` field as `{<tag_rem_id>: {"t": true, ",u": <ms>}}`. Removing a tag via the UI flips `"t"` to `false` rather than deleting the entry, so the soft-deleted history is preserved.
+
+The bridge plugin can't write this — its `addPowerup` handler maps a few built-in shortcodes (`editLater → 'e'`) and otherwise calls SDK `rem.addPowerup(code)`, which expects a powerup code, not a rem ID. Passing a tag rem ID returns successfully but writes nothing. So tag-writing goes direct to SQLite. Tags don't involve `f` (no ordering implication), so the only consequence vs. the plugin path is the user needs **Cmd+R** in RemNote to see the new chip:
+
+```python
+import sqlite3, json, time
+DB = '/Users/han/remnote/remnote-62403c0f38b1150016221e9d/remnote.db'
+
+def set_tag(target_id, tag_id, on=True):
+    """Add (on=True) or soft-remove (on=False) a tag, mirroring RemNote's
+    own convention of flipping `t` rather than deleting the entry."""
+    now_ms = int(time.time() * 1000)
+    conn = sqlite3.connect(DB)
+    try:
+        d = json.loads(conn.execute(
+            "SELECT doc FROM quanta WHERE _id = ?", (target_id,)).fetchone()[0])
+        tp = d.get('tp', {})
+        tp[tag_id] = {'t': on, ',u': now_ms}
+        d['tp'] = tp
+        d['m'] = now_ms
+        d['u'] = now_ms
+        conn.execute("UPDATE quanta SET doc = ? WHERE _id = ?",
+                     (json.dumps(d, ensure_ascii=False), target_id))
+        conn.commit()
+    finally:
+        conn.close()
+```
+
+A **tag** (this workflow) is structurally distinct from a **reference child** (Workflow 6). Both can render as chips at the top of a doc, but a tag lives in the parent's `tp` field and survives reordering of children, while a reference child is a real child rem holding its own bullet identity. If the user says "tag this doc with X", they mean `tp` — use this workflow, not Workflow 6.
+
 ## Gotchas
 
 - **Display order = `f`, not `o`/`p`/`y`.** `o`/`p`/`y` are creation-time timestamps; RemNote updates only `f` (a base-94 fractional-index string like `a0P`, `a2h`, `a2}`) when the user reorders blocks in the UI. Sort children by `f` string lex order to match what the user sees. `writer.py` and `live_api.py` don't set `f` at all, which is why their writes can land in unexpected positions — prefer the sync_client path.
@@ -217,6 +249,8 @@ If `/pending` stays non-empty past ~5 s, the plugin isn't polling — see Prefli
 - **Localhost proxy interception.** The user runs an HTTP proxy via `HTTP_PROXY=http://121.4.45.119:31878`; raw `urllib`/`requests` calls to `http://127.0.0.1:9321` get routed through it and return 502. Two fixes: (a) `import sync_client` first — it sets `os.environ['NO_PROXY']='*'` at module load and that bypasses the proxy for all subsequent requests in this process; (b) pass `proxies={'http': None, 'https': None}` to each call. The `NO_PROXY=.fabu.ai,fabu.ai` envvar does NOT cover localhost.
 
 - **References are stored as richText elements, not bracket text.** A clickable `[[Name]]` link in `key` is a dict `{"i": "q", "_id": "<target>"}`, not the literal characters `"[[Name]]"`. To create a reference rem via the bridge, POST `/create` with `text` set to that dict (see Workflow 6) — the plugin wraps it: `setText([{i:"q",_id:"..."}])`. Same trick works for `/update` with `newText`. Storing the literal bracket text won't auto-resolve later — RemNote only links via the SDK / autocomplete path.
+
+- **`addPowerup` only accepts built-in shortcodes.** The plugin handler maps `editLater → 'e'` and passes anything else through to SDK `rem.addPowerup(code)`. The SDK expects a powerup *code* (a short identifier like `'e'`, `'m'`, …), not an arbitrary tag rem ID — so calling `addPowerup` with a tag rem like `AHBynZuyLFShjKeYZ` succeeds quietly but writes nothing. Tag-writing therefore goes direct-DB via Workflow 9.
 
 ## See also
 
