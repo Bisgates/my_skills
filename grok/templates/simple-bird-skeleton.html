@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title><!-- title (Chinese) --></title>
+
+<!--
+  ============================================================
+  simple-bird-skeleton — the new default visual layer for bird.
+
+  Visual contract: macOS system font stack + warm-paper palette +
+  bird-pedagogy magazine markers (Roman-numeral chapter openers,
+  drop-cap lede, small-caps section heads, callout / pull / matrix).
+  ZERO external assets — no Google Fonts, no KaTeX, no Prism.
+
+  Read references/styles/visual-simple.md + references/styles/bird.md
+  before filling this in. visual-simple.md owns the look (palette,
+  fonts, required components); bird.md owns the voice (meta-question
+  first, asymptotic levers, cross-domain transfer, meta-reflection
+  close).
+
+  KaTeX is intentionally absent. If the source has heavy LaTeX,
+  either pass --math (the renderer adds the KaTeX CDN block back)
+  or rerun with --visual magazine.
+  ============================================================
+-->
+
+<style>
+:root {
+  --paper:        #fbf6e9;
+  --paper-2:      #f3ebd6;
+  --ink:          #1f1a14;
+  --ink-soft:     #3b332a;
+  --ink-faint:    #6b6052;
+  --rule:         #b8a583;
+  --rule-soft:    #d8c9a2;
+  --accent:       #8c2f1c;
+  --accent-2:     #2c5340;
+  --gold:         #a37c2a;
+  --quote-bg:     #f0e6cd;
+  --code-bg:      #efe6ce;
+  --code-fg:      #1a140d;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, "Iowan Old Style", "Charter", "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 18px; line-height: 1.7;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+body { padding-bottom: 6em; }
+.mono, code, pre {
+  font-family: ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Mono", Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+main { max-width: 820px; margin: 0 auto; padding: 56px 32px 0; }
+
+/* ============================================================
+   Masthead (hero)
+   ============================================================ */
+.masthead {
+  text-align: center;
+  border-top: 4px double var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 32px 0 22px;
+  margin-bottom: 36px;
+}
+.masthead .kicker {
+  font-variant: small-caps;
+  letter-spacing: 0.28em;
+  font-size: 12px;
+  color: var(--accent);
+}
+.masthead h1 {
+  font-size: 44px; line-height: 1.18; margin: 14px 0 8px;
+  font-weight: 500;
+}
+.masthead .deck {
+  font-style: italic; color: var(--ink-soft);
+  font-size: 18px; max-width: 620px; margin: 0 auto;
+}
+.masthead .byline {
+  margin-top: 14px;
+  font-size: 12px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+
+/* ============================================================
+   Chapter openers (Roman numerals, bird-pedagogy marker)
+   ============================================================ */
+.chapter-rule {
+  text-align: center;
+  margin: 64px 0 26px;
+  color: var(--accent);
+  font-variant: small-caps;
+  letter-spacing: 0.3em;
+}
+.chapter-rule .roman {
+  display: inline-block;
+  font-size: 22px;
+  font-style: italic;
+  padding: 0 18px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  line-height: 2;
+}
+.chapter-title {
+  text-align: center;
+  font-size: 26px;
+  font-style: italic;
+  font-weight: 500;
+  margin: 0 0 28px;
+  color: var(--ink);
+}
+
+/* ============================================================
+   Body prose + drop-cap lede
+   ============================================================ */
+p { margin: 0 0 1.05em; }
+.lede::first-letter {
+  font-size: 4.4em; line-height: 0.86;
+  float: left; padding: 6px 12px 0 0;
+  color: var(--accent);
+  font-family: "Iowan Old Style", "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  font-weight: 500;
+}
+h3 {
+  font-size: 19px; font-weight: 500;
+  font-variant: small-caps; letter-spacing: 0.08em;
+  margin: 32px 0 12px;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  padding-bottom: 4px;
+}
+
+/* ============================================================
+   Callouts / pull-quote / matrix
+   ============================================================ */
+.callout {
+  border-left: 3px solid var(--accent);
+  background: rgba(140,47,28,0.05);
+  padding: 14px 18px;
+  margin: 22px 0;
+  font-size: 16.5px;
+}
+.callout .ctitle {
+  font-variant: small-caps; letter-spacing: 0.12em;
+  font-size: 12px; color: var(--accent); margin-bottom: 4px;
+}
+.pull {
+  margin: 28px 0;
+  text-align: center;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--accent-2);
+  line-height: 1.4;
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  padding: 14px 0;
+}
+.pull .who {
+  display: block; margin-top: 8px;
+  font-size: 12px; letter-spacing: 0.12em;
+  font-style: normal; color: var(--ink-faint);
+  text-transform: uppercase;
+}
+.matrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 22px 0;
+}
+.matrix .cell {
+  border: 1px solid var(--rule);
+  background: var(--paper-2);
+  padding: 14px 16px;
+  font-size: 15.5px;
+}
+.matrix .cell .h {
+  font-variant: small-caps; letter-spacing: 0.1em;
+  font-size: 12px; color: var(--accent); margin-bottom: 6px;
+}
+
+/* ============================================================
+   Code blocks (no Prism — plain styled <pre>)
+   ============================================================ */
+code {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 1px 5px; border-radius: 2px;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  border-left: 3px solid var(--gold);
+  padding: 14px 18px;
+  overflow-x: auto;
+  font-size: 13.5px; line-height: 1.55;
+  margin: 22px 0;
+}
+pre code { background: transparent; padding: 0; }
+
+/* ============================================================
+   Tables
+   ============================================================ */
+table {
+  width: 100%; border-collapse: collapse;
+  margin: 22px 0; font-size: 15.5px;
+}
+th, td {
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  padding: 8px 10px; text-align: left;
+  vertical-align: top;
+}
+th {
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ============================================================
+   Optional: afterword kicker box
+   ============================================================ */
+.afterword {
+  margin: 56px 0 28px;
+  border: 1px solid var(--ink-soft);
+  background: var(--paper-2);
+  padding: 22px 24px;
+}
+.afterword .label {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.afterword h4 {
+  font-style: italic; font-weight: 500;
+  font-size: 22px; margin: 6px 0 12px;
+  color: var(--ink);
+}
+
+/* ============================================================
+   Uncertainty marker (shared across visuals)
+   ============================================================ */
+.uncertain {
+  border-left: 3px dashed var(--accent);
+  background: rgba(140,47,28,0.04);
+  padding: 10px 14px; margin: 18px 0;
+  font-style: italic; color: var(--ink-soft);
+}
+
+/* responsive */
+@media (max-width: 640px) {
+  .masthead h1 { font-size: 32px; }
+  main { padding: 32px 18px 0; }
+  .matrix { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<main>
+
+<!-- ============ MASTHEAD (hero) ============ -->
+<header class="masthead">
+  <div class="kicker"><!-- 4-6 words, kicker in small caps (e.g. "An Agent Memory Field Note") --></div>
+  <h1><!-- main title (Chinese) --></h1>
+  <div class="deck"><!-- one-sentence thesis (Chinese): what this source is about and why it matters --></div>
+  <div class="byline"><!-- byline: e.g. TARS · 调研笔记 · 2026 年 5 月 --></div>
+</header>
+
+<!-- ============ CHAPTER I (begin with why — field-level predicament) ============ -->
+<div class="chapter-rule"><span class="roman">I · <!-- chapter I name (Chinese) --></span></div>
+<h2 class="chapter-title" id="bird-<!-- slug-1 -->"><!-- chapter I subtitle (Chinese) --></h2>
+
+<p class="lede"><!-- opening paragraph: ground a field-level predicament in a concrete physical scenario. The drop cap fires automatically on the first letter, accent-colored. State the obvious naive approach and why it fails before naming any source-specific solution. --></p>
+
+<p><!-- second paragraph: name the source. One sentence on what it claims. Then introduce the question this artifact will dig into. --></p>
+
+<div class="callout">
+  <div class="ctitle"><!-- callout label: e.g. "三条路线的最小区分" --></div>
+  <p style="margin:0;"><!-- one-paragraph contrast / prior-family comparison. Keep this tight — a callout is punctuation, not a paragraph stack. --></p>
+</div>
+
+<p><!-- closing paragraph for chapter I: lift the meta-question this page actually answers. Bird voice = "what are we really trying to accomplish?" --></p>
+
+<!-- ============ CHAPTER II (the structural insight) ============ -->
+<div class="chapter-rule"><span class="roman">II · <!-- chapter II name --></span></div>
+<h2 class="chapter-title" id="bird-<!-- slug-2 -->"><!-- chapter II subtitle --></h2>
+
+<p><!-- derive the source's method from the goal + constraints. Watch the method "fall out" of what the chapter I predicament demanded. --></p>
+
+<h3><!-- subsection, small-caps system serif --></h3>
+
+<p><!-- worked example, prose form. If you need a concrete numerical walkthrough, format it inline:
+  "假设你有一个 1D 标准正态: p(x) = (1/√2π) e^(−x²/2)。
+   log p(x) = −x²/2 − const，所以 s(x) = −x。
+   在 x = 2，score = −2。"
+   No KaTeX in simple-bird; render math with plain Unicode + HTML sub/sup. -->
+</p>
+
+<div class="pull">
+  <!-- A distilled one-liner from this section. Italic, accent-2 color, between two hairlines. -->
+  <span class="who"><!-- attribution: source citation, agent voice, etc. --></span>
+</div>
+
+<p><!-- after the pull-quote, return to body register and continue the derivation or move to consequences. --></p>
+
+<!-- ============ CHAPTER III (the asymptotic / cross-domain lever — Hamming signature) ============ -->
+<div class="chapter-rule"><span class="roman">III · <!-- chapter III name --></span></div>
+<h2 class="chapter-title" id="bird-<!-- slug-3 -->"><!-- chapter III subtitle --></h2>
+
+<p><!-- push a parameter to 0 or ∞, observe what the method degenerates to. Or: name the same trick appearing in another field, with the abstract reason. This is the bird-pedagogy beat that magazine-flavored pages carry too. --></p>
+
+<div class="matrix">
+  <div class="cell">
+    <div class="h"><!-- left card label, e.g. "极限 → 0" --></div>
+    <!-- prose describing what the method becomes at the limit -->
+  </div>
+  <div class="cell">
+    <div class="h"><!-- right card label, e.g. "极限 → ∞" --></div>
+    <!-- mirror prose for the other extreme -->
+  </div>
+</div>
+
+<!-- ============ CHAPTER IV (meta-reflection close) ============ -->
+<div class="chapter-rule"><span class="roman">IV · <!-- chapter IV name, e.g. "尾声 · 抽掉细节之后剩下什么" --></span></div>
+<h2 class="chapter-title" id="bird-<!-- slug-4 -->"><!-- chapter IV subtitle --></h2>
+
+<p><!-- the meta-reflection close. What is the principle worth remembering when the details fade? This is the Hamming move that makes the bird pack rewatchable; do not skip it. --></p>
+
+<aside class="afterword">
+  <div class="label">Editor's note</div>
+  <h4><!-- italic afterword headline --></h4>
+  <p><!-- 2-3 sentences naming what this artifact chose to spend its page budget on and what it deliberately left for the source itself / for a sibling artifact. --></p>
+</aside>
+
+</main>
+
+</body>
+</html>
