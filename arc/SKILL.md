@@ -44,7 +44,7 @@ Common natural-language triggers (Chinese verbatim, kept here so trigger matchin
 ```
 arcs/all/<id>_<slug>/
   0_meta.md                 # required; script-managed. frontmatter + ## history + ## log
-  1_objective.md            # required; produced by /arc-objective
+  1_objective.html          # required; produced by /arc-objective (HTML, grok-simple visual; auto-opens on lock)
   2_plan.md                 # required; produced by /arc-plan (may be 1-3 lines for trivial tasks)
   4_*.md ~ 6_*.md           # free slots, free naming (pivot/eval/blocker/decision_*)
   8_handoff_plan.md         # generated only by /arc-finalize Stage 1 (formal route only)
@@ -83,7 +83,7 @@ arcs/all/<id>_<slug>/
 | Hard delete (no trace) | `/arc-delete <id>` | `arc-delete.md` |
 
 **Auto-chain after objective.** `/arc-objective` does not stop and ask "what next?".
-Once `1_objective.md` is locked, the agent estimates complexity and either (a) writes
+Once `1_objective.html` is locked (and auto-opened), the agent estimates complexity and either (a) writes
 a 1-3 line `2_plan.md` inline and chains directly into execute (trivial task), or
 (b) chains into `/arc-plan` for the full plan flow (non-trivial task). User
 confirmation is **not** required between phases. See `arc-objective.md` for the

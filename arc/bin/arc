@@ -299,8 +299,10 @@ def list_arcs(root: Path) -> List[Tuple[Path, Dict[str, str]]]:
 
 
 def hint_for(arc: Path, fm: Dict[str, str]) -> str:
-    if not (arc / "1_objective.md").exists():
-        return "needs 1_objective.md"
+    # Accept either the new HTML form (current default) or the legacy .md form
+    # so existing arcs created before the template change still validate.
+    if not ((arc / "1_objective.html").exists() or (arc / "1_objective.md").exists()):
+        return "needs 1_objective.html"
     if not (arc / "2_plan.md").exists():
         return "needs 2_plan.md"
     summary_html = arc / "9_summary.html"

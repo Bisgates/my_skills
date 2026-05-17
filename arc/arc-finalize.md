@@ -14,7 +14,7 @@ description: Two-stage finalization — first draft 8_handoff_plan.md (no projec
    - **Unit A — `utils/*.py`.** For each file, assess promotion value: worth reusing? pure functions? does it conflict with existing code in the main project? Report a row per file.
    - **Unit B — `scripts/*.py`.** Skip by default, but list them and explicitly mark as skipped. Report a list.
    - **Unit C — `doc/*.md`.** Decide whether each is worth lifting up into the main project's `docs/`. Report `[NEW]` / `[UPDATE]` / `[STALE?]` recommendations.
-   - **Unit D — `0_meta.md ## log`.** Full scan for "stuck >15 min", "naming convention decided", "read a paper", "made a significant decision" → trigger `[NEW]` proposals (follows the workspace AGENTS.md "new-knowledge triggers"). Also cross-check `1_objective.md` acceptance: has it been met? → draft the Verification section.
+   - **Unit D — `0_meta.md ## log`.** Full scan for "stuck >15 min", "naming convention decided", "read a paper", "made a significant decision" → trigger `[NEW]` proposals (follows the workspace AGENTS.md "new-knowledge triggers"). Also cross-check `1_objective.html` acceptance (parse §III 验收 — L1 metric cards + L2 evidence bullets): has it been met? → draft the Verification section.
 
    **When to skip parallelism:** if `utils/`, `scripts/`, and `doc/` are all empty (or only have 1-2 trivial files), do the sweep inline serially — fan-out has overhead that is not worth it for tiny arcs. Default for normal arcs is parallel.
 3. **Generate `8_handoff_plan.md`** using `~/.claude/skills/arc/templates/8_handoff_plan.md`. **All four sections must be filled:**
@@ -41,7 +41,7 @@ Start only when the user explicitly says `approved` or equivalent. If they say `
 
 3. **Do not run a git commit** (the project has no git wired up yet; once it does, this skill needs to extend).
 
-4. **Dispatch the reporter sub-agent (background).** Per `reporter.md` Phase B — `general-purpose`, no explicit `model`, `run_in_background: true`. The reporter writes `<arc>/9_summary.html` from the canonical inputs (`1_objective.md`, `2_plan.md`, `_tmp/report_notes.md`, `0_meta.md` log, `output/` listing) **plus** `8_handoff_plan.md` if it exists — the finalize-specific content (promoted code, doc changes, verification against acceptance, follow-ups, surviving `STALE?` items) flows into the template's 留下的产物 / 接下来 / 关键决策 candidate sections. Do **not** hand-craft any `9_*.md` file; that artifact is gone.
+4. **Dispatch the reporter sub-agent (background).** Per `reporter.md` Phase B — `general-purpose`, no explicit `model`, `run_in_background: true`. The reporter writes `<arc>/9_summary.html` from the canonical inputs (`1_objective.html`, `2_plan.md`, `_tmp/report_notes.md`, `0_meta.md` log, `output/` listing) **plus** `8_handoff_plan.md` if it exists — the finalize-specific content (promoted code, doc changes, verification against acceptance, follow-ups, surviving `STALE?` items) flows into the template's 留下的产物 / 接下来 / 关键决策 candidate sections. Do **not** hand-craft any `9_*.md` file; that artifact is gone.
 
 5. **Do not flip status here.** The reporter is background. When the completion notification arrives (could be later this turn, several turns later, or mid-conversation), the shared handler in `reporter.md` Phase C verifies the file, calls `arc status <id> done` (gate now passes), runs `open`, and tells the user one line. If you call `arc status <id> done` here, the CLI rejects it because `9_summary.html` does not exist yet.
 

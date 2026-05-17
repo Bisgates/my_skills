@@ -1,6 +1,6 @@
 ---
 name: arc-plan
-description: Generate 2_plan.md based on locked 1_objective.md. Use when the user says "/arc-plan" or "/arc-plan 260430c".
+description: Generate 2_plan.md based on locked 1_objective.html. Use when the user says "/arc-plan" or "/arc-plan 260430c".
 ---
 
 # /arc-plan — Write the execution plan
@@ -8,9 +8,9 @@ description: Generate 2_plan.md based on locked 1_objective.md. Use when the use
 ## Steps for the agent
 
 1. **Resolve the arc** — same as `/arc-objective` (id or cwd).
-2. **Read `1_objective.md`.** If it does not exist or is still the bare skeleton, stop and tell the user to run `/arc-objective` first.
+2. **Read `1_objective.html`.** If it does not exist or is still the bare skeleton (all `FILL` markers untouched), stop and tell the user to run `/arc-objective` first.
 3. **Pull parent context.** From `0_meta.md`, if `parent` is non-null, read the parent's `2_plan.md` / `9_summary.html` as reference.
-4. **Ask 1–3 clarifying questions** (only if needed), each with a recommended answer. If `1_objective.md` is already clear enough, write the plan directly.
+4. **Ask 1–3 clarifying questions** (only if needed), each with a recommended answer. If `1_objective.html` is already clear enough, write the plan directly.
 5. **Write `2_plan.md`** using `~/.claude/skills/arc/templates/2_plan.md` as the skeleton. Key requirements:
    - **The "Smoke Test First" section is required.** Validate the plan on tiny data first, then run the real experiment. This matches the workspace AGENTS.md emphasis on "data contract / preprocessing first + smoke train".
    - **The "Out-of-Scope" section is required.** "None" is acceptable, but it has to be a considered "none".

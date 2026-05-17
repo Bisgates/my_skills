@@ -20,7 +20,7 @@ description: Resume an arc with full context load and a "where are we" report. U
 
 3. **Load context** (read each file only if it exists):
    - `0_meta.md` — pull brief / status history / parent. **Read only the trailing 40 lines** of the `## log` section (use `tail` or `grep` — do not read the whole thing).
-   - `1_objective.md` — pull goal / acceptance. If missing, the hint is `needs 1_objective.md`.
+   - `1_objective.html` — pull goal / acceptance. Parse the §I 目标 lede paragraph (drop HTML tags) for the goal, and §III 验收 (the `.metrics` cards and the L2 callout list) for acceptance. Legacy arcs may still carry `1_objective.md` instead — read whichever exists. If neither is present, the hint is `needs 1_objective.html`.
    - `2_plan.md` — if present.
    - `8_handoff_plan.md` — if present, finalize is in progress.
 
@@ -31,7 +31,7 @@ description: Resume an arc with full context load and a "where are we" report. U
    - parent: <parent_id or none>
    - last_active: <ISO>
 
-   ## Goal (from 1_objective.md)
+   ## Goal (from 1_objective.html)
    <one sentence>
 
    ## Plan summary (from 2_plan.md)

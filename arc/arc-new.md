@@ -23,10 +23,10 @@ A two-step chain: (1) `arc new` builds the skeleton, (2) automatically enter `/a
    To start: cd $(arc cd 260430c)
    ```
 
-4. **Chain into `/arc-objective`.** Run the grill-me flow and write the result into `1_objective.md`, using `~/.claude/skills/arc/templates/1_objective.md` as the skeleton.
+4. **Chain into `/arc-objective`.** Run the grill-me flow and write the result into `1_objective.html`, using `~/.claude/skills/arc/templates/1_objective.html` as the skeleton. `/arc-objective` auto-opens the locked file in the browser when it finishes.
 
 ## Important
 
-- Do not write `1_objective.md` yourself right after `arc new`. Chain into `/arc-objective` (grill-me style; **how many questions to ask is adaptive to task complexity** — see `arc-objective.md`).
+- Do not write `1_objective.html` yourself right after `arc new`. Chain into `/arc-objective` (grill-me style; **how many questions to ask is adaptive to task complexity** — see `arc-objective.md`).
 - Do not call `arc touch` after `arc new` — `arc new` already sets `last_active_at`.
-- If the user declines to continue with grill-me ("leave it, I'll write the objective later"), stop at step 3 and remind them that "`arc list` will show a `needs 1_objective.md` hint".
+- If the user declines to continue with grill-me ("leave it, I'll write the objective later"), stop at step 3 and remind them that "`arc list` will show a `needs 1_objective.html` hint".

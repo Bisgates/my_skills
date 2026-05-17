@@ -9,7 +9,7 @@
 ## Why a reporter exists
 
 The arc protocol already records *what happened* (`0_meta.md ## log`,
-`1_objective.md`, `2_plan.md`, `output/`). What it does not produce is a
+`1_objective.html`, `2_plan.md`, `output/`). What it does not produce is a
 **reader-facing artifact** that shows *the result first, the journey second,
 and a few honest after-thoughts* in a form the user can hand to a teammate
 or revisit cold a month later. The reporter fills that gap as a single-file HTML under grok's "simple"
@@ -115,7 +115,9 @@ Google Fonts, KaTeX, Prism, or any other external asset. All CSS stays in the
 one inline <style> block the template ships with.
 
 Step 2 — Read the source material.
-1. <arc>/1_objective.md — goal, boundary, acceptance criteria.
+1. <arc>/1_objective.html — goal, boundary, acceptance criteria. Strip HTML tags
+   when quoting; the file is a grok-simple HTML doc, not Markdown. Legacy arcs
+   may still carry `1_objective.md` instead — read whichever exists.
 2. <arc>/2_plan.md — the route map.
 3. <arc>/_tmp/report_notes.md — pre-staged notes (skim once for narrative).
 4. <arc>/0_meta.md — frontmatter (id/brief/parent/dates) and the trailing 60 lines
