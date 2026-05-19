@@ -174,13 +174,17 @@ section p { margin: 0 0 1em; color: var(--ink); }
 }
 .callout p { margin: 0; }
 
-/* Two-column boundary list (in-scope vs. non-goals) */
+/* Two-column boundary list (in-scope vs. non-goals).
+   Add `.stacked` modifier (`<div class="boundary stacked">`) to switch
+   to a single full-width column when bullets are long enough that two
+   narrow columns wrap awkwardly. */
 .boundary {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
   margin: 16px 0;
 }
+.boundary.stacked { grid-template-columns: 1fr; }
 .boundary > div {
   background: var(--paper-2);
   border: 1px solid var(--rule-soft);
@@ -288,6 +292,11 @@ footer.colophon {
   <!--
     §II 边界 — In-scope vs. non-goals. Both columns required; non-goals are
     just as load-bearing as in-scope.
+
+    Layout: default is two-column. If either side's bullets are long enough
+    that two narrow columns wrap awkwardly, switch to stacked (single
+    full-width column) by adding the `stacked` modifier:
+        <div class="boundary stacked">
   -->
   <section>
     <div class="chapter-rule"><span class="roman">II · 边界</span></div>
