@@ -142,17 +142,39 @@ def find_new_id(parent_id, text, timeout=10):
 
 ### 6. Insert a clickable `[[ref]]` (not literal `[[…]]` text)
 
-The plugin's `create` handler does `await rem.setText([cmd.text])` — it wraps the incoming `text` field into a single-element richText array. A string makes a text rem; **a richText reference element makes a real link**:
+The plugin's `create` / `update` handler calls `rem.setText(Array.isArray(cmd.text) ? cmd.text : [cmd.text])`. So `cmd.text` (and `cmd.newText`) can be one of three shapes:
+
+| `cmd.text` shape | resulting rem content |
+|---|---|
+| `"plain string"` | a plain-text rem |
+| `{'i': 'q', '_id': '<id>'}` (single ref dict) | a rem whose entire content is one clickable `[[Name]]` link |
+| `[…richText items…]` (already an array) | passed through to `setText` as-is — use this for **inline mixed text + refs** |
+
+**Case A — rem content = just a link** (the common case for "drop a backlink into a doc"):
 
 ```python
 import requests, sync_client  # sync_client import side-effect-sets NO_PROXY=*
 requests.post('http://127.0.0.1:9321/create', json={
-    'text': {'i': 'q', '_id': '<target_rem_id>'},   # ← dict, NOT a string
+    'text': {'i': 'q', '_id': '<target_rem_id>'},   # dict, not a string
     'parentId': '<where to place the link>',
 })
 ```
 
-Sending `'text': '[[Some Doc]]'` (a plain string) stores the literal characters and renders as un-linked text. Sending the dict produces an actual `[[Some Doc]]` reference that resolves to whatever `<target_rem_id>` currently names — survives renames.
+**Case B — sentence with inline refs** (e.g. `"[[ADHD]]: 免费完成每日启动"` as one rem with a real clickable chip in the middle of the prose):
+
+```python
+requests.post('http://127.0.0.1:9321/create', json={
+    'text': [
+        {'i': 'q', '_id': '<adhd_rem_id>'},
+        ': 免费完成每日"启动"，绕过执行功能门槛。',
+    ],
+    'parentId': '<where>',
+})
+```
+
+A richText array element is **either a string or a `{'i':'q','_id':...}` dict**; interleave them however the prose needs. The plugin no longer double-wraps when it sees an array, so this lands as a single rem whose `key` mixes prose and live references.
+
+Sending `'text': '[[Some Doc]]'` (a plain string) still stores the literal characters and renders as un-linked text — that's the trap. To get a real link, pick Case A or Case B above.
 
 ### 7. Load a Linear board view into today's daily note (auto-numbered title)
 
@@ -248,7 +270,7 @@ A **tag** (this workflow) is structurally distinct from a **reference child** (W
 
 - **Localhost proxy interception.** The user runs an HTTP proxy via `HTTP_PROXY=http://121.4.45.119:31878`; raw `urllib`/`requests` calls to `http://127.0.0.1:9321` get routed through it and return 502. Two fixes: (a) `import sync_client` first — it sets `os.environ['NO_PROXY']='*'` at module load and that bypasses the proxy for all subsequent requests in this process; (b) pass `proxies={'http': None, 'https': None}` to each call. The `NO_PROXY=.fabu.ai,fabu.ai` envvar does NOT cover localhost.
 
-- **References are stored as richText elements, not bracket text.** A clickable `[[Name]]` link in `key` is a dict `{"i": "q", "_id": "<target>"}`, not the literal characters `"[[Name]]"`. To create a reference rem via the bridge, POST `/create` with `text` set to that dict (see Workflow 6) — the plugin wraps it: `setText([{i:"q",_id:"..."}])`. Same trick works for `/update` with `newText`. Storing the literal bracket text won't auto-resolve later — RemNote only links via the SDK / autocomplete path.
+- **References are stored as richText elements, not bracket text.** A clickable `[[Name]]` link in `key` is a dict `{"i": "q", "_id": "<target>"}`, not the literal characters `"[[Name]]"`. To create a reference rem via the bridge, POST `/create` (or `/update` with `newText`) with `text` set to that dict — or, for prose that has references in the middle of a sentence, set `text` to a richText array mixing strings and ref dicts (see Workflow 6, Cases A vs. B). Storing the literal bracket text won't auto-resolve later — RemNote only links via the SDK / autocomplete path.
 
 - **`addPowerup` only accepts built-in shortcodes.** The plugin handler maps `editLater → 'e'` and passes anything else through to SDK `rem.addPowerup(code)`. The SDK expects a powerup *code* (a short identifier like `'e'`, `'m'`, …), not an arbitrary tag rem ID — so calling `addPowerup` with a tag rem like `AHBynZuyLFShjKeYZ` succeeds quietly but writes nothing. Tag-writing therefore goes direct-DB via Workflow 9.
 
