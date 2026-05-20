@@ -1,6 +1,6 @@
 ---
 name: grok
-description: Convert a target folder — paper PDF, book chapter, concept note, codebase entry-point — into a single-file interactive learning HTML. Default = two-tab HTML, bird (top-down, Hamming) + frog (bottom-up, Karpathy + Ng). Both tabs render under the new "simple" visual default — macOS system fonts, warm-paper palette, zero external CDN. Magazine longread (Google Fonts + KaTeX) opt-in via `--visual magazine`; Jupyter notebook via `--visual notebook`. Same scope on both tabs, shared slugs so deep links resolve across tabs; ship one tab if the source has nothing for the other lens. Opens with "begin with why", walks each new concept through a concrete worked example, 80% of the page to core insights. HTML is Chinese; the skill spec stays English. Use when the user runs `/grok <folder>`, asks to "学习/讲解/拆解/搞懂 X 文件夹里的 paper/书/概念/代码" inside `learn_with_agent`, or asks for a bird / frog / Hamming / Karpathy / Ng / SICP / notebook / magazine / simple explainer.
+description: Convert a target folder — paper PDF, book chapter, concept note, codebase entry-point — into a single-file interactive learning HTML. Default = two-tab HTML, bird (top-down, Hamming) + frog (bottom-up, Karpathy + Ng). Both tabs render under the new "simple" visual default — macOS system fonts, warm-paper palette, zero external CDN. Magazine longread (Google Fonts + KaTeX) opt-in via `--visual magazine`; Jupyter notebook via `--visual notebook`. Same scope on both tabs, shared slugs so deep links resolve across tabs; ship one tab if the source has nothing for the other lens. Opens with "begin with why", walks each new concept through a concrete worked example, 80% of the page to core insights. HTML is Chinese; the skill spec stays English. Use when the user runs `/grok <folder>`, asks to "学习/讲解/拆解/搞懂 X 文件夹里的 paper/书/概念/代码" inside `learn_with_agent`, or asks for a bird / frog / Hamming / Karpathy / Ng / SICP / notebook / magazine / simple / guest explainer.
 ---
 
 # grok
@@ -19,6 +19,7 @@ description: Convert a target folder — paper PDF, book chapter, concept note, 
 /grok "260506_Coding Agents_alphazero" --visual magazine,notebook      # restore the pre-2026-05 default (bird=magazine, frog=notebook)
 /grok "260506_Coding Agents_alphazero" --style bird --visual magazine  # bird-only, magazine visual (paper learning with formulas)
 /grok "260506_Coding Agents_alphazero" --style frog --visual notebook  # frog-only, Jupyter notebook visual
+/grok "260506_Coding Agents_alphazero" --style guest:steve_jobs        # experimental guest lens (single tab, single voice)
 /grok "260506_Coding Agents_alphazero" --math                          # any visual + KaTeX added back (when source has LaTeX)
 /grok "260506_Coding Agents_alphazero" --align                         # alignment checkpoint first
 ```
@@ -62,6 +63,22 @@ A grok artifact has **two orthogonal axes**: a **pedagogical posture** (how the 
 
 **Pedagogy default.** No `--style` flag → **dual-tab** (both packs). See § Dual-tab default for the contract.
 
+### Guest packs (experimental, opt-in)
+
+A **guest** is a third, single-voice lens — a named persona that reads the source through their distinctive worldview. Guests are not symmetric with bird and frog: there is no "guest default," guests never appear in the dual-tab rotation, and the active roster is allowed to churn. The guest mechanism exists so the user can experiment with new voices, see what a Steve Jobs / Feynman / Hotz / … lens does to a paper-learning page, and then **merge the moves that earned their keep back into bird or frog**. Guest packs are the lab; bird and frog are the production line.
+
+| Style flag | Lens | Spec |
+|---|---|---|
+| **guest:steve_jobs** | Product-vision lens: keynote demo first, brutal simplicity audit, "what does this enable that wasn't possible before?" | [`references/styles/guests/steve_jobs.md`](references/styles/guests/steve_jobs.md) |
+
+To select a guest: `--style guest:<name>` (e.g. `--style guest:steve_jobs`), or natural phrases like "用 steve_jobs 视角讲" / "Steve Jobs 风格" / "guest = steve_jobs" / "用嘉宾视角讲" + a named persona. Visual defaults follow the guest pack's spec; most guests reuse an existing simple skeleton and override voice + a small number of components rather than ship a new template.
+
+**Hard rules for guests:**
+1. **Single-tab only.** A guest is always single-style; `--style guest:<name>` cannot be combined with `--style bird` / `--style frog` / dual-tab. The whole point of a guest is that one strong voice runs the page end-to-end.
+2. **Each guest pack declares its base.** The guest's `.md` spec names which existing skeleton it builds on (`simple-bird-skeleton.html` by default, or `simple-frog-skeleton.html` for guests with a more bottom-up cadence), and lists the voice / component overrides that turn the base into the guest. New from-scratch skeletons are discouraged — keep the experiment cheap to iterate.
+3. **Roster is not permanent.** Adding a guest = drop a new `references/styles/guests/<name>.md` and add one row to the table above. Removing a guest = delete the file and the row. **Promotion path**: when a guest's voice beats / required components / visual moves prove worth keeping, the user folds them into `bird.md` or `frog.md` (whichever altitude the move belongs to), then the guest can be dropped or kept as a "Greatest Hits" archive. Don't let guests accumulate indefinitely.
+4. **No legacy aliases for guests.** Unlike bird/frog (which honor `--style mit` / `--style stanford` for backward compatibility), guests are addressed by their declared name only. Renaming a guest = update every reference; there is no silent remap.
+
 ### Visual layers
 
 | Visual | Look | Required components per pedagogy | Spec | Skeleton |
@@ -92,6 +109,11 @@ A grok artifact has **two orthogonal axes**: a **pedagogical posture** (how the 
 - Direction: "自底向上" / "bottom-up" / "例子先行" / "example-first" / "worked-example-driven"
 - Code-first: "spelled out from scratch" / "代码为核心" / "代码主导讲解" / "code-first walkthrough"
 
+**Trigger phrases that select a guest pedagogy** (`--style guest:<name>`):
+- Explicit: `--style guest:<name>` · "用嘉宾视角讲" · "用 guest 视角" · "guest = <name>"
+- By persona: "用 steve_jobs 视角讲" / "Steve Jobs 风格" / "用 Jobs 的角度看这篇 paper" (and the analogous form for any other guest in the roster table above)
+- The guest's name must already be present in the **Guest packs** table — otherwise grok refuses and asks the user to either pick a listed guest or add a new pack first.
+
 **Trigger phrases that select a visual** (`--visual …`):
 - `--visual simple` · "简洁版" / "调研报告 风格" / "不要 google fonts" / "纯系统字体" / "零外部依赖"
 - `--visual magazine` · "杂志风" / "magazine 风格" / "longread" / "纸质感杂志排版" / "Playfair 字体"
@@ -116,6 +138,8 @@ When the user names a pedagogy without naming a visual, **the visual defaults to
 - A visual that doesn't match a pedagogy (e.g. `--visual notebook` applied to the bird tab when also `--style bird`) falls back: simple takes its place. Don't force a notebook-rendered bird.
 
 When the user asks for a single pedagogy but is ambiguous which one, ask once — *bird (top-down) or frog (bottom-up)?* — before generating. Don't silently default to dual-tab if the user clearly wanted a single style.
+
+**Guest pedagogy + visual.** Guests declare their own visual policy in their pack spec (`references/styles/guests/<name>.md`). A `--visual <X>` flag passed alongside `--style guest:<name>` is honored only if the guest pack's spec lists `<X>` as compatible; otherwise the guest's declared visual wins, with a one-line note in chat explaining why the flag was ignored.
 
 ### Adding a new pedagogy or a new visual
 
@@ -167,6 +191,7 @@ Paper-grokking is naturally chunked: independent chapter / section drafts, separ
    - **Dual-tab (default, no `--style` flag):** load **both** `references/styles/bird.md` and `references/styles/frog.md` into context. Plan for two parallel agent groups in step 5.
    - **Single bird** (`--style bird` or any bird trigger phrase, or any legacy alias like `--style mit` / `--style feynman`): load only `references/styles/bird.md`.
    - **Single frog** (`--style frog` or any frog trigger phrase, or any legacy alias like `--style stanford` / `--style karpathy`): load only `references/styles/frog.md`.
+   - **Guest** (`--style guest:<name>` or any guest trigger phrase): load `references/styles/guests/<name>.md`. The guest pack names the base skeleton it builds on (typically `simple-bird-skeleton.html` or `simple-frog-skeleton.html`) and the voice / component overrides; also load the spec of that base pack (`bird.md` or `frog.md`) so the agent inherits the shared component vocabulary and only overrides what the guest pack lists. Single-tab mode is implied — no dual-tab fan-out.
 
    **Visual:**
    - **simple** (default, no `--visual` flag): load `references/styles/visual-simple.md`. This is the new default for both bird and frog.
@@ -429,6 +454,7 @@ Run the **style-specific** half of the audit from `references/styles/<Style>.md`
 **Pedagogy packs**
 - [`references/styles/bird.md`](references/styles/bird.md) — bird style pack; top-down, Hamming lineage. Owns the bird voice contract and the magazine visual (its default rendering).
 - [`references/styles/frog.md`](references/styles/frog.md) — frog style pack; bottom-up, Karpathy + Andrew Ng lineage. Owns the frog voice contract and the notebook visual (its default rendering).
+- [`references/styles/guests/`](references/styles/guests/) — guest packs (experimental, opt-in, single-tab). Each `<name>.md` declares a persona-flavored lens layered on top of `bird.md` or `frog.md`. Active roster lives in the **Guest packs** table in this file; promoted moves are folded back into bird/frog and the guest may be retired.
 
 **Visual layer**
 - [`references/styles/visual-simple.md`](references/styles/visual-simple.md) — simple visual layer (new default); macOS system fonts, warm-paper palette, zero external CDN. Hosts both bird-flavored and frog-flavored sub-styles.
