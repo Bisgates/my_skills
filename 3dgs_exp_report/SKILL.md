@@ -159,7 +159,7 @@ For the canonical visual ground truth, open `~/project/what_new/weekly/2026-19.h
 ## See also
 
 - `~/.claude/skills/grok/templates/bird-skeleton.html` — **canonical magazine skeleton** (renamed across grok's style-pack iterations: `skeleton.html` → `Feynman-skeleton.html` → `MIT-skeleton.html` → `bird-skeleton.html`; current name follows Dyson's *Birds and Frogs*). Start every report from a copy of this file, then prune lab/math-box and fill the 3-chapter spine.
-- `~/.claude/skills/grok/references/styles/bird.md` — full magazine style contract (component checklist, CSS class reference, visual gotchas) that this skill's chrome inherits. The voice contract is Hamming-style top-down — but for experiment reports the focus is on results / metrics / videos, so the visual is reused while the voice content is the report itself, not a Hamming-style essay.
+- `~/.claude/skills/grok/references/visual/magazine.md` — full magazine visual contract (component checklist, CSS class reference, visual gotchas) that this skill's chrome inherits. For experiment reports the focus is on results / metrics / videos, so the magazine visual is reused while the voice content is the report itself (not the Hamming-style essay from `~/.claude/skills/grok/references/pedagogy/bird.md`).
 - [`templates/chapter_spine.html`](templates/chapter_spine.html) — fill-in stencil for the 3 required chapters (and an optional supplementary chapter) in magazine markup.
 - `~/.claude/skills/video2html/SKILL.md` — video embedding pipeline. Use its "video inside something bigger" workflow.
 - `~/.claude/skills/grok/SKILL.md` — paper-learning HTML skill that defines the magazine theme this skill inherits. Different surface (it learns a source; we report an experiment); same chrome.
