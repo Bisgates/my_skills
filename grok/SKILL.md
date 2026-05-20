@@ -19,7 +19,8 @@ description: Convert a target folder — paper PDF, book chapter, concept note, 
 /grok "260506_Coding Agents_alphazero" --visual magazine,notebook      # restore the pre-2026-05 default (bird=magazine, frog=notebook)
 /grok "260506_Coding Agents_alphazero" --style bird --visual magazine  # bird-only, magazine visual (paper learning with formulas)
 /grok "260506_Coding Agents_alphazero" --style frog --visual notebook  # frog-only, Jupyter notebook visual
-/grok "260506_Coding Agents_alphazero" --style guest:steve_jobs        # experimental guest lens (single tab, single voice)
+/grok 讲讲佛教里无常的概念 with guest steve_jobs                        # default dual-tab + guest tab = triple-tab; topic is a concept, not a folder
+/grok "260506_Coding Agents_alphazero" with guest steve_jobs            # triple-tab: bird + frog + guest:steve_jobs
 /grok "260506_Coding Agents_alphazero" --math                          # any visual + KaTeX added back (when source has LaTeX)
 /grok "260506_Coding Agents_alphazero" --align                         # alignment checkpoint first
 ```
@@ -34,9 +35,11 @@ Output:
 
 Filename always = source stem with extension swapped to `.html`. Single file, all dependencies via CDN.
 
-## Dual-tab default — why the default is two halves
+## Dual-tab default — why the default is two halves (and how guest extends it to triple-tab)
 
 The default `/grok <folder>` is **one HTML with two tabs**, not a single-style page. This is load-bearing: the reader gets bird and frog as two complete lenses on the same source and picks whichever entry point fits their current cognitive state, switching mid-read when stuck. The pattern echoes how a careful learner already works — book in one hand (bird: Hamming, top-down, "what's the question behind the question, and what does the method look like once we strip everything away?"), notebook on the desk (frog: Karpathy + Ng, bottom-up, "let's compute the smallest case by hand and watch the abstraction emerge").
+
+When the invocation adds `with guest <name>` (see § Guest packs), a **third tab** joins the rotation at the same role-level as bird and frog — the output becomes triple-tab with the same three principles below applied to all three halves. The triple-tab is assembled by extending the dual-tab skeleton inline at output time (third button, third pane, third CSS scope, `#guest-<slug>` hash route); no separate tri-tab template ships yet.
 
 **Three principles govern the dual-tab assembly. They are not negotiable defaults that fade after Quick start; they're the contract.**
 
@@ -63,21 +66,32 @@ A grok artifact has **two orthogonal axes**: a **pedagogical posture** (how the 
 
 **Pedagogy default.** No `--style` flag → **dual-tab** (both packs). See § Dual-tab default for the contract.
 
-### Guest packs (experimental, opt-in)
+### Guest packs (experimental, additive third pedagogy)
 
-A **guest** is a third, single-voice lens — a named persona that reads the source through their distinctive worldview. Guests are not symmetric with bird and frog: there is no "guest default," guests never appear in the dual-tab rotation, and the active roster is allowed to churn. The guest mechanism exists so the user can experiment with new voices, see what a Steve Jobs / Feynman / Hotz / … lens does to a paper-learning page, and then **merge the moves that earned their keep back into bird or frog**. Guest packs are the lab; bird and frog are the production line.
+A **guest** is a third, persona-flavored pedagogy that runs **in parallel with** bird and frog — same altitude class as them, written by its own dedicated sub-agent, rendered as its own tab in the output. Guests exist so the user can experiment with new voices (Steve Jobs / Feynman / Hotz / …), see what each lens does to a paper-learning page, and over time **merge the moves that earned their keep back into bird or frog**. Guest packs are the lab; bird and frog are the production line.
 
-| Style flag | Lens | Spec |
+| Persona | Lens | Spec |
 |---|---|---|
-| **guest:steve_jobs** | Product-vision lens: keynote demo first, brutal simplicity audit, "what does this enable that wasn't possible before?" | [`references/styles/guests/steve_jobs.md`](references/styles/guests/steve_jobs.md) |
+| **steve_jobs** | Product-vision lens: keynote demo first, brutal simplicity audit, "what does this enable that wasn't possible before?", "one more thing" close | [`references/styles/guests/steve_jobs.md`](references/styles/guests/steve_jobs.md) |
 
-To select a guest: `--style guest:<name>` (e.g. `--style guest:steve_jobs`), or natural phrases like "用 steve_jobs 视角讲" / "Steve Jobs 风格" / "guest = steve_jobs" / "用嘉宾视角讲" + a named persona. Visual defaults follow the guest pack's spec; most guests reuse an existing simple skeleton and override voice + a small number of components rather than ship a new template.
+**Trigger:** `with guest <name>` appended to the invocation, or natural-language variants like "用 steve_jobs 视角讲" / "Steve Jobs 风格" / "再加一个 guest 视角 = jobs". The guest is **additive on top of whatever the default would have been**:
+
+| Invocation | Output |
+|---|---|
+| `/grok <topic>` (default) | dual-tab: bird + frog |
+| `/grok <topic> with guest steve_jobs` | **triple-tab: bird + frog + guest** |
+| `/grok <topic> --style bird with guest steve_jobs` | dual-tab: bird + guest |
+| `/grok <topic> --style frog with guest steve_jobs` | dual-tab: frog + guest |
 
 **Hard rules for guests:**
-1. **Single-tab only.** A guest is always single-style; `--style guest:<name>` cannot be combined with `--style bird` / `--style frog` / dual-tab. The whole point of a guest is that one strong voice runs the page end-to-end.
-2. **Each guest pack declares its base.** The guest's `.md` spec names which existing skeleton it builds on (`simple-bird-skeleton.html` by default, or `simple-frog-skeleton.html` for guests with a more bottom-up cadence), and lists the voice / component overrides that turn the base into the guest. New from-scratch skeletons are discouraged — keep the experiment cheap to iterate.
-3. **Roster is not permanent.** Adding a guest = drop a new `references/styles/guests/<name>.md` and add one row to the table above. Removing a guest = delete the file and the row. **Promotion path**: when a guest's voice beats / required components / visual moves prove worth keeping, the user folds them into `bird.md` or `frog.md` (whichever altitude the move belongs to), then the guest can be dropped or kept as a "Greatest Hits" archive. Don't let guests accumulate indefinitely.
-4. **No legacy aliases for guests.** Unlike bird/frog (which honor `--style mit` / `--style stanford` for backward compatibility), guests are addressed by their declared name only. Renaming a guest = update every reference; there is no silent remap.
+
+1. **Parallel pedagogy, not an overlay.** A guest is a peer of bird and frog — same role in the dual/triple-tab assembly, same level of completeness (the guest tab must cover the entire source scope, principle 1 of dual-tab default applies). Guests are *not* a "single-tab override that replaces bird/frog."
+2. **One sub-agent per guest tab.** Unlike bird and frog (which fan out one agent per section per tab), each guest tab is written by **one dedicated sub-agent** that owns the whole tab body. The reason is voice unity: a single persona running end-to-end keeps the keynote cadence consistent in a way a per-section fan-out can't. See § Parallel sub-agents.
+3. **Slug coordination is best-effort.** The guest's section structure can diverge from bird/frog when the persona reorganizes the source. Where a section parallels a bird/frog section, use the matching slug (`id="guest-<slug>"` alongside `id="bird-<slug>"` and `id="frog-<slug>"`); where the guest invented a section (e.g. Jobs's "one more thing"), use a guest-only slug. Color-coded variables still share hex across all three tabs.
+4. **Each guest pack declares its base for component reuse.** The pack names which existing skeleton it lifts CSS / layout from (`simple-bird-skeleton.html` for top-down personas, `simple-frog-skeleton.html` for bottom-up personas) and lists the voice / required components / drops on top. The guest tab body is built from that base's CSS scoped under `.tab-guest { … }`. New from-scratch skeletons are discouraged — keep iteration cheap.
+5. **No tri-tab skeleton file (yet).** Triple-tab is assembled by extending the dual-tab skeleton inline at output-generation time: add a third `<button class="tab-btn" data-tab="guest">`, a third `<section class="tab-pane tab-guest" id="tab-guest">`, the guest's CSS rules under `.tab-guest`, and `#guest-<slug>` handling in the hash-router. If the triple-tab pattern stabilizes across several guests, promote it to a `templates/simple-tri-tab-skeleton.html` then; until then it's an inline extension.
+6. **Roster is not permanent.** Adding a guest = drop `references/styles/guests/<name>.md` and add a row to the table above. Removing = delete both. **Promotion path:** when a guest's voice beats / required components / visual moves prove worth keeping, the user folds them into `bird.md` or `frog.md` (whichever altitude the move belongs to), then the guest may be retired or kept as a "Greatest Hits" archive. Don't let guests accumulate indefinitely; periodically prune.
+7. **No legacy aliases for guests.** Unlike bird/frog (which silently honor `--style mit` / `--style stanford` for old project notes), guests are addressed by their declared name only. Renaming a guest = update every reference; there is no silent remap.
 
 ### Visual layers
 
@@ -109,10 +123,11 @@ To select a guest: `--style guest:<name>` (e.g. `--style guest:steve_jobs`), or 
 - Direction: "自底向上" / "bottom-up" / "例子先行" / "example-first" / "worked-example-driven"
 - Code-first: "spelled out from scratch" / "代码为核心" / "代码主导讲解" / "code-first walkthrough"
 
-**Trigger phrases that select a guest pedagogy** (`--style guest:<name>`):
-- Explicit: `--style guest:<name>` · "用嘉宾视角讲" · "用 guest 视角" · "guest = <name>"
-- By persona: "用 steve_jobs 视角讲" / "Steve Jobs 风格" / "用 Jobs 的角度看这篇 paper" (and the analogous form for any other guest in the roster table above)
-- The guest's name must already be present in the **Guest packs** table — otherwise grok refuses and asks the user to either pick a listed guest or add a new pack first.
+**Trigger phrases that add a guest tab** (additive on top of the default pedagogy):
+- Explicit: `with guest <name>` appended to the invocation (e.g. `/grok 讲讲佛教里无常的概念 with guest steve_jobs`)
+- Chinese natural language: "再加一个 guest 视角 = jobs" / "嘉宾用 steve_jobs" / "用 steve_jobs 视角讲" (when paired with a default invocation; if the user *only* says "用 steve_jobs 视角讲" with no default-pedagogy context, treat it as `bird + frog + guest:steve_jobs` triple-tab, i.e. the full default plus the guest tab)
+- By persona name alone in invocation context: "Steve Jobs 风格" added to a /grok call
+- The guest's name must already be present in the **Guest packs** table above — otherwise grok refuses and asks the user to either pick a listed guest or add a new pack first.
 
 **Trigger phrases that select a visual** (`--visual …`):
 - `--visual simple` · "简洁版" / "调研报告 风格" / "不要 google fonts" / "纯系统字体" / "零外部依赖"
@@ -139,7 +154,7 @@ When the user names a pedagogy without naming a visual, **the visual defaults to
 
 When the user asks for a single pedagogy but is ambiguous which one, ask once — *bird (top-down) or frog (bottom-up)?* — before generating. Don't silently default to dual-tab if the user clearly wanted a single style.
 
-**Guest pedagogy + visual.** Guests declare their own visual policy in their pack spec (`references/styles/guests/<name>.md`). A `--visual <X>` flag passed alongside `--style guest:<name>` is honored only if the guest pack's spec lists `<X>` as compatible; otherwise the guest's declared visual wins, with a one-line note in chat explaining why the flag was ignored.
+**Guest tab + visual.** The guest tab declares its own visual policy in its pack spec (`references/styles/guests/<name>.md`) — typically reusing the simple visual's warm-paper tokens for cross-tab continuity. The `--visual <X>` flag in the invocation still controls the **base** tabs (bird / frog); the guest tab follows whatever its pack declares regardless of `--visual`, on the principle that the persona's visual identity is part of the persona. If the user wants the guest tab to track a non-default visual, the request goes in the chat message (e.g. "guest tab also use magazine visual"), and the agent passes that override to the guest sub-agent.
 
 ### Adding a new pedagogy or a new visual
 
@@ -159,11 +174,14 @@ Keep packs **mutually distinguishable**. If a "new style" is "magazine but with 
 
 Paper-grokking is naturally chunked: independent chapter / section drafts, separate worked-example research, several lab-visualization sketches, multiple external-source lookups. Fan those units out into sub-agents — one Agent tool call per unit, fired in a single message so they run concurrently. Cuts wall-clock time roughly proportional to the number of independent units; the reader still receives one HTML.
 
-**Top-level fan-out for the dual-tab default.** The bird half and the frog half are independent learning artifacts that happen to share scope. Treat them as **two parallel agent groups**: one group drafts the bird magazine body, one group drafts the frog notebook body. Both groups can run concurrently after the alignment outline is locked. Inside each group, sections / labs / external supplements fan out as the next concurrent layer. The parent assembles all returned bodies into the dual-tab shell after both groups complete. Single-style mode is one group instead of two.
+**Top-level fan-out for the default (dual-tab) and the triple-tab case.** The bird half and the frog half are independent learning artifacts that happen to share scope. Treat them as **two parallel agent groups**: one group drafts the bird body, one group drafts the frog body. Both groups can run concurrently after the alignment outline is locked. Inside each group, sections / labs / external supplements fan out as the next concurrent layer. The parent assembles all returned bodies into the (dual or triple) tab shell after every group / agent completes. Single-style mode is one group instead of two.
+
+When the invocation includes `with guest <name>`, **add one more top-level sub-agent** — a single agent that owns the whole guest tab body end-to-end. **Do not fan the guest tab out per section.** Persona-driven voice (Jobs's keynote cadence, Feynman's bouncing intuition, …) suffers when stitched from multiple agents, even with a shared spec — the seams show. One agent writes the guest tab; that agent receives the guest's pack, the base pack the guest builds on, the same alignment outline bird/frog received, and the shared cross-anchor slug map. It runs concurrently with the bird and frog groups.
 
 **Concrete fan-out units in this skill:**
 
-- **Top level (dual-tab only):** bird-half agent group + frog-half agent group. Each receives the shared alignment outline + the cross-anchor slug map (so anchors line up between halves).
+- **Top level (default / dual-tab):** bird-half agent group + frog-half agent group. Each receives the shared alignment outline + the cross-anchor slug map (so anchors line up between halves).
+- **Top level (triple-tab, `with guest <name>`):** bird-half agent group + frog-half agent group + **one** guest agent (single agent, not a group). The guest agent receives the same alignment outline and slug map as the other two, plus the guest's pack and its declared base pack.
 - Prior-work research for chapter 0 / cold open — one agent per family (VAE / GAN / Flow / …). Run once at the top level; both halves consume the same research output.
 - Section drafting after the outline is locked — one agent per section per half, each with its spec + the writing principles + the relevant source excerpts + **the style pack's voice and component contract** + **the assigned cross-anchor slug**.
 - External supplements (`aside.external` in magazine, `aside.external` or external-callout in notebook) — one agent per topic per half (or shared across halves when the supplement is identical, e.g. an author bio).
@@ -187,11 +205,11 @@ Paper-grokking is naturally chunked: independent chapter / section drafts, separ
 
 2. **Resolve the pedagogy, the visual, and the mode.** Pick the pedagogy pack(s) and the visual as described in **Style selection** above.
 
-   **Pedagogy:**
-   - **Dual-tab (default, no `--style` flag):** load **both** `references/styles/bird.md` and `references/styles/frog.md` into context. Plan for two parallel agent groups in step 5.
+   **Pedagogy (base + optional additive guest):**
+   - **Dual-tab (default, no `--style` flag):** load **both** `references/styles/bird.md` and `references/styles/frog.md` into context.
    - **Single bird** (`--style bird` or any bird trigger phrase, or any legacy alias like `--style mit` / `--style feynman`): load only `references/styles/bird.md`.
    - **Single frog** (`--style frog` or any frog trigger phrase, or any legacy alias like `--style stanford` / `--style karpathy`): load only `references/styles/frog.md`.
-   - **Guest** (`--style guest:<name>` or any guest trigger phrase): load `references/styles/guests/<name>.md`. The guest pack names the base skeleton it builds on (typically `simple-bird-skeleton.html` or `simple-frog-skeleton.html`) and the voice / component overrides; also load the spec of that base pack (`bird.md` or `frog.md`) so the agent inherits the shared component vocabulary and only overrides what the guest pack lists. Single-tab mode is implied — no dual-tab fan-out.
+   - **+ Guest (additive)** when the invocation contains `with guest <name>` or any guest trigger phrase: **additionally** load `references/styles/guests/<name>.md` and the spec of the base pack the guest's `.md` declares (`bird.md` or `frog.md`) for component vocabulary. The base packs above are still loaded — guest is added on top, not in place of. Tab count becomes (base pack count) + 1. Plan one extra sub-agent (the single agent that owns the whole guest tab — see § Parallel sub-agents).
 
    **Visual:**
    - **simple** (default, no `--visual` flag): load `references/styles/visual-simple.md`. This is the new default for both bird and frog.
