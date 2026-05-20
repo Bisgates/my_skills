@@ -169,6 +169,51 @@
     /* page-level rules from frog-skeleton (body bg, type stack, etc.) */
     /* PASTE FROG CSS HERE, namespaced */
   }
+
+  /* ============================================================
+     Narrow-screen (iPhone / mobile) — additive only. The tab bar
+     here uses button-style chips ("🐦 Bird view · 抽象先行" labels
+     are long, so we must keep them on one line and allow horizontal
+     scroll instead of letting "鸟/瞰" split character-by-character.
+     The bird / frog body rules (pasted in above) are responsible
+     for their own mobile tightening — see bird-skeleton.html and
+     frog-skeleton.html for the per-tab @media blocks.
+     ============================================================ */
+  @media (max-width: 720px) {
+    .tabbar {
+      padding: 10px 12px;
+      gap: 10px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tabbar::-webkit-scrollbar { display: none; }
+    .tabbar .brand {
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+    .tabbar .tabs { gap: 6px; flex-shrink: 0; }
+    .tab-btn {
+      padding: 5px 10px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tab-omitted-note {
+      margin: 18px 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+  }
+  @media (max-width: 480px) {
+    .tabbar { padding: 8px 10px; gap: 6px; }
+    .tabbar .brand { font-size: 13px; margin-right: 4px; }
+    .tab-btn { padding: 4px 9px; font-size: 10.5px; }
+  }
 </style>
 </head>
 <body>

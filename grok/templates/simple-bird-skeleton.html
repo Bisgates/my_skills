@@ -261,6 +261,62 @@ th {
   main { padding: 32px 18px 0; }
   .matrix { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Narrow-screen (iPhone / mobile) — additive only. Tighten section
+   padding, shrink drop cap, allow code + tables to scroll instead of
+   bleeding past the viewport.
+   ============================================================ */
+@media (max-width: 720px) {
+  main { padding: 28px 14px 0; max-width: 100%; }
+  body { font-size: 16px; line-height: 1.6; }
+
+  .masthead { padding: 22px 0 16px; margin-bottom: 24px; }
+  .masthead h1 { font-size: 28px; line-height: 1.22; }
+  .masthead .deck { font-size: 16px; }
+
+  .chapter-rule { margin: 44px 0 18px; }
+  .chapter-rule .roman { font-size: 18px; }
+  .chapter-title { font-size: 22px; margin-bottom: 20px; }
+
+  h3 { font-size: 17px; }
+  .lede::first-letter { font-size: 3.2em; padding: 4px 8px 0 0; }
+
+  .callout { padding: 12px 14px; margin: 18px 0; font-size: 15.5px; }
+  .pull { font-size: 18px; padding: 12px 0; margin: 22px 0; }
+  .matrix { grid-template-columns: 1fr; gap: 12px; }
+  .matrix .cell { padding: 12px 14px; font-size: 15px; }
+
+  pre {
+    padding: 10px 12px;
+    font-size: 12.5px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  pre code { white-space: pre; }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  th, td { padding: 6px 8px; }
+
+  .afterword { padding: 18px 18px; margin: 36px 0 22px; }
+  .afterword h4 { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  main { padding: 22px 12px 0; }
+  body { font-size: 15px; }
+  .masthead h1 { font-size: 24px; }
+  .chapter-title { font-size: 19px; }
+  .lede::first-letter { font-size: 2.8em; }
+  .pull { font-size: 17px; }
+  pre { padding: 8px 10px; font-size: 11.5px; }
+}
 </style>
 </head>
 <body>

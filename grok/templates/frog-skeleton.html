@@ -256,6 +256,95 @@
     .nums{ grid-template-columns:repeat(2,1fr); }
   }
 
+  /* ============================================================
+     Narrow-screen (iPhone / mobile) — additive, extends the 720px
+     block above. Preserves notebook In/Out cell rhythm; tightens
+     padding, scrolls code horizontally, stacks lab controls.
+     ============================================================ */
+  @media (max-width:720px){
+    .nb{ max-width:100%; }
+    body{ font-size:15.5px; line-height:1.6; }
+
+    .nb-title{ padding-bottom:14px; margin-bottom:22px; }
+    .nb-title .sub{ font-size:14px; }
+    .nb-title .meta{ font-size:11.5px; }
+
+    h2{ margin:40px 0 6px; }
+    h2 .num{ font-size:14px; margin-right:8px; }
+    h3{ font-size:16px; margin:24px 0 4px; }
+    h2 + .lede, h3 + .lede{ font-size:13.5px; }
+
+    /* Cells — code overflows safely instead of bleeding */
+    .cell{ margin:14px 0; }
+    .cell .body{ padding:7px 12px; }
+    .cell .body pre{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .cell .body pre code{ font-size:12px; line-height:1.5; white-space:pre; }
+    .cell.out .body{ font-size:12px; padding:7px 12px; }
+
+    /* Chalk block — keep dramatic feel, just shrink */
+    .chalk{ padding:16px 18px; font-size:13px; margin:18px 0; border-radius:8px; }
+
+    /* Callouts */
+    .callout{ padding:12px 14px; font-size:13.5px; gap:10px; }
+    .callout .tag{ font-size:10.5px; }
+
+    /* TOC */
+    .toc{ padding:12px 14px; font-size:12.5px; margin:18px 0 28px; }
+
+    /* Numeric punchline grid */
+    .num-box{ padding:11px 13px; }
+    .num-box .v{ font-size:18px; }
+    .num-box .v.sm{ font-size:14px; }
+
+    /* Tables — scroll wrapper */
+    table.tbl{
+      display:block;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      white-space:nowrap;
+      font-size:13px;
+    }
+    table.tbl th, table.tbl td{ padding:6px 8px; }
+
+    /* Lab block — stack controls, full-width canvas */
+    .lab{ padding:14px 14px 14px; margin:18px 0; }
+    .lab .lab-head{ flex-direction:column; align-items:flex-start; gap:4px; }
+    .lab .row{ flex-direction:column; align-items:stretch; gap:8px; }
+    .lab .row > *{ flex-shrink:1; }
+    .lab .row label{ min-width:auto; }
+    .lab .row .grow{ width:100%; min-width:0; }
+    .lab .row .v{ text-align:left; min-width:auto; }
+    .lab input[type=range]{ width:100%; min-width:0; flex:1; }
+    .lab canvas{ max-width:100%; height:auto; }
+    .lab .btn{ font-size:12px; padding:6px 11px; }
+    .lab .panel{ font-size:12px; padding:9px 11px; }
+    .lab .step-trace{ font-size:12px; }
+
+    /* Diff panes — stack already handled above; tighten padding */
+    .diff pre{ padding:10px 12px; font-size:11.5px; }
+    .diff .pane .pane-head{ padding:7px 10px; font-size:11.5px; }
+
+    /* nn.Module tree */
+    .modtree{ padding:12px 14px; font-size:12px; line-height:1.65; }
+
+    /* Footer */
+    .nb-foot{ font-size:11.5px; margin-top:56px; padding-top:18px; }
+  }
+
+  @media (max-width:480px){
+    .nb{ padding:24px 12px 64px; }
+    body{ font-size:15px; }
+    .nb-title h1{ font-size:21px; }
+    h2{ font-size:18px; }
+    .cell{ grid-template-columns:42px 1fr; }
+    .cell .prompt{ font-size:10px; padding-right:6px; }
+    .cell .body pre code,
+    .cell.out .body{ font-size:11.5px; }
+    .chalk{ padding:14px 14px; font-size:12.5px; }
+    .nums{ grid-template-columns:1fr 1fr; gap:10px; }
+    .num-box .v{ font-size:16px; }
+  }
+
   /* Prism — light theme, quiet tokens */
   code[class*="language-"], pre[class*="language-"]{
     text-shadow:none !important; font-family:'JetBrains Mono',monospace !important; background:transparent;

@@ -413,6 +413,123 @@
     .lede::first-letter{font-size:60px;}
     .pullquote{font-size:20px;}
   }
+
+  /* ============================================================
+     Narrow-screen (iPhone / mobile) — additive only. Magazine
+     identity (Playfair Display, drop cap, ornament rows) preserved
+     on desktop; on phones tighten padding, shrink the giant numerals,
+     scroll code + tables horizontally, stack lab controls.
+     ============================================================ */
+  @media(max-width:720px){
+    .page{padding:24px 14px 56px;max-width:100%;}
+    body{font-size:16px;}
+
+    /* Masthead row */
+    .masthead{flex-wrap:wrap;gap:8px;font-size:10px;letter-spacing:0.14em;}
+    .masthead .logo{font-size:15px;}
+
+    /* Hero */
+    .hero{margin:18px 0 36px;}
+    .hero .kicker{font-size:11px;letter-spacing:0.22em;margin-bottom:12px;}
+    .hero h1{font-size:36px;line-height:1.04;}
+    .hero .subline{font-size:17px;margin:6px 0 18px;}
+    .editor-note{font-size:16px;padding:18px 0 18px;}
+    .editor-note .signoff{font-size:14px;}
+    .hero-stats{gap:18px;margin-top:22px;padding-top:14px;}
+    .hero-stats .v{font-size:24px;}
+    .hero-stats .l{font-size:9.5px;letter-spacing:0.18em;}
+    .hero .meta-line{gap:12px;font-size:11.5px;}
+    .hero .meta-line .pill{padding:4px 9px;}
+
+    /* Section openers — shrink the giant numeral */
+    section.branch{margin:56px 0 0;}
+    .section-head{gap:14px;}
+    .section-head .numeral{font-size:48px;margin-right:12px;}
+    .section-head h2{font-size:24px;}
+    .section-head .branchcode{font-size:10px;letter-spacing:0.18em;}
+    .ornament{font-size:18px;letter-spacing:0.3em;}
+    .ch-hook{font-size:16px;}
+
+    /* Body prose + drop cap */
+    .lede{font-size:17px;line-height:1.5;margin:18px 0 20px;}
+    .lede::first-letter{font-size:48px;padding:4px 8px 0 0;margin-top:4px;}
+    .branch p,.branch ul,.branch ol{font-size:16px;line-height:1.65;}
+    .branch h3{font-size:19px;margin:28px 0 10px;}
+
+    /* Callouts / pull / math / worked-example / feynman */
+    .pullquote,.pull-quote{font-size:18px;padding:16px 18px 16px 20px;margin:24px 0;}
+    .math-box{padding:14px 16px;margin:18px 0;}
+    .math-box .math-note{font-size:14px;}
+    .worked-example{padding:14px 16px;margin:18px 0;}
+    .insight,.danger,.success,.warning,.definition{padding:12px 16px;margin:18px 0;}
+    .insight p,.danger p,.success p,.warning p,.definition p{font-size:15px;line-height:1.6;}
+    .feynman{padding:18px 22px 16px;margin:24px 0;}
+    .feynman p{font-size:16px;}
+
+    /* Code blocks — scroll instead of bleed */
+    pre[class*="language-"]{
+      padding:10px 12px !important;
+      font-size:12px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+
+    /* Tables — scroll wrapper */
+    table{
+      display:block;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      white-space:nowrap;
+      font-size:13px;
+    }
+    th{padding:8px 10px;font-size:10.5px;}
+    td{padding:8px 10px;font-size:13.5px;}
+    .num{font-size:12.5px;}
+
+    /* Compare cards — stack */
+    .compare{grid-template-columns:1fr;gap:14px;margin:22px 0;}
+    .compare > div{padding:14px 16px;}
+
+    /* Lab block — stack controls, full-width canvas */
+    .lab{padding:18px 16px;margin:24px 0;}
+    .lab canvas,.lab svg{max-width:100%;height:auto;}
+    .ctrl-row{gap:10px;flex-direction:column;align-items:stretch;}
+    .ctrl-row label{min-width:auto;}
+    .ctrl-row input[type=range]{width:100%;min-width:0;flex:1;}
+    .ctrl-val{text-align:left;}
+    .btn-row{gap:6px;}
+    .btn{padding:6px 12px;font-size:11px;}
+
+    /* Timeline */
+    .timeline{padding-left:22px;}
+    .tl-title{font-size:16px;}
+    .tl-desc{font-size:14.5px;}
+
+    /* Afterword + colophon */
+    .afterword{padding:22px 22px 24px;margin-top:64px;}
+    .afterword h4{font-size:19px;}
+    .colophon{gap:18px;font-size:13px;flex-direction:column;}
+
+    /* External aside + uncertain marker */
+    aside.external{padding:12px 16px;font-size:14px;}
+    .uncertain{padding:10px 14px;font-size:14px;}
+  }
+
+  @media(max-width:480px){
+    .page{padding:18px 12px 48px;}
+    body{font-size:15px;}
+    .hero h1{font-size:30px;}
+    .hero .subline{font-size:16px;}
+    .editor-note{font-size:15px;}
+    .section-head .numeral{font-size:38px;}
+    .section-head h2{font-size:21px;}
+    .lede{font-size:16px;}
+    .lede::first-letter{font-size:38px;}
+    .branch p,.branch ul,.branch ol{font-size:15.5px;}
+    .branch h3{font-size:17px;}
+    .pullquote,.pull-quote{font-size:17px;}
+    pre[class*="language-"]{padding:8px 10px !important;font-size:11.5px;}
+  }
 </style>
 </head>
 <body>

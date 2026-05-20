@@ -254,6 +254,63 @@ table.tbl td.num {
   main { padding: 32px 18px 0; }
   .nb-head h1 { font-size: 24px; }
 }
+
+/* ============================================================
+   Narrow-screen (iPhone / mobile) — additive only. Preserve the
+   In/Out cell rhythm; just tighten padding and let code cells
+   scroll horizontally for long lines.
+   ============================================================ */
+@media (max-width: 720px) {
+  main { padding: 28px 14px 0; max-width: 100%; }
+  body { font-size: 16px; line-height: 1.6; }
+
+  .nb-head { padding-bottom: 14px; margin-bottom: 22px; }
+  .nb-head h1 { font-size: 22px; }
+  .nb-head .sub { font-size: 15px; }
+
+  h2.section { font-size: 16px; margin: 32px 0 8px; letter-spacing: 0.1em; }
+  h3.subsection { font-size: 15px; }
+
+  .cell { padding-left: 10px; margin: 12px 0; }
+  .cell.code pre,
+  .cell.out pre {
+    padding: 10px 12px;
+    font-size: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cell.code pre { white-space: pre; }
+
+  .stop { padding: 10px 14px; font-size: 14.5px; margin: 14px 0; }
+  .callout { padding: 10px 14px; font-size: 14.5px; margin: 14px 0; }
+
+  .nums {
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  .nums .num-box { padding: 8px 12px; }
+  .nums .v { font-size: 18px; }
+
+  table.tbl {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+  table.tbl th, table.tbl td { padding: 5px 8px; }
+}
+
+@media (max-width: 480px) {
+  main { padding: 22px 12px 0; }
+  body { font-size: 15px; }
+  .nb-head h1 { font-size: 20px; }
+  h2.section { font-size: 15px; }
+  .cell.code pre,
+  .cell.out pre { padding: 8px 10px; font-size: 11.5px; }
+  .nums { grid-template-columns: repeat(2, 1fr); }
+  .nums .v { font-size: 16px; }
+}
 </style>
 </head>
 <body>

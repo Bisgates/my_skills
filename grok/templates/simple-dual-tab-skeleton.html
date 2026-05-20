@@ -411,6 +411,104 @@ main { max-width: 820px; margin: 0 auto; padding: 56px 32px 0; }
   .tab-bird .matrix { grid-template-columns: 1fr; }
   main { padding: 32px 18px 0; }
 }
+
+/* ============================================================
+   Narrow-screen (iPhone / mobile) — additive only.
+   Tab bar must NOT wrap character-by-character ("鸟/瞰" split is the
+   bug we're fixing); code cells get horizontal scroll instead of
+   bleeding past the viewport; section padding tightens.
+   ============================================================ */
+@media (max-width: 720px) {
+  /* Tab bar — keep on one line, allow horizontal scroll if needed,
+     hide non-essential meta. */
+  .tabbar {
+    padding: 0 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 12px 14px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tab-meta { display: none; }
+
+  /* Shell */
+  main { padding: 28px 14px 0; max-width: 100%; }
+  body { font-size: 16px; line-height: 1.6; }
+
+  /* Bird tab — text scales, drop cap shrinks, matrix stacks */
+  .tab-bird .masthead { padding: 22px 0 16px; margin-bottom: 24px; }
+  .tab-bird .masthead h1 { font-size: 28px; line-height: 1.22; }
+  .tab-bird .masthead .deck { font-size: 16px; }
+  .tab-bird .chapter-rule { margin: 44px 0 18px; }
+  .tab-bird .chapter-rule .roman { font-size: 18px; }
+  .tab-bird .chapter-title { font-size: 22px; margin-bottom: 20px; }
+  .tab-bird .lede::first-letter { font-size: 3.2em; padding: 4px 8px 0 0; }
+  .tab-bird h3 { font-size: 17px; }
+  .tab-bird .callout { padding: 12px 14px; margin: 18px 0; font-size: 15.5px; }
+  .tab-bird .pull { font-size: 18px; padding: 12px 0; margin: 22px 0; }
+  .tab-bird .matrix { grid-template-columns: 1fr; gap: 12px; }
+  .tab-bird .matrix .cell { padding: 12px 14px; font-size: 15px; }
+  .tab-bird pre {
+    padding: 10px 12px;
+    font-size: 12.5px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-bird pre code { white-space: pre; }
+  .tab-bird table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  .tab-bird th, .tab-bird td { padding: 6px 8px; }
+  .tab-bird .afterword { padding: 18px 18px; margin: 36px 0 22px; }
+  .tab-bird .afterword h4 { font-size: 18px; }
+
+  /* Frog tab — notebook cell rhythm preserved, padding tightens */
+  .tab-frog .nb-head h1 { font-size: 24px; }
+  .tab-frog h2.section { font-size: 16px; margin: 32px 0 8px; }
+  .tab-frog h3.subsection { font-size: 15px; }
+  .tab-frog .cell { padding-left: 10px; margin: 12px 0; }
+  .tab-frog .cell.code pre,
+  .tab-frog .cell.out pre {
+    padding: 10px 12px;
+    font-size: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-frog .cell.code pre { white-space: pre; }
+  .tab-frog .stop { padding: 10px 14px; font-size: 14.5px; margin: 14px 0; }
+  .tab-frog .callout { padding: 10px 14px; font-size: 14.5px; margin: 14px 0; }
+  .tab-frog .nums { gap: 10px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .tab-frog .nums .num-box { padding: 8px 12px; }
+  .tab-frog .nums .v { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  .tabbar { padding: 0 8px; }
+  .tab-btn { padding: 10px 11px; font-size: 12px; letter-spacing: 0.06em; }
+  main { padding: 22px 12px 0; }
+  body { font-size: 15px; }
+
+  .tab-bird .masthead h1 { font-size: 24px; }
+  .tab-bird .chapter-title { font-size: 19px; }
+  .tab-bird .lede::first-letter { font-size: 2.8em; }
+  .tab-bird pre { padding: 8px 10px; font-size: 11.5px; }
+  .tab-bird .pull { font-size: 17px; }
+
+  .tab-frog .nb-head h1 { font-size: 21px; }
+  .tab-frog .cell.code pre,
+  .tab-frog .cell.out pre { padding: 8px 10px; font-size: 11.5px; }
+}
 </style>
 </head>
 <body>
