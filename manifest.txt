@@ -12,4 +12,3 @@ problem-first-teach
 remnote
 use_codex
 tester
-read_xhs
