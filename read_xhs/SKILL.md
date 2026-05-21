@@ -1,6 +1,7 @@
 ---
 name: read_xhs
-description: Fetch a Xiaohongshu (xiaohongshu.com / 小红书) post by URL and summarize content primarily from in-image text; the caption/desc is supplementary and comments are ignored. Use when the user shares a xiaohongshu.com or xhs.in URL and asks to read, summarize, extract, translate, or analyze the post (Chinese phrasings: 看下/总结/读取/讲了啥/帮我看 + 小红书/xhs/这条/这个帖子). Do NOT trigger for other platforms (Weibo, Douyin, TikTok, X, Instagram), for video-only xhs posts where the user wants transcription, or for generic URL summarization without an xhs URL.
+description: >
+  Fetch a Xiaohongshu (xiaohongshu.com / 小红书) post by URL and summarize content primarily from in-image text; the caption/desc is supplementary and comments are ignored. Use when the user shares a xiaohongshu.com or xhs.in URL and asks to read, summarize, extract, translate, or analyze the post. Chinese phrasings include 看下/总结/读取/讲了啥/帮我看 + 小红书/xhs/这条/这个帖子. Do NOT trigger for other platforms (Weibo, Douyin, TikTok, X, Instagram), for video-only xhs posts where the user wants transcription, or for generic URL summarization without an xhs URL.
 ---
 
 # read_xhs
