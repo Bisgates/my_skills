@@ -1,6 +1,6 @@
 ---
 name: grok
-description: Convert a target folder — paper PDF, book chapter, concept note, codebase entry-point — into a single-file interactive learning HTML (Chinese artifact). Default = two-tab page; bird (top-down, Hamming-style) + frog (bottom-up, Karpathy / Ng-style) on the same source. Single-tab via `--style bird` / `--style frog`; add a third guest tab via `with guest <name>`; visual variants via `--visual simple|magazine|notebook`. Use when the user runs `/grok <folder>`, asks to "学习/讲解/拆解/搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside `learn_with_agent`, or asks for a bird / frog / Hamming / Karpathy / Ng / SICP / notebook / magazine / simple / guest explainer.
+description: Convert a target folder — paper PDF, book chapter, concept note, codebase entry-point — into a single-file interactive learning HTML (Chinese artifact). Default = two-tab page; bird (top-down, Feynman-style) + frog (bottom-up, Karpathy / Ng-style) on the same source. Single-tab via `--style bird` / `--style frog`; add a third guest tab via `with guest <name>`; visual variants via `--visual simple|magazine|notebook`. Use when the user runs `/grok <folder>`, asks to "学习/讲解/拆解/搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside `learn_with_agent`, or asks for a bird / frog / Hamming / Karpathy / Ng / SICP / notebook / magazine / simple / guest explainer.
 ---
 
 # grok
@@ -23,7 +23,7 @@ Artifact language: Chinese. Spec language: English.
 /grok "260506_Coding Agents_alphazero" --align                         # alignment checkpoint first
 ```
 
-Natural-language equivalents: "用 bird 风格 / Hamming 风格 / 自顶向下 / 抽象先行" → bird. "用 frog / Karpathy / Andrew Ng 风格 / spelled out from scratch / 自底向上 / 例子先行" → frog. "杂志风 / magazine / longread" → magazine visual. "notebook 形式 / jupyter 风格" → notebook visual. "调研报告 / 简洁版 / 不要 google fonts" or saying nothing about visual → simple.
+Natural-language equivalents: "用 bird 风格 / 费曼风格 / Feynman 风格 / 自顶向下 / 抽象先行" → bird. "用 frog / Karpathy / Andrew Ng 风格 / spelled out from scratch / 自底向上 / 例子先行" → frog. "杂志风 / magazine / longread" → magazine visual. "notebook 形式 / jupyter 风格" → notebook visual. "调研报告 / 简洁版 / 不要 google fonts" or saying nothing about visual → simple.
 
 Legacy aliases (silent): `--style mit` / `--style feynman` → bird. `--style stanford` / `--style karpathy` → frog.
 
@@ -45,7 +45,7 @@ Two orthogonal axes. `--style` picks pedagogy (primary identity); `--visual` pic
 
 | Pack | Posture | Lineage | Spec |
 |---|---|---|---|
-| **bird** 🐦 | Top-down, abstraction-first, derived from first principles | Hamming, *The Art of Doing Science and Engineering* | [`references/pedagogy/bird.md`](references/pedagogy/bird.md) |
+| **bird** 🐦 | Top-down conceptual narrative; predicament → insight → mechanism, with worked examples inline | Feynman lectures + Karpathy long-form essays | [`references/pedagogy/bird.md`](references/pedagogy/bird.md) |
 | **frog** 🐸 | Bottom-up, worked-example first; abstraction emerges | Karpathy "zero to hero" + Andrew Ng CS229 | [`references/pedagogy/frog.md`](references/pedagogy/frog.md) |
 
 **Pedagogy default:** no `--style` flag → dual-tab (both packs). See § Dual-tab contract.
