@@ -12,3 +12,4 @@ problem-first-teach
 remnote
 use_codex
 tester
+spark
