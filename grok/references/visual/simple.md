@@ -21,8 +21,8 @@ Default skeletons:
 
 ```css
 :root {
-  --paper:     #fbf6e9;   /* page background, warm pulp */
-  --paper-2:   #f3ebd6;   /* tab bar / secondary surface */
+  --paper:     #f0eee6;   /* page background, Anthropic ivory */
+  --paper-2:   #e8e6dc;   /* tab bar / secondary surface */
   --ink:       #1f1a14;   /* body text */
   --ink-soft:  #3b332a;   /* headings, decks */
   --ink-faint: #6b6052;   /* meta, captions, footers */
@@ -126,7 +126,7 @@ Identical to magazine dual-tab: `#bird-<slug>` activates bird tab and scrolls; `
 | External assets | none | Google Fonts + KaTeX + Prism | Google Fonts + KaTeX + Prism |
 | Body font | macOS system serif | Cormorant + Playfair Display | Inter |
 | Mono | macOS system mono | JetBrains Mono | JetBrains Mono |
-| Page background | `#fbf6e9` warm pulp | `#f4ecdd` warm paper + dotted texture | `#fafafa` off-white |
+| Page background | `#f0eee6` Anthropic ivory | `#f4ecdd` warm paper + dotted texture | `#fafafa` off-white |
 | Drop cap | yes (bird-flavored) | yes | no |
 | Roman numerals | yes (bird-flavored) | yes | no |
 | In/Out cells | yes (frog-flavored) | no | yes |
