@@ -1,0 +1,91 @@
+---
+name: distill-report
+description: Turn a technical or research topic — a paper, lecture, concept, algorithm, math derivation, or system — into ONE single-file interactive HTML report whose interactions are genuinely computed (real numerical solvers, real 3D via three.js, real in-browser training) rather than pre-rendered animations. High interactive-visualization density on a clean modern theme, KaTeX math, worked examples, self-test quizzes. Use when the user asks for an "interactive report / 交互式报告 / 讲解网页 / explainer / deep-dive" on a technical topic, runs /distill-report, points at a lecture PDF or arXiv paper to "详解 / 讲透", or wants a report that out-teaches a static write-up. Distinct from grok (warm-paper, zero-CDN, dual-tab bird/frog learning cards) — distill-report is a single CDN-allowed explainer whose soul is interactive density. Not for UI/design work (see the design skills) or non-technical/business reports.
+---
+
+# distill-report
+
+Artifact language: **Chinese**. Spec language: English (this file). The produced HTML is a Chinese-language artifact; the spec stays English for portability.
+
+Build a single-file interactive HTML report that teaches a technical topic by letting the reader compute with it. See [`references/principles.md`](references/principles.md) for the craft behind the rules below, and [`references/rubric.md`](references/rubric.md) for the quality bar (also your self-audit).
+
+## Output
+
+One self-contained HTML file. CDN allowed but pinned — KaTeX for math, three.js (r128) for 3D when it genuinely helps; everything else hand-rolled Canvas 2D. (Pinned CDN needs network to load; for true offline, vendor the libs.)
+
+## What the interactions must do
+
+Each interactive element computes the quantity it represents. A noise slider recomputes the curve from the noised data; a "calibrate" button runs the solver; an attention panel computes attention from features. When the full method is too heavy for a browser, build the smallest real version that still exercises the idea — a 1-D toy, a tiny grid, a few iterations, a small hand-written net. If something genuinely can't be computed live, present it as a clearly-labeled static illustration rather than a live-looking demo. Pre-rendered blends, hardcoded "results", and ground-truth-perturbed stand-ins don't teach, so they don't belong.
+
+## Technical hygiene
+
+- **Single file**; CDN pinned (KaTeX; three.js r128 only when 3D earns its place; depth-sort when you use it).
+- Every `<canvas>` is DPR-scaled via the skeleton's `setupCanvas`; every lab is an IIFE ending in `draw()`, ids lab-prefixed, guarded by `if(!c)return`; animations use `requestAnimationFrame` gated on a running flag.
+- Responsive (`@media` ≤720/≤480 in the skeleton); honor `prefers-reduced-motion` (skeleton does this); canvases carry an `aria-label`, live readouts use `aria-live="polite"`.
+
+## The mandatory spine
+
+1. **Masthead + hero stat band** — title, deck, 3-5 framing numbers.
+2. **Cold open — begin-with-why.** The predicament → the naive approach → why it fails. No "本文综述". End each section by creating the next section's problem.
+3. **先画地图 — top-down map.** A concept/architecture strip before any detail.
+4. **Body sections**, each: *problem-first* → *mechanism, derived not asserted* → *interactive lab* → *worked example (napkin numbers, before the abstraction)* → *checkpoint*.
+5. **Connections / "why not X".** Prior work, alternatives, why this wins.
+6. **Self-test quiz** — real answer checking.
+7. **Close** — comparison table / design-philosophy list.
+
+A single **running example** threaded through the whole report (one toy distribution, one matrix, one scene) is a strong coherence move.
+
+## Interaction toolkit
+
+| Archetype | Teaches | What it computes |
+|---|---|---|
+| Parameter slider → live recompute | causal "what if" | the real quantity as the parameter moves (e.g. σ → Parzen density) |
+| Step-through walkthrough | a procedure | the real intermediate state at each step |
+| Draggable point / vector | geometry / dependence | the real response (projection, span, determinant) |
+| Real 3D scene (three.js) | 3D structure | real rotation + depth sort; real perspective projection |
+| In-browser solver | "we can recover/learn X" | the real algorithm (DLT+SVD, Gauss-Newton/LM, tiny SGD) to convergence |
+| Data-driven plot | a relationship | data computed live, not hardcoded paper numbers |
+| Break-it demo (≥1) | why the mechanism is needed | a triggerable failure mode (singular matrix, mode collapse, σ=0) |
+
+Aim for ≥6 interactions, most reader-driven, with at least one break-it demo.
+
+## Build pipeline (the proven path)
+
+Assemble the report rather than hand-writing one blob, so generation parallelizes and stays consistent:
+
+1. **Lock the build plan first** (single agent): from the source, produce `title / kicker / deck / footer / 4 stats / runningExample / needsThree / units[]`. Each *unit* = one generation agent's slice: a chapter group + its labs, each lab with an explicit compute spec. Aim 4-5 units. Settle the recurring entities so colors stay consistent across units.
+2. **Fan out generation** (parallel, one agent per unit): each writes a `<section>` fragment + a lab-JS fragment, following the skeleton conventions and the running example. Match the parent model — never downgrade.
+3. **Assemble** with [`bin/assemble.py`](bin/assemble.py): inserts sections before `</main>`, wraps each lab in its own `<script>` (a throwing lab can't kill its siblings), fills `{{TOKENS}}`, and with `--three` injects the pinned three.js build.
+   ```
+   python3 bin/assemble.py --skeleton templates/skeleton.html --out report.html \
+     --sections u1_sections.html ... --labs u1_labs.js ... [--three] \
+     --set TITLE=... --set KICKER=... --set DECK=... --set FOOTER=... --set STATS=@stats.html
+   ```
+4. **Self-audit + QA** (below), then `open` and exercise every lab.
+
+The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the visual system, scroll-progress + scroll-spy + reveal furniture, `setupCanvas`/`drawArrow`/`C`/`quizPick`, the KaTeX loader, a quiz-integrity validator, and the component classes (`.callout`, `.math-block`, `.lab`, `.quiz`, `.map`, `table.cmp`). It exposes a shared palette `C` so canvas drawing matches the prose/math colors — give each recurring entity one color and keep it across prose, formulas, and canvas.
+
+## Self-audit (= references/rubric.md, plus the easy-to-miss checks)
+
+- [ ] Open your own JS and confirm each interaction's on-screen number comes from the formula beside it (no pre-rendered blend, no hardcoded result, no perturbed ground truth).
+- [ ] ≥6 interactions, ≥1 break-it demo, most reader-driven (rubric ③).
+- [ ] Key results derived, not asserted; edge cases shown (rubric ②).
+- [ ] Cold open is begin-with-why; every concept has a napkin worked example first; quiz present (rubric ④).
+- [ ] **Quiz integrity**: each `.quiz` has exactly one `data-correct="1"` matching the `.fb` explanation. The skeleton's validator console-warns + outlines violators — open the console during QA. (Easy to introduce, invisible until clicked.)
+- [ ] Consistent entity colors carried into canvas; scroll-spy + progress + clean KaTeX; DPR + responsive + `prefers-reduced-motion` (rubric ⑤).
+- [ ] **Illustrative vs measured**: if a chart mixes real measured numbers with illustrative ones, distinguish them visually (filled vs hollow markers) and label it.
+- [ ] Single file; CDN pinned; every canvas DPR-scaled; every lab IIFE ends in `draw()`; ids lab-prefixed.
+
+## Gotchas
+
+- **Let the work speak.** Don't have the artifact advertise its own rigor (no "100% real" stat, no "we actually compute this" callouts) — just build it well and let the reader find out by dragging.
+- **Don't pad density with decoration.** A few interactions that reveal cause-and-effect beat many that only play back.
+- **3D only when it helps.** Don't force three.js where 2D is clearer; depth-sort when you use it.
+- **Name the real algorithm.** If you compute right-singular vectors via Jacobi eigendecomposition of AᵀA, title it "SVD (via Jacobi)" rather than "SVD".
+- **KaTeX**: deferred + `DOMContentLoaded`, never `<script onload>` (fires mid-parse on long bodies).
+
+## See also
+
+- [`references/principles.md`](references/principles.md) — the craft: interaction-as-insight, derive-don't-assert, begin-with-why, reading scaffolding. The *why*.
+- [`references/rubric.md`](references/rubric.md) — the 5-dimension scoring rubric / self-audit.
+- [`templates/skeleton.html`](templates/skeleton.html) · [`bin/assemble.py`](bin/assemble.py) — the build shell and assembler.
