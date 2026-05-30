@@ -58,7 +58,9 @@ body {
 #spy a span { position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
   white-space: nowrap; background: var(--ink); color: #fff; font-size: 12px; padding: 2px 8px;
   border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity .15s; }
-#spy a:hover span { opacity: 1; }
+/* hovering anywhere on the rail reveals the whole chapter list, not just one dot */
+#spy:hover a span { opacity: 1; }
+#spy:hover a.active span { background: var(--accent); }
 
 main { max-width: 820px; margin: 0 auto; padding: 56px 24px 96px; }
 
