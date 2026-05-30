@@ -11,7 +11,14 @@ Build a single-file interactive HTML report that teaches a technical topic by le
 
 ## Output
 
-One self-contained HTML file. CDN allowed but pinned — KaTeX for math, three.js (r128) for 3D when it genuinely helps; everything else hand-rolled Canvas 2D. (Pinned CDN needs network to load; for true offline, vendor the libs.)
+One self-contained HTML file, saved beside its source the same way grok does:
+
+- **Source / folder argument given** → `<folder>/<source-stem>.html` (the report sits next to the PDF / paper it explains).
+- **No source argument, or source outside `learn_with_agent/`** → `/Users/han/project/learn_with_agent/<YYMMDD>/<source-stem>.html` (today's date); `mkdir -p` on demand.
+
+Filename = the source stem with its extension swapped to `.html` (a short topic slug when there's no source file). If that path already exists, **overwrite** it — no versioning; use git for history. Intermediate section / lab fragments and drafts go in `<output-dir>/_drafts/` and are left untouched on overwrite.
+
+CDN allowed but pinned — KaTeX for math, three.js (r128) for 3D when it genuinely helps; everything else hand-rolled Canvas 2D. (Pinned CDN needs network to load; for true offline, vendor the libs.)
 
 ## What the interactions must do
 
@@ -57,11 +64,12 @@ Assemble the report rather than hand-writing one blob, so generation parallelize
 2. **Fan out generation** (parallel, one agent per unit): each writes a `<section>` fragment + a lab-JS fragment, following the skeleton conventions and the running example. Match the parent model — never downgrade.
 3. **Assemble** with [`bin/assemble.py`](bin/assemble.py): inserts sections before `</main>`, wraps each lab in its own `<script>` (a throwing lab can't kill its siblings), fills `{{TOKENS}}`, and with `--three` injects the pinned three.js build.
    ```
-   python3 bin/assemble.py --skeleton templates/skeleton.html --out report.html \
+   python3 bin/assemble.py --skeleton templates/skeleton.html --out "<output-dir>/<source-stem>.html" \
      --sections u1_sections.html ... --labs u1_labs.js ... [--three] \
      --set TITLE=... --set KICKER=... --set DECK=... --set FOOTER=... --set STATS=@stats.html
    ```
-4. **Self-audit + QA** (below), then `open` and exercise every lab.
+   Resolve `<output-dir>/<source-stem>` per § Output; keep the section / lab fragments in `<output-dir>/_drafts/`.
+4. **Self-audit + QA** (below), then `open "<absolute-output-path>"`, exercise every lab, and print the absolute output path on its own line in your final message.
 
 The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the visual system, scroll-progress + scroll-spy + reveal furniture, `setupCanvas`/`drawArrow`/`C`/`quizPick`, the KaTeX loader, a quiz-integrity validator, and the component classes (`.callout`, `.math-block`, `.lab`, `.quiz`, `.map`, `table.cmp`). It exposes a shared palette `C` so canvas drawing matches the prose/math colors — give each recurring entity one color and keep it across prose, formulas, and canvas.
 
