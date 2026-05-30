@@ -1,6 +1,6 @@
 # Principles: what makes an interactive technical report teach
 
-Task-agnostic craft principles behind `distill-report`. Distilled from auditing many AI-generated interactive explainers — what genuinely teaches versus what only looks impressive on a skim. Read this to understand *why* the rules in `SKILL.md` exist; they apply to any topic.
+Task-agnostic craft principles behind `distill`. Distilled from auditing many AI-generated interactive explainers — what genuinely teaches versus what only looks impressive on a skim. Read this to understand *why* the rules in `SKILL.md` exist; they apply to any topic.
 
 ## 1. Compute the real thing
 

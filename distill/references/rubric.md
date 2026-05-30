@@ -1,6 +1,6 @@
 # Rubric: quality of an interactive technical report
 
-A scoring instrument for `distill-report` output. Two uses: (1) self-audit your own report before shipping; (2) score reports blind, A/B, when comparing approaches. Dimensions and weights put genuine computation and depth first, so polish can't paper over an empty interaction.
+A scoring instrument for `distill` output. Two uses: (1) self-audit your own report before shipping; (2) score reports blind, A/B, when comparing approaches. Dimensions and weights put genuine computation and depth first, so polish can't paper over an empty interaction.
 
 ## How to judge
 

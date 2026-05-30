@@ -102,6 +102,9 @@ p { margin: 0 0 1em; }
 .math-block { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; margin: 16px 0; position: relative; }
 .math-block .math-label { position: absolute; right: 14px; top: 10px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--ink-faint); }
 .math-block .math-note { font-style: italic; color: var(--ink-soft); font-size: .94rem; margin-top: 8px; }
+/* wide display math scrolls inside its box instead of overflowing the column (safety net — still prefer breaking long lines with \begin{aligned}) */
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 1px 6px; }
+.katex-display > .katex { white-space: nowrap; }
 
 /* labs (interactive) */
 .lab { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 16px; margin: 20px 0; }
@@ -227,16 +230,26 @@ function quizPick(btn, correct) {
   const fb = box.querySelector('.fb'); if (fb) { fb.style.display = 'block'; if (window.renderMathInElement) renderMathInElement(fb); }
 }
 
-/* === KaTeX render (deferred, on DOMContentLoaded) === */
+/* === KaTeX render (deferred, on DOMContentLoaded). Inside math use \lt \gt \le \ge —
+       a raw < or > is HTML-parsed as a tag before KaTeX runs and corrupts the formula. === */
 document.addEventListener('DOMContentLoaded', function () {
   if (window.renderMathInElement) renderMathInElement(document.body, {
     delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
     throwOnError: false, ignoredTags: ['pre', 'code', 'script', 'style']
   });
+  // math-render integrity: a leftover "$$" after render means a display block never matched —
+  // almost always a raw < or > inside it that the HTML parser ate as a tag before KaTeX saw it.
+  // Flag the offending block (dashed red) so QA catches it; fix the source with \lt \gt \le \ge.
+  if (document.body.textContent.indexOf('$$') !== -1) {
+    console.warn('[distill] leftover "$$" after render — raw < or > inside a formula? use \\lt \\gt \\le \\ge');
+    document.querySelectorAll('.math-block, .callout, p, li, td').forEach(function (el) {
+      if (el.textContent.indexOf('$$') !== -1) el.style.outline = '2px dashed var(--danger)';
+    });
+  }
   // quiz integrity: each .quiz must have exactly one data-correct="1" — flags the inverted/blank-flag bug during QA
   document.querySelectorAll('.quiz').forEach(function (q, i) {
     var n = q.querySelectorAll('.opt[data-correct="1"]').length;
-    if (n !== 1) { console.warn('[distill-report] quiz #' + i + ' has ' + n + ' correct option(s), expected 1'); q.style.outline = '2px dashed var(--danger)'; }
+    if (n !== 1) { console.warn('[distill] quiz #' + i + ' has ' + n + ' correct option(s), expected 1'); q.style.outline = '2px dashed var(--danger)'; }
   });
 });
 

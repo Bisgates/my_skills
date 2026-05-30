@@ -1,9 +1,9 @@
 ---
-name: distill-report
-description: Turn a technical or research topic — a paper, lecture, concept, algorithm, math derivation, or system — into ONE single-file interactive HTML report whose interactions are genuinely computed (real numerical solvers, real 3D via three.js, real in-browser training) rather than pre-rendered animations. High interactive-visualization density on a clean modern theme, KaTeX math, worked examples, self-test quizzes. Use when the user asks for an "interactive report / 交互式报告 / 讲解网页 / explainer / deep-dive" on a technical topic, runs /distill-report, points at a lecture PDF or arXiv paper to "详解 / 讲透", or wants a report that out-teaches a static write-up. Distinct from grok (warm-paper, zero-CDN, dual-tab bird/frog learning cards) — distill-report is a single CDN-allowed explainer whose soul is interactive density. Not for UI/design work (see the design skills) or non-technical/business reports.
+name: distill
+description: Turn a technical or research topic — a paper, lecture, concept, algorithm, math derivation, or system — into ONE single-file interactive HTML report whose interactions are genuinely computed (real numerical solvers, real 3D via three.js, real in-browser training) rather than pre-rendered animations. High interactive-visualization density on a clean modern theme, KaTeX math, worked examples, self-test quizzes. Use when the user asks for an "interactive report / 交互式报告 / 讲解网页 / explainer / deep-dive" on a technical topic, runs /distill, points at a lecture PDF or arXiv paper to "详解 / 讲透", or wants a report that out-teaches a static write-up. Distinct from grok (warm-paper, zero-CDN, dual-tab bird/frog learning cards) — distill is a single CDN-allowed explainer whose soul is interactive density. Not for UI/design work (see the design skills) or non-technical/business reports.
 ---
 
-# distill-report
+# distill
 
 Artifact language: **Chinese**. Spec language: English (this file). The produced HTML is a Chinese-language artifact; the spec stays English for portability.
 
@@ -80,6 +80,7 @@ The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the vi
 - [ ] Key results derived, not asserted; edge cases shown (rubric ②).
 - [ ] Cold open is begin-with-why; every concept has a napkin worked example first; quiz present (rubric ④).
 - [ ] **Quiz integrity**: each `.quiz` has exactly one `data-correct="1"` matching the `.fb` explanation. The skeleton's validator console-warns + outlines violators — open the console during QA. (Easy to introduce, invisible until clicked.)
+- [ ] **Math renders & fits**: no raw `$$`/`$` left on the page (every block matched — a leftover usually means a raw `<`/`>` inside the formula; use `\lt \gt \le \ge`); no formula overflows the reading column on desktop or mobile. The skeleton outlines unrendered blocks in dashed red — open the console during QA.
 - [ ] Consistent entity colors carried into canvas; scroll-spy + progress + clean KaTeX; DPR + responsive + `prefers-reduced-motion` (rubric ⑤).
 - [ ] **Illustrative vs measured**: if a chart mixes real measured numbers with illustrative ones, distinguish them visually (filled vs hollow markers) and label it.
 - [ ] Single file; CDN pinned; every canvas DPR-scaled; every lab IIFE ends in `draw()`; ids lab-prefixed.
@@ -90,7 +91,9 @@ The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the vi
 - **Don't pad density with decoration.** A few interactions that reveal cause-and-effect beat many that only play back.
 - **3D only when it helps.** Don't force three.js where 2D is clearer; depth-sort when you use it.
 - **Name the real algorithm.** If you compute right-singular vectors via Jacobi eigendecomposition of AᵀA, title it "SVD (via Jacobi)" rather than "SVD".
-- **KaTeX**: deferred + `DOMContentLoaded`, never `<script onload>` (fires mid-parse on long bodies).
+- **Math — never put a raw `<` or `>` inside `$…$` / `$$…$$`.** The browser HTML-parses `a<b` as the start of a tag *before* KaTeX runs, swallows part of the formula into a phantom element, and leaves a raw `$$…$$` (with mangled content) on the page. Write `\lt \gt \le \ge` (escaping as `&lt; &gt;` also works, since `textContent` decodes it back). The skeleton's render validator outlines any block with a leftover `$$` in dashed red so QA catches a slip.
+- **Math — break wide display formulas so they don't overflow the column.** A long single-line `$$…$$` runs past the box edge. Stack it with `\begin{aligned} … \\ … \end{aligned}` or split into several numbered blocks; the skeleton's `overflow-x:auto` on `.katex-display` is the safety net, not a license to ship a formula wider than the reading column.
+- **KaTeX load**: deferred + `DOMContentLoaded`, never `<script onload>` (fires mid-parse on long bodies).
 
 ## See also
 
