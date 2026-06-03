@@ -39,15 +39,18 @@ which is exactly the behavior this protocol is designed to avoid.
 The reporter is dispatched **exactly once per arc**, at one of these points:
 
 - **Fast-done path** — at the end of `/arc-execute`, after the user
-  one-line-confirms a trivial arc is ready to mark done. No
-  `8_handoff_plan.md` exists; nothing to promote.
-- **Formal finalize path** — `/arc-finalize` Stage 2, after promotion
-  completes. `8_handoff_plan.md` exists and the reporter folds promoted
-  code / doc changes / surviving `STALE?` items into the report.
+  one-line-confirms a trivial arc is ready to mark done. Nothing was swept;
+  `_tmp/report_notes.md` has no `[finalize-suggestions]` block.
+- **Finalize path** — `/arc-finalize` ran a single-pass sweep and appended a
+  `[finalize-suggestions]` block to `_tmp/report_notes.md` (suggested code /
+  doc promotions, surviving `STALE?` items). The agent did **not** promote
+  anything — the suggestions are the user's to act on. The reporter folds them
+  into the 留下的产物 / 接下来 sections as follow-ups.
 
 Same template (`templates/9_summary.html`), same Phase A staging, same
 Phase B dispatch shape, same Phase C handler. The only difference between
-routes is whether the reporter has `8_handoff_plan.md` in its input set.
+routes is whether `_tmp/report_notes.md` carries a `[finalize-suggestions]`
+block.
 
 ## Three phases
 
@@ -92,7 +95,7 @@ sub-agent's prompt must be self-contained — it has none of the current
 conversation context.
 
 **Dispatch prompt skeleton** (the main agent fills in `<...>`; the route is
-encoded by whether `8_handoff_plan.md` exists in the source list):
+encoded by whether `_tmp/report_notes.md` carries a `[finalize-suggestions]` block):
 
 ```
 You are the arc reporter for arc <id> at canonical path <arcs/all/<id>_<slug>/>.
@@ -119,17 +122,17 @@ Step 2 — Read the source material.
    when quoting; the file is a grok-simple HTML doc, not Markdown. Legacy arcs
    may still carry `1_objective.md` instead — read whichever exists.
 2. <arc>/2_plan.md — the route map.
-3. <arc>/_tmp/report_notes.md — pre-staged notes (skim once for narrative).
+3. <arc>/_tmp/report_notes.md — pre-staged notes (skim once for narrative). If it
+   carries a `[finalize-suggestions]` block (finalize route), fold those suggested
+   code / doc promotions and surviving STALE? items into the §3+ candidate sections
+   as follow-ups (留下的产物 / 接下来) — frame them as *suggested* promotions the
+   user may still act on, not as done work. If there is no such block (fast-done
+   route), draw 留下的产物 from <arc>/output/ alone and skip promotion content.
 4. <arc>/0_meta.md — frontmatter (id/brief/parent/dates) and the trailing 60 lines
    of `## log` for the journey.
-5. <arc>/8_handoff_plan.md — **read only if it exists** (formal finalize route).
-   When present, fold promoted-code rows / doc changes / STALE? items into the
-   §3+ candidate sections (留下的产物 / 接下来 / 关键决策). When absent
-   (fast-done route), draw 留下的产物 from <arc>/output/ alone and skip
-   promotion content.
-6. <arc>/output/ — list directory contents to know which artifacts exist;
+5. <arc>/output/ — list directory contents to know which artifacts exist;
    reference them by relative path. Do not inline binary outputs; link to them.
-7. <arc>/utils/ and <arc>/scripts/ — list filenames and one-line summaries of intent
+6. <arc>/utils/ and <arc>/scripts/ — list filenames and one-line summaries of intent
    (read top docstrings only); do not paste full source.
 
 Step 3 — Fill the template.
@@ -148,9 +151,10 @@ Section spine (mirror the template):
                   template (关键决策 / 留下的产物 / 学到的东西 / 接下来). Use only
                   the ones that genuinely earn space. Bias toward fewer, shorter
                   sections. Padding here makes the report worse, not better.
-                  For the formal finalize route, 留下的产物 (promoted code +
-                  doc changes from 8_handoff_plan.md) and 接下来 (surviving
-                  follow-ups / STALE? items) usually earn their space.
+                  For the finalize route, 留下的产物 / 接下来 (the suggested
+                  code + doc promotions and surviving follow-ups / STALE? items
+                  from the `[finalize-suggestions]` note) usually earn their
+                  space — framed as suggestions, not as done work.
 
 Style:
 - Single .html file, **zero external CDN** — the template's inline <style>

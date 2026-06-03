@@ -58,7 +58,7 @@ description: Execute the arc's plan from current state, logging progress, until 
 
    **Finalize route.** Anything else — substantive code/docs to promote, acceptance ambiguous, the user prefers the formal flow.
    - Tell the user one short line: "Plan complete. Suggest `/arc-finalize` next." Yield.
-   - **Do not** dispatch the reporter here. Finalize Stage 2 will dispatch it after promotion (`arc-finalize.md`).
+   - **Do not** dispatch the reporter here. `/arc-finalize` will dispatch it after its sweep prints the 落盘 suggestions (`arc-finalize.md`).
 
 9. **Reporter completion notification handling.** See `reporter.md` Phase C — single shared handler for both routes. The handler verifies the file, calls `arc status <id> done`, runs `open`, and tells the user one line. Do not duplicate the logic here.
 

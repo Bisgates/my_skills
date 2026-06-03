@@ -47,7 +47,6 @@ arcs/all/<id>_<slug>/
   1_objective.html          # required; produced by /arc-objective (HTML, grok-simple visual; auto-opens on lock)
   2_plan.md                 # required; produced by /arc-plan (may be 1-3 lines for trivial tasks)
   4_*.md ~ 6_*.md           # free slots, free naming (pivot/eval/blocker/decision_*)
-  8_handoff_plan.md         # generated only by /arc-finalize Stage 1 (formal route only)
   9_summary.html            # required for `done` state — written by reporter sub-agent (see reporter.md). Auto-opens.
   _tmp/                     # agent-internal scratch — notes for self, dotfiles, intermediate JSON / images. Includes _tmp/report_notes.md (reporter in-flight staging). Never promoted; agents read freely.
   doc/                      # freeform notes (create on demand)
@@ -127,7 +126,7 @@ arc rebuild                           # repair symlinks + index
 - **Default-on agent teams (execute + finalize).** During `/arc-execute` and `/arc-finalize`, identify work units with no data dependency between them and **default to dispatching multiple `general-purpose` sub-agents in parallel within a single message** (do not pass `model`; inherit the parent model so behavior stays consistent). Sub-agents do not write logs themselves; the main agent collects results and calls `arc log` once. Serialize only when there is a real data dependency, a shared mutable file, or an interactive decision needed. See `arc-execute.md` and `arc-finalize.md`. Objective and plan stay single-agent because they are user-facing dialogue.
 - **Reporter agent.** During `/arc-plan` and `/arc-execute`, the main agent maintains short notes in `_tmp/report_notes.md` (bullet jots — strategy, smoke result, key decisions, load-bearing artifacts). The reporter sub-agent is dispatched exactly once per arc, when the arc is about to flip to `done`. It fills `templates/9_summary.html` and writes `<arc>/9_summary.html` — the same file is also the `done` gate. There are two dispatch points (same reporter, same template):
   - **Fast-done path** — at the end of `/arc-execute`, after the user confirms with a one-line yes/ok.
-  - **Formal finalize path** — `/arc-finalize` Stage 2, after promotion completes; the reporter additionally folds promoted-code / doc-changes from `8_handoff_plan.md` into the 留下的产物 / 接下来 candidate sections.
+  - **Finalize path** — `/arc-finalize` runs a single pass (sweep → print 落盘 suggestions in chat → dispatch reporter; the agent never edits the main project). Before dispatch it appends the suggestions as a `[finalize-suggestions]` block to `_tmp/report_notes.md`, which the reporter folds into the 留下的产物 / 接下来 candidate sections.
 
   Dispatch is **always** a single `general-purpose` sub-agent **in the background (`run_in_background: true`, non-negotiable)**. The reporter must never block the main flow. On the background completion notification, the main agent verifies the file, calls `arc status <id> done` (gate now passes), runs `open`, and tells the user one short line. Section spine: §1 结果 / §2 过程 (短) / §3+ 自由发挥 (轻 — pick 0-4 of the candidates the template ships with). The reporter is **not** user-invocable; full protocol in `reporter.md`.
 - **When the plan does not anticipate the situation**, stop and ask the user. Do not silently rewrite the objective or plan.
