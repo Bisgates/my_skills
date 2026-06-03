@@ -71,7 +71,7 @@ Assemble the report rather than hand-writing one blob, so generation parallelize
    Resolve `<output-dir>/<source-stem>` per § Output; keep the section / lab fragments in `<output-dir>/_drafts/`.
 4. **Self-audit + QA** (below), then `open "<absolute-output-path>"`, exercise every lab, and print the absolute output path on its own line in your final message.
 
-The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the visual system, scroll-progress + scroll-spy + reveal furniture, `setupCanvas`/`drawArrow`/`C`/`quizPick`, the KaTeX loader, a quiz-integrity validator, and the component classes (`.callout`, `.math-block`, `.lab`, `.quiz`, `.map`, `table.cmp`). It exposes a shared palette `C` so canvas drawing matches the prose/math colors — give each recurring entity one color and keep it across prose, formulas, and canvas.
+The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the visual system, scroll-progress + scroll-spy furniture (sections render flat, all at once — no scroll-reveal), `setupCanvas`/`drawArrow`/`C`/`quizPick`, the KaTeX loader, a quiz-integrity validator, and the component classes (`.callout`, `.math-block`, `.lab`, `.quiz`, `.map`, `table.cmp`). It exposes a shared palette `C` so canvas drawing matches the prose/math colors — give each recurring entity one color and keep it across prose, formulas, and canvas.
 
 ## Self-audit (= references/rubric.md, plus the easy-to-miss checks)
 
