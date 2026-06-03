@@ -267,6 +267,7 @@ Run alongside the style-specific checklist in the loaded pedagogy / visual specs
 - **Don't strip warm-paper CSS tokens.** They're the simple visual's identity.
 - **Don't sneak Google Fonts into simple.** Even one "harmless" import for a "nicer" italic. Switch to magazine if you need Playfair.
 - **Don't render Roman numerals under notebook** or `In [N]:` cells under magazine. Those markers are tied to their visuals.
+- **Reading scale is 1.25×.** Every skeleton's `<style>` is pre-scaled — desktop column ≈1025px, body ≈21–22px, all paddings/headings/radii multiplied to match — so width and font grow together and chars-per-line is unchanged (this is why px values are fractional, e.g. `21.25px`; that's intentional, don't "round it back"). `@media` breakpoints stay at real-viewport px. Hand-rolled components must use the same scaled px (or `rem`/`em`/`%`) or they'll render small against the rest.
 
 ## See also
 

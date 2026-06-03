@@ -94,6 +94,7 @@ The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the vi
 - **Math — never put a raw `<` or `>` inside `$…$` / `$$…$$`.** The browser HTML-parses `a<b` as the start of a tag *before* KaTeX runs, swallows part of the formula into a phantom element, and leaves a raw `$$…$$` (with mangled content) on the page. Write `\lt \gt \le \ge` (escaping as `&lt; &gt;` also works, since `textContent` decodes it back). The skeleton's render validator outlines any block with a leftover `$$` in dashed red so QA catches a slip.
 - **Math — break wide display formulas so they don't overflow the column.** A long single-line `$$…$$` runs past the box edge. Stack it with `\begin{aligned} … \\ … \end{aligned}` or split into several numbered blocks; the skeleton's `overflow-x:auto` on `.katex-display` is the safety net, not a license to ship a formula wider than the reading column.
 - **KaTeX load**: deferred + `DOMContentLoaded`, never `<script onload>` (fires mid-parse on long bodies).
+- **Reading scale is 1.25×.** The skeleton's `<style>` is pre-scaled — column ≈1025px, body ≈21px, all paddings/headings/radii multiplied to match — so width and font grow together and chars-per-line is unchanged (fractional px like `21.25px` are intentional, don't round them back). `@media` breakpoints stay at real-viewport px; `width:100%` canvases re-render crisp at the wider column (don't bake a `zoom`, which would just upscale-blur every lab). Hand-rolled sections must match the same scaled px.
 
 ## See also
 
