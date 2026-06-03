@@ -543,6 +543,13 @@ main { max-width: 1025px; margin: 0 auto; padding: 70px 40px 0; }
 (function () {
   var buttons = document.querySelectorAll('.tab-btn');
   var panes   = document.querySelectorAll('.tab-pane');
+  // Independent scroll per tab: bird and frog each remember where they were,
+  // so switching tabs never carries one tab's scroll position into the other.
+  var scrollMem = { bird: 0, frog: 0 };
+  function currentTab() {
+    var b = document.querySelector('.tab-btn.active');
+    return b ? b.getAttribute('data-tab') : null;
+  }
   function activate(name) {
     buttons.forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === name);
@@ -553,8 +560,12 @@ main { max-width: 1025px; margin: 0 auto; padding: 70px 40px 0; }
   }
   buttons.forEach(function (b) {
     b.addEventListener('click', function () {
-      activate(b.getAttribute('data-tab'));
-      history.replaceState(null, '', '#' + b.getAttribute('data-tab'));
+      var name = b.getAttribute('data-tab');
+      var cur = currentTab();
+      if (cur) scrollMem[cur] = window.scrollY;   // stash where we're leaving
+      activate(name);
+      window.scrollTo(0, scrollMem[name] || 0);   // restore where we last were
+      history.replaceState(null, '', '#' + name);
     });
   });
   // Deep link: #bird-<slug> / #frog-<slug> switches tab + scrolls.
