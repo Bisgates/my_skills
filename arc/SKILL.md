@@ -44,7 +44,7 @@ Common natural-language triggers (Chinese verbatim, kept here so trigger matchin
 ```
 arcs/all/<id>_<slug>/
   0_meta.md                 # required; script-managed. frontmatter + ## history + ## log
-  1_objective.html          # required; produced by /arc-objective (HTML, grok-simple visual; auto-opens on lock)
+  1_objective.html          # required; produced by /arc-objective (HTML, light product-doc visual; auto-opens on lock)
   2_plan.md                 # required; produced by /arc-plan (may be 1-3 lines for trivial tasks)
   4_*.md ~ 6_*.md           # free slots, free naming (pivot/eval/blocker/decision_*)
   9_summary.html            # required for `done` state — written by reporter sub-agent (see reporter.md). Auto-opens.
