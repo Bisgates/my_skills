@@ -9,13 +9,12 @@
   /arc-objective: this file is the SKELETON for the locked objective.
   Copy it to <arc>/1_objective.html, then replace tokens and FILL blocks.
 
-  Visual contract = light product-doc theme (Linear/Notion-like):
+  Visual contract = light product-doc theme (Linear/Notion-like), shared with
+  templates/9_summary.html:
     - neutral light palette (the :root tokens below — keep them all)
     - macOS system font stack (no Google Fonts)
     - ZERO external CDN (no Tailwind, no KaTeX, no Prism)
     - all CSS inline in this one <style> block
-  NOTE: templates/9_summary.html still ships the older warm-paper theme;
-  the two are intentionally decoupled until summary is migrated.
 
   Tokens: {{ARC_NAME}} {{BRIEF}} {{ID}} {{DATE}}
     ARC_NAME = the arc's brief, prose-cleaned (also used as the <h1>)

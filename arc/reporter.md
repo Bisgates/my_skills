@@ -12,9 +12,10 @@ The arc protocol already records *what happened* (`0_meta.md ## log`,
 `1_objective.html`, `2_plan.md`, `output/`). What it does not produce is a
 **reader-facing artifact** that shows *the result first, the journey second,
 and a few honest after-thoughts* in a form the user can hand to a teammate
-or revisit cold a month later. The reporter fills that gap as a single-file HTML under grok's "simple"
-visual (warm-paper palette, macOS system fonts, zero external CDN) — light,
-one-pager-ish, results-led, double-clicks open offline forever.
+or revisit cold a month later. The reporter fills that gap as a single-file HTML under the light
+product-doc visual shared with `1_objective.html` (neutral light palette,
+macOS system fonts, zero external CDN) — light, one-pager-ish, results-led,
+double-clicks open offline forever.
 
 `9_summary.html` doubles as the `done` gate: `arc status <id> done` requires
 the file to exist and be non-empty. The reporter is the only thing that
@@ -111,15 +112,16 @@ Step 1 — Copy the template.
 Read ~/.claude/skills/arc/templates/9_summary.html. That file is the SKELETON:
 all CSS, layout, section comments, and FILL markers are already in place. Copy
 its full contents to <arc>/9_summary.html, then edit *that copy* — do not start
-from scratch and do not invent your own CSS. The template is grok's "simple"
-visual: warm-paper palette, macOS system serif body, Roman-numeral section
-openers, ZERO external CDN. Preserve that contract — do not add Tailwind,
+from scratch and do not invent your own CSS. The template is the light
+product-doc visual (same theme as 1_objective.html): neutral light palette,
+macOS system sans body, numbered section heads (01 结果 / 02 过程 / …),
+ZERO external CDN. Preserve that contract — do not add Tailwind,
 Google Fonts, KaTeX, Prism, or any other external asset. All CSS stays in the
 one inline <style> block the template ships with.
 
 Step 2 — Read the source material.
 1. <arc>/1_objective.html — goal, boundary, acceptance criteria. Strip HTML tags
-   when quoting; the file is a grok-simple HTML doc, not Markdown. Legacy arcs
+   when quoting; the file is an HTML doc, not Markdown. Legacy arcs
    may still carry `1_objective.md` instead — read whichever exists.
 2. <arc>/2_plan.md — the route map.
 3. <arc>/_tmp/report_notes.md — pre-staged notes (skim once for narrative). If it
@@ -161,10 +163,10 @@ Style:
   block is the entire visual system. Do not add Tailwind, Google Fonts, KaTeX,
   Prism, or any other external dependency. The whole file must double-click
   open offline forever.
-- Visual = grok's "simple" theme: warm-paper palette (`--paper #fbf6e9`),
-  macOS system serif body, mono code, Roman-numeral section openers
-  (I · 结果 / II · 过程 / …). Keep the :root tokens — they are the visual
-  identity.
+- Visual = light product-doc theme (shared with 1_objective.html): neutral
+  light palette (`--bg #fafafa`), macOS system sans body, mono code, numbered
+  section heads (01 结果 / 02 过程 / …). Keep the :root tokens — they are the
+  visual identity.
 - Natural-language content in **Chinese** (matches the user's reading language).
 - Light. The whole report should read in 2-3 minutes.
 - Diagrams as inline SVG only when load-bearing; do not invent decorative ones.
