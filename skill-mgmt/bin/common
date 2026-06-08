@@ -41,8 +41,8 @@ skill_mgmt_skill_dependencies() {
 
   awk '
     function trim(s) {
-      gsub(/^[ \t\047\"\[]+/, "", s)
-      gsub(/[ \t\047\",\]]+$/, "", s)
+      gsub(/^[ \t\047"\[]+/, "", s)
+      gsub(/[ \t\047",\]]+$/, "", s)
       return s
     }
     function emit_list(s, parts, count, i, dep) {
