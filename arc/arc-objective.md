@@ -1,9 +1,9 @@
 ---
 name: arc-objective
-description: Run grill-me to define the arc objective with crisp boundary and acceptance criteria. Use when the user says "/arc-objective", "/arc-objective 260430c", or right after /arc-new chains in.
+description: Run grill-with-docs to define the arc objective with crisp boundary and acceptance criteria. Use when the user says "/arc-objective", "/arc-objective 260430c", or right after /arc-new chains in.
 ---
 
-# /arc-objective — Lock the objective with grill-me
+# /arc-objective — Lock the objective with grill-with-docs
 
 ## Steps for the agent
 
@@ -13,16 +13,18 @@ description: Run grill-me to define the arc objective with crisp boundary and ac
 
 2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.html` and `9_summary.html` (if present) to use as constraint context.
 
-3. **Estimate complexity, then choose interrogation depth.** grill-me inside arc is **adaptive**, not a fixed question count:
+3. **Estimate complexity, then choose interrogation depth.** grill-with-docs inside arc is **adaptive**, not a fixed question count:
    - **Simple task** (single goal, narrow scope, acceptance readable straight off the brief, no ambiguous branches): **ask less**. Clarify only the 0–2 points that are genuinely missing; the moment you can write a crisp goal + checkable acceptance, **commit it to disk**. Do not pad questions just to "follow the flow".
    - **Complex task** (multiple goals / stakeholders, fuzzy success criteria, cross-system or wide scope, strong dependencies or high risk): **ask more**. Walk the branches patiently and align core goal, acceptance, boundary, constraints, dependencies, and risks one at a time. Still follow "one question at a time, with a recommended answer", but **do not skip the questions that need asking**.
    - **Anti-patterns:** running a full questionnaire on a simple task just to tick boxes; cutting a complex task off after one or two questions to save effort.
    - If you cannot tell whether the task is simple or complex, **ask one question first** to surface the user's own self-assessment of effort, then decide whether to extend into a longer conversation.
 
-4. **Enter the grill-me loop** (the user's preferred "one question at a time, with a recommended answer" style):
+4. **Enter the grill-with-docs loop** (the user's preferred "one question at a time, with a recommended answer" style):
    - Every question comes with a recommended answer.
    - Lock one branch before moving to the next.
    - Do not rapid-fire five questions; do not omit recommended answers.
+   - If a `CONTEXT.md` exists in the project, challenge any term the user uses that conflicts with the glossary before moving on. When a term is resolved, update `CONTEXT.md` inline — do not batch.
+   - If a decision is hard to reverse, surprising without context, and the result of a real trade-off, offer to record it as an ADR under `docs/adr/`.
    - **Ask in priority order: core first, boundary second.** What is being done, why now, and what success looks like — these are first-class. Boundary / constraints / risks matter, but they are guardrails to tighten *after* the core is locked. Do not invert this and start by chasing scope / non-goals / risks; the user will feel the conversation has drifted.
    - The branches below are a **menu**, used in priority order. **For simple tasks, only touch the items still unclear in the first two sections**; for the rest, either omit them entirely (delete the corresponding 04 / 06 section from the HTML — the template wraps them in HTML comments precisely so they can be dropped) or close them inside `1_objective.html` with a single line. Do not interrogate item by item.
      1. **Core goal:** what problem to solve, why now (motivation / trigger), what success looks like. Verbs must be concrete — no "研究 / 探索 / 看看" / "investigate / explore / take a look".
