@@ -138,7 +138,7 @@ Paper-grokking is naturally chunked. Fan independent units out as sub-agents —
 
 **Don't parallelize the linear spine.** Chapter 0 must be drafted first; alignment outline confirmed first; slug map agreed first; master HTML stitch-together happens once on the parent.
 
-**Match the parent's model and reasoning depth.** Pass the parent's `model` explicitly (Opus stays Opus, Sonnet stays Sonnet); never let the runtime auto-pick a cheaper one. Same reader, same bar.
+**Model for text-producing agents.** When running inside Claude Code, set `model: "opus-4-6"` on all section-drafting and worked-example agents — 4.6's prose is more human-friendly than newer checkpoints. If the model flag is unavailable, omit it.
 
 ## Workflow
 
