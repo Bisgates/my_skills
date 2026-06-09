@@ -61,7 +61,7 @@ Aim for ≥6 interactions, most reader-driven, with at least one break-it demo.
 Assemble the report rather than hand-writing one blob, so generation parallelizes and stays consistent:
 
 1. **Lock the build plan first** (single agent): from the source, produce `title / kicker / deck / footer / 4 stats / runningExample / needsThree / units[]`. Each *unit* = one generation agent's slice: a chapter group + its labs, each lab with an explicit compute spec. Aim 4-5 units. Settle the recurring entities so colors stay consistent across units.
-2. **Fan out generation** (parallel, one agent per unit): each writes a `<section>` fragment + a lab-JS fragment, following the skeleton conventions and the running example. When running inside Claude Code, prefer `model: "opus"` for these text-producing agents — prose and explanation quality benefits from the strongest writer available. If the parent is already opus or the model flag is unavailable, omit it.
+2. **Fan out generation** (parallel, one agent per unit): each writes a `<section>` fragment + a lab-JS fragment, following the skeleton conventions and the running example. When running inside Claude Code, set `model: "opus-4-6"` on these text-producing agents — 4.6's prose is more human-friendly than newer checkpoints. If the model flag is unavailable, omit it.
 3. **Assemble** with [`bin/assemble.py`](bin/assemble.py): inserts sections before `</main>`, wraps each lab in its own `<script>` (a throwing lab can't kill its siblings), fills `{{TOKENS}}`, and with `--three` injects the pinned three.js build.
    ```
    python3 bin/assemble.py --skeleton templates/skeleton.html --out "<output-dir>/<source-stem>.html" \
