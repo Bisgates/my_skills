@@ -5,7 +5,7 @@ reference it from today's daily note.
 Defaults
 --------
 - Source board: working_on view marked active in
-    /Users/han/project/life/linear_board_view/public/data/working_on/views.json
+    /Users/han/project/personal/linear_board_view/public/data/working_on/views.json
 - Doc title: <YYMMDD><next-letter>_<slug>
     * YYMMDD = today, local time
     * next-letter = a / b / c / ... — first unused among top-level rems whose
@@ -37,14 +37,14 @@ from pathlib import Path
 
 # `sync_client` sets NO_PROXY=* on import — without that, requests/urllib calls
 # to 127.0.0.1 traverse the system HTTP proxy and 502.
-sys.path.insert(0, '/Users/han/project/life/notes')
-sys.path.insert(0, '/Users/han/project/life/notes/remnote-sync-plugin')
+sys.path.insert(0, '/Users/han/project/personal/notes')
+sys.path.insert(0, '/Users/han/project/personal/notes/remnote-sync-plugin')
 import requests  # noqa: E402
 import sync_client  # noqa: E402,F401  side-effect-sets NO_PROXY
 
 DB = '/Users/han/remnote/remnote-62403c0f38b1150016221e9d/remnote.db'
 SERVER = 'http://127.0.0.1:9321'
-BOARD_DIR = Path('/Users/han/project/life/linear_board_view/public/data')
+BOARD_DIR = Path('/Users/han/project/personal/linear_board_view/public/data')
 
 
 # ----- bridge ---------------------------------------------------------------

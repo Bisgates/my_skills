@@ -1,6 +1,6 @@
 ---
 name: remnote
-description: Read RemNote rems and append children, create new top-level docs, insert clickable [[references]], set a RemNote tag on a rem (write `tp` directly — e.g. tag a doc with `[[7a1 -- person]]`), or load a Linear board view snapshot into a new RemNote summary doc linked from today's daily note (auto-numbered `YYMMDD<letter>_<slug>` titles, section auto-picked by hour), via the sync_server+plugin bridge at /Users/han/project/life/notes on this machine. Use when the user wants to read / dump / search a RemNote rem (IDs often look like '6s3c - grok skill'), append a child rem, create a new RemNote doc, insert a [[link]] in a daily-note section, tag a rem with another rem (RemNote-native tag chip, distinct from a reference child), or load today's Linear board into RemNote. Do NOT trigger for the Flomo→RemNote or RemNote→Todoist batch sync CLIs, for plugin source work (webpack/TypeScript), or for non-RemNote note systems (Obsidian/Apple Notes/Bear/flomo/markdown).
+description: Read RemNote rems and append children, create new top-level docs, insert clickable [[references]], set a RemNote tag on a rem (write `tp` directly — e.g. tag a doc with `[[7a1 -- person]]`), or load a Linear board view snapshot into a new RemNote summary doc linked from today's daily note (auto-numbered `YYMMDD<letter>_<slug>` titles, section auto-picked by hour), via the sync_server+plugin bridge at /Users/han/project/personal/notes on this machine. Use when the user wants to read / dump / search a RemNote rem (IDs often look like '6s3c - grok skill'), append a child rem, create a new RemNote doc, insert a [[link]] in a daily-note section, tag a rem with another rem (RemNote-native tag chip, distinct from a reference child), or load today's Linear board into RemNote. Do NOT trigger for the Flomo→RemNote or RemNote→Todoist batch sync CLIs, for plugin source work (webpack/TypeScript), or for non-RemNote note systems (Obsidian/Apple Notes/Bear/flomo/markdown).
 ---
 
 # Remnote
@@ -11,7 +11,7 @@ The bridge exists because direct SQLite writes bypass RemNote's frontend state a
 
 **Host pins.** Paths in this skill are concrete because this is the user's machine; do not parameterize them on the fly.
 
-- Repo: `/Users/han/project/life/notes`
+- Repo: `/Users/han/project/personal/notes`
 - DB: `/Users/han/remnote/remnote-62403c0f38b1150016221e9d/remnote.db`
 - Owner ID: `62403c0f38b1150016221e9d`
 - Sync server: `http://127.0.0.1:9321`
@@ -23,7 +23,7 @@ The bridge exists because direct SQLite writes bypass RemNote's frontend state a
 **Read** (no setup needed — RemNote can be running):
 
 ```python
-import sys; sys.path.insert(0, '/Users/han/project/life/notes')
+import sys; sys.path.insert(0, '/Users/han/project/personal/notes')
 from remnote.reader_live import RemNoteReaderLive
 
 r = RemNoteReaderLive('/Users/han/remnote/remnote-62403c0f38b1150016221e9d/remnote.db')
@@ -39,7 +39,7 @@ finally:
 **Write** (requires sync_server up + plugin polling — see preflight below):
 
 ```python
-import sys; sys.path.insert(0, '/Users/han/project/life/notes/remnote-sync-plugin')
+import sys; sys.path.insert(0, '/Users/han/project/personal/notes/remnote-sync-plugin')
 from sync_client import RemNoteSyncClient
 
 c = RemNoteSyncClient()
@@ -61,10 +61,10 @@ curl -sS --max-time 2 http://127.0.0.1:9321/health    # sync_server (should retu
 curl -sS --max-time 2 -o /dev/null -w "%{http_code}\n" http://localhost:8080   # plugin dev server (200 if up)
 ```
 
-If either is down, **do not use launchctl** — the bundled `remnote-service.sh install` plists point to a stale path (`/Users/han/project/notes/...` without `life/`) and exit 78. Start manually:
+If either is down, **do not use launchctl** — the bundled `remnote-service.sh install` plists point to a stale path (`/Users/han/project/notes/...` instead of `personal/notes/`) and exit 78. Start manually:
 
 ```bash
-cd /Users/han/project/life/notes/remnote-sync-plugin
+cd /Users/han/project/personal/notes/remnote-sync-plugin
 nohup /Users/han/miniconda3/bin/python3 sync_server.py \
     > /tmp/remnote-sync-server.log 2> /tmp/remnote-sync-server.error.log &
 nohup /usr/local/bin/npm run dev \
@@ -178,7 +178,7 @@ Sending `'text': '[[Some Doc]]'` (a plain string) still stores the literal chara
 
 ### 7. Load a Linear board view into today's daily note (auto-numbered title)
 
-Use the bundled script `scripts/load_board_to_remnote.py`. It reads the active view from `/Users/han/project/life/linear_board_view/public/data/working_on/views.json`, summarizes the node tree (separating done items into "今日已完成"), creates a new top-level RemNote doc, and inserts `[[<title>]]` into today's daily note.
+Use the bundled script `scripts/load_board_to_remnote.py`. It reads the active view from `/Users/han/project/personal/linear_board_view/public/data/working_on/views.json`, summarizes the node tree (separating done items into "今日已完成"), creates a new top-level RemNote doc, and inserts `[[<title>]]` into today's daily note.
 
 ```bash
 python3 ~/.claude/skills/remnote/scripts/load_board_to_remnote.py
@@ -250,7 +250,7 @@ A **tag** (this workflow) is structurally distinct from a **reference child** (W
 
 - **Display order = `f`, not `o`/`p`/`y`.** `o`/`p`/`y` are creation-time timestamps; RemNote updates only `f` (a base-94 fractional-index string like `a0P`, `a2h`, `a2}`) when the user reorders blocks in the UI. Sort children by `f` string lex order to match what the user sees. `writer.py` and `live_api.py` don't set `f` at all, which is why their writes can land in unexpected positions — prefer the sync_client path.
 
-- **launchd plists are broken on this machine.** `com.han.remnote-sync-server.plist` and `com.han.remnote-plugin-dev.plist` reference `/Users/han/project/notes/...` (missing `life/`), so `launchctl` exits 78 silently. Manual `nohup` start works. Offer to fix the plists permanently only if the user asks — don't quietly rewrite them.
+- **launchd plists are broken on this machine.** `com.han.remnote-sync-server.plist` and `com.han.remnote-plugin-dev.plist` reference `/Users/han/project/notes/...` (should be `project/personal/notes/`), so `launchctl` exits 78 silently. Manual `nohup` start works. Offer to fix the plists permanently only if the user asks — don't quietly rewrite them.
 
 - **Plugin must be loaded AND polling.** The sync_server can queue commands forever; if the plugin in RemNote isn't loaded (bundle 404 because webpack dev server is down) or paused (the "Stop Live Sync" command was used), nothing happens. Test path before relying on `is_server_running()`: enqueue a no-op and poll `/pending` for ACK.
 
@@ -277,8 +277,8 @@ A **tag** (this workflow) is structurally distinct from a **reference child** (W
 ## See also
 
 - `scripts/load_board_to_remnote.py` (bundled) — end-to-end loader for the Linear board → RemNote daily-note flow. Reference implementation for `wait_drained`, `find_rem` (WAL-tolerant), `create_reference` (richText hack), and `next_letter_today`.
-- `/Users/han/project/life/notes/CLAUDE.md` — same machine, deeper detail on the three access patterns, the `remnote_to_todoist.py` task sync, and the Flomo sync.
-- `/Users/han/project/life/notes/remnote-sync-plugin/CLAUDE.md` — plugin internals (polling loop, command types, image compression).
-- `/Users/han/project/life/notes/remnote-sync-plugin/src/widgets/index.tsx` — plugin source; see the `create`/`update` cases to understand exactly how `cmd.text` / `cmd.newText` get passed to `rem.setText`.
-- `/Users/han/project/life/notes/remnote/{reader_live,writer,live_api}.py` — the three Python entry points.
-- `/Users/han/project/life/linear_board_view/AGENTS.md` — board-view app schema (`SnapshotFile`, `noteNodes`, `edges`, `issueMembers`) consumed by the bundled loader.
+- `/Users/han/project/personal/notes/CLAUDE.md` — same machine, deeper detail on the three access patterns, the `remnote_to_todoist.py` task sync, and the Flomo sync.
+- `/Users/han/project/personal/notes/remnote-sync-plugin/CLAUDE.md` — plugin internals (polling loop, command types, image compression).
+- `/Users/han/project/personal/notes/remnote-sync-plugin/src/widgets/index.tsx` — plugin source; see the `create`/`update` cases to understand exactly how `cmd.text` / `cmd.newText` get passed to `rem.setText`.
+- `/Users/han/project/personal/notes/remnote/{reader_live,writer,live_api}.py` — the three Python entry points.
+- `/Users/han/project/personal/linear_board_view/AGENTS.md` — board-view app schema (`SnapshotFile`, `noteNodes`, `edges`, `issueMembers`) consumed by the bundled loader.
