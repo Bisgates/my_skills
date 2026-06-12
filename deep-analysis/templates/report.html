@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{TITLE}}</title>
+
+<!--
+  deep-analysis report SKELETON.
+  Visual contract = light product-doc theme (shared with the arc templates):
+    - neutral light palette (keep all :root tokens)
+    - macOS system font stack, NO Google Fonts
+    - ZERO external CDN; all CSS in this one <style> block
+    - charts = inline SVG authored directly in the document (no chart.js / echarts)
+  The report must double-click open offline forever.
+
+  Tokens: {{TITLE}} {{SUBTITLE}} {{TYPE}} {{DATE}} {{CUTOFF}} {{SOURCES_ONELINE}}
+    TITLE   = 报告主标题（事实句，不设问）
+    SUBTITLE= 一行副题：报告回答的核心问题或口径
+    TYPE    = event | company | industry
+    DATE    = 生成日期 YYYY-MM-DD
+    CUTOFF  = 数据截止日期 YYYY-MM-DD
+    SOURCES_ONELINE = 主要信息来源一行（机构名顿号分隔）
+
+  Section spine (writer fills, numbering 01..N fixed by usage):
+    01 核心结论       mandatory — lede + metric 卡片 + 结论清单（先行，全文最重要）
+    02..N-1 分析正文  自由章节：数据总览 / 时间序列 / 分布拆解 / 机制分析 / 横向对比 / 情景与展望…
+    N  附录·来源      mandatory — 编号脚注全集：每条 = 来源名 + 直链 + 检索日期 + 一句该来源支撑了什么
+
+  Component menu (use what the content needs):
+    .metrics + .metric        头部关键数字卡
+    table.data                数据表（最后一列恒为「来源」，引脚注编号）
+    .callout                  说明块：.note(中性·数据口径) .finding(绿·关键发现) .warn(红·风险/反例)
+    figure.chart + inline SVG 图表（条形/折线手写 SVG；宽度 100%，viewBox 自适应）
+    .fn / ol.footnotes        正文上标引用 + 附录脚注列表
+-->
+
+<style>
+:root {
+  --bg:         #fafafa;
+  --card:       #ffffff;
+  --border:     #e4e4e7;
+  --border-hi:  #d4d4d8;
+  --ink:        #18181b;
+  --ink-soft:   #3f3f46;
+  --ink-faint:  #71717a;
+  --accent:     #5b5bd6;
+  --accent-bg:  #eeeefc;
+  --green:      #16a34a;
+  --green-bg:   #ecfdf3;
+  --blue:       #0369a1;
+  --blue-bg:    #e0f2fe;
+  --red:        #dc2626;
+  --red-bg:     #fef2f2;
+  --code-bg:    #f4f4f5;
+  --shadow:     0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.05);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 17.5px; line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+.mono, code, pre { font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace; }
+main { max-width: 980px; margin: 0 auto; padding: 58px 32px 100px; }
+
+/* Masthead */
+.masthead { margin-bottom: 42px; }
+.masthead .pills { display: flex; gap: 9px; margin-bottom: 18px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13.5px; font-weight: 500;
+  padding: 4px 12px; border-radius: 99px;
+  background: var(--accent-bg); color: var(--accent);
+}
+.pill.neutral { background: var(--code-bg); color: var(--ink-faint); }
+.pill .dot { width: 6px; height: 6px; border-radius: 99px; background: currentColor; }
+.masthead h1 { font-size: 36px; line-height: 1.22; margin: 0 0 9px; font-weight: 650; letter-spacing: -0.022em; }
+.masthead .deck { color: var(--ink-faint); font-size: 19px; }
+.masthead .meta { margin-top: 14px; font-size: 14.5px; color: var(--ink-faint); }
+.masthead .meta b { color: var(--ink-soft); font-weight: 600; }
+
+/* Section header */
+.sechead { display: flex; align-items: baseline; gap: 11px; margin: 50px 0 16px; }
+.sechead .idx { font-size: 15px; font-weight: 600; color: var(--accent); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.sechead h2 { font-size: 22px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+h3 { font-size: 18px; font-weight: 650; margin: 28px 0 10px; }
+
+section p { margin: 0 0 0.85em; }
+.lede { font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; line-height: 1.5; margin: 0 0 16px; }
+
+/* Card base */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; box-shadow: var(--shadow); }
+
+/* Metric cards */
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 16px 0; }
+.metric { background: var(--card); border: 1px solid var(--border); border-radius: 11px; box-shadow: var(--shadow); padding: 17px 20px; }
+.metric .num { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 650; font-size: 1.9rem; line-height: 1.1; color: var(--ink); }
+.metric .lbl { color: var(--ink-faint); font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 7px; }
+.metric .delta { font-size: 13.5px; font-weight: 550; margin-top: 6px; }
+.metric .delta-up { color: var(--green); }
+.metric .delta-down { color: var(--red); }
+
+/* Data tables — last column is always 来源 (footnote refs) */
+.card.tablewrap { padding: 6px 21px; margin: 16px 0; overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: 15px; }
+table.data th, table.data td {
+  text-align: left; padding: 10px 14px 10px 0;
+  border-top: 1px solid var(--code-bg); vertical-align: top; color: var(--ink-soft);
+}
+table.data tr:first-child th { border-top: 0; }
+table.data th { font-size: 12.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); }
+table.data td.num, table.data th.num { text-align: right; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; }
+table.data td b { color: var(--ink); font-weight: 650; }
+table.data tr.total td { border-top: 2px solid var(--border-hi); color: var(--ink); font-weight: 600; }
+
+/* Callouts */
+.callout { border-radius: 9px; padding: 13px 17px; margin: 16px 0; font-size: 15.5px; color: var(--ink-soft); }
+.callout .lead { font-weight: 650; margin-right: 6px; }
+.callout.note    { background: var(--code-bg);  border-left: 3px solid var(--border-hi); }
+.callout.finding { background: var(--green-bg); border-left: 3px solid var(--green); }
+.callout.finding .lead { color: var(--green); }
+.callout.warn    { background: var(--red-bg);   border-left: 3px solid var(--red); }
+.callout.warn .lead { color: var(--red); }
+
+/* Charts — inline SVG only */
+figure.chart { margin: 20px 0; padding: 18px 21px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 11px; box-shadow: var(--shadow); }
+figure.chart svg { width: 100%; height: auto; display: block; }
+figure.chart figcaption { font-size: 13.5px; color: var(--ink-faint); margin-top: 10px; }
+figure.chart figcaption .src { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+
+/* Footnote refs in body */
+sup.fn a { color: var(--accent); font-size: 0.72em; font-weight: 600; text-decoration: none; padding: 0 1px; }
+
+/* Appendix footnotes */
+ol.footnotes { margin: 13px 0; padding-left: 1.6em; font-size: 14.5px; color: var(--ink-soft); }
+ol.footnotes li { margin: 0.5em 0; }
+ol.footnotes li .srcname { font-weight: 600; color: var(--ink); }
+ol.footnotes li .date { color: var(--ink-faint); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+
+/* Inline */
+code { font-size: 0.86em; background: var(--code-bg); padding: 0.12rem 0.38rem; border-radius: 5px; color: var(--ink-soft); }
+a { color: var(--accent); text-decoration: none; }
+strong { font-weight: 600; }
+ul, ol { padding-left: 1.4em; }
+ul li, ol li { margin: 0.35em 0; }
+blockquote { margin: 16px 0; padding: 10px 18px; border-left: 3px solid var(--border-hi); color: var(--ink-faint); font-size: 15.5px; }
+
+footer.colophon {
+  max-width: 980px; margin: 0 auto; padding: 18px 32px 50px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px; color: var(--ink-faint);
+}
+</style>
+</head>
+<body>
+
+<main>
+
+  <header class="masthead">
+    <div class="pills">
+      <span class="pill"><span class="dot"></span>deep-analysis</span>
+      <span class="pill neutral">{{TYPE}}</span>
+      <span class="pill neutral">数据截止 {{CUTOFF}}</span>
+    </div>
+    <h1>{{TITLE}}</h1>
+    <div class="deck">{{SUBTITLE}}</div>
+    <div class="meta"><b>主要信息来源：</b>{{SOURCES_ONELINE}}</div>
+  </header>
+
+  <!-- 01 核心结论 — lede 一句话定调；metric 卡放 3-5 个全报告最硬的数字；
+       结论清单 3-6 条，每条一句话 + 脚注引用。结论先行，正文只是展开。 -->
+  <div class="sechead"><span class="idx">01</span><h2>核心结论</h2></div>
+  <section>
+    <p class="lede"><!-- FILL --></p>
+    <div class="metrics">
+      <!-- FILL: 3-5 个 metric 卡
+      <div class="metric">
+        <div class="num">2,410</div>
+        <div class="lbl">弹道导弹总发射量（前10天）</div>
+        <div class="delta delta-down">↓ 95% vs 首日</div>
+      </div> -->
+    </div>
+    <ul>
+      <!-- FILL: 结论清单，每条尾随脚注 <sup class="fn"><a href="#fn1" id="r1">1</a></sup> -->
+    </ul>
+  </section>
+
+  <!-- 02..N-1 分析正文 — 章节按内容需要自由组织，常用骨架：
+       数据总览 → 时间序列/分布拆解 → 机制分析 → 横向对比 → 情景与展望。
+       每章: 数据表(来源列) / 图(inline SVG) / callout 穿插；每个关键主张句带脚注。 -->
+  <div class="sechead"><span class="idx">02</span><h2><!-- FILL: 章题=内容摘要 --></h2></div>
+  <section>
+    <!-- FILL -->
+  </section>
+
+  <!-- N 附录·来源 — 全部编号脚注；每条:来源名+直链+检索日期+支撑了什么 -->
+  <div class="sechead"><span class="idx">N</span><h2>附录 · 来源</h2></div>
+  <section>
+    <ol class="footnotes">
+      <!-- FILL:
+      <li id="fn1"><span class="srcname">Jerusalem Post</span> — <a href="URL">URL</a> <span class="date">检索 2026-06-11</span>：支撑逐日导弹发射量序列。 <a href="#r1">↩</a></li> -->
+    </ol>
+  </section>
+
+</main>
+
+<footer class="colophon">
+  <span>deep-analysis · {{TYPE}}</span>
+  <span>生成 {{DATE}} · 数据截止 {{CUTOFF}}</span>
+</footer>
+
+</body>
+</html>
