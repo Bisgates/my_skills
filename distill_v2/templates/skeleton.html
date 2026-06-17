@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+
+<!-- KaTeX (vendored, woff2 base64-inlined) for light-DOM math + @font-face registration -->
+{{KATEX_HEAD_CSS}}
+<!-- KaTeX layout CSS for d-math shadow roots (font-face stripped; fonts are global) -->
+<template id="katex-shadow-css">{{KATEX_SHADOW_CSS}}</template>
+
+<style>
+/* author CSS (labs / figures) — distill-compatible */
+{{EXTRA_CSS}}
+</style>
+</head>
+<body>
+
+<d-front-matter>
+<script type="text/json">
+{{FRONTMATTER}}
+</script>
+</d-front-matter>
+
+<d-article>
+{{CONTENT}}
+</d-article>
+
+<d-appendix>
+{{APPENDIX}}
+</d-appendix>
+
+<d-bibliography>
+<script type="text/bibtex">
+{{BIBLIOGRAPHY}}
+</script>
+</d-bibliography>
+
+<!-- vendored runtime: KaTeX first (defines window.katex), then the patched template -->
+<script>{{KATEX_JS}}</script>
+<script>{{TEMPLATE_JS}}</script>
+
+<!-- author lab scripts -->
+<script>{{LABS_JS}}</script>
+
+</body>
+</html>

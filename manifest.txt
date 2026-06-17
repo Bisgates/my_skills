@@ -16,3 +16,4 @@ spark
 distill
 extract-wisdom-to-skill
 deep-analysis
+distill_v2
