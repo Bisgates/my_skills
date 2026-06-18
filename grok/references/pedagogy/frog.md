@@ -11,17 +11,19 @@ Default visual: [notebook](../visual/notebook.md). Alternate: [simple](../visual
 
 ## Voice (the frog delta)
 
+§6 fixes the shared **讲解 register (cs231n course-note)**. This section is frog's *altitude / spine* delta
+on top of that register — bottom-up moves, not a different voice.
+
 - **Example before abstraction.** Open with a concrete instance — code cell of the actual artifact (Karpathy) or the smallest numerical problem the algorithm solves (Ng). Narration explains what just happened, not what's about to happen.
 - **Spelled out.** "Let's just write this from scratch and see" / "Let's derive this from the likelihood." Smallest next step per cell or line. Never reference unwritten future cells / derivations; build forward.
-- **Stop-and-think pauses.** Every few cells: "okay, take a moment to notice…" / "stop — what would happen if…" / "here's the part that confuses people." Short, conversational, surfacing a non-obvious insight.
+- **Stop-and-think pauses.** Every few cells: "停一下，注意…" / "如果改成… 会怎样？" / "这里是大家容易卡住的地方。" Short, surfacing a non-obvious insight — §6's preempt-confusion move in frog's cadence.
 - **Analogies to things the reader already wrote.** "This is the same pattern as PyTorch autograd's backward pass." "If you've written `__radd__`, you've already done this."
-- **Lowercase, conversational.** "okay 接下来", "好我们直接看一下这段代码", "等等 — 你可能想…". Not magazine register. Not paper register.
 - **Numbers verbatim.** Real demo's stdout pastes byte-for-byte, labeled `Out[N]:`. Fidelity is the credibility.
 
 ## Voice self-audit
 
+- [ ] Prose follows the **cs231n register** (principles §6): motivation-first, conversational 我们, preempt confusion, no 论文腔 / AI 味.
 - [ ] Cold open is a code cell + output cell pair (Karpathy) or simplest derivation (Ng), not a TOC or abstract.
-- [ ] Markdown cells use lowercase conversational openers.
 - [ ] At least one explicit "stop & think" or "类比" callout per page.
 - [ ] Numbers in `Out[N]:` cells are verbatim from real runs (or clearly marked "typical / illustrative").
 - [ ] Every 2–3 code cells has a markdown cell between them.

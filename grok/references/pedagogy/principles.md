@@ -53,21 +53,32 @@ Skip or mention briefly: standard backprop / Adam / SGD / LayerNorm; vanilla sel
 
 Spend the page on the source's key insight, the new mechanism, why only this design works.
 
-## 6 · 反论文腔
+## 6 · 讲解口吻 = cs231n course-note register
 
-Artifact language: Chinese.
+The shared teaching voice for every pack (bird / frog / guest), modeled on the cs231n course notes
+(<https://cs231n.github.io/>, e.g. `optimization-1`). This is a **register, orthogonal to altitude** — it
+does not change *what* bird (top-down) or frog (bottom-up) cover, only *how* the prose reads. Artifact
+language: Chinese. The reader should be able to read a page top to bottom and *understand*, because the
+prose teaches rather than states:
 
-Banned phrases (search and remove before shipping):
+- **Motivation-first.** Open a unit by recapping where we are, naming the role this piece plays, and
+  foreshadowing where it leads — then introduce it.
+- **Conversational but authoritative.** Inclusive "我们" / "你会发现" / "试着想一下"; openly flag the
+  subtle or odd points ("这里看起来奇怪，因为…") instead of hiding them.
+- **Intuition before formalism.** Every new term/formula gets a one-line intuition before the symbol — a
+  concrete instance, a number, or a pedagogical analogy (cs231n's hiker-on-a-hill is fair game; keep it
+  tied to the mechanism, don't let it drift into literary flourish).
+- **Signpost the core, recap the section.** Name the principle before the details (a 「核心思想：…」 line)
+  and close a section with a short plain-Chinese recap of what shifted — not a 论文 "综上所述".
+- **Preempt confusion.** Anticipate the reader's likely objection or terminology snag and resolve it in
+  line ("你可能会问为什么…—…").
+- **Reasoning glue.** Connect each step to the last (问题在于… / 因此… / 注意… / 关键在于… / 反过来看…);
+  the glue carries the dependency between steps, so it is information, not filler.
+- **Sentence rhythm.** Long and short alternate; no paragraph longer than 5–6 lines.
 
-> 本文提出 / 综上所述 / 基于以上分析 / 不失一般性 / 值得注意的是 / 显然地 / 与此同时 / 据此可知 / 由上可见
-
-Pacing. Long and short sentences alternate. Rhetorical questions, metaphors, colloquial pivots ("换句话说" / "问题来了" / "听起来很玄, 其实……" / "注意一个微妙的点"). No paragraph runs longer than 5–6 lines.
-
-Intuition before formalism. Every new term gets a one-line intuition anchor before its definition or formula.
-
-First and second person allowed. "我们" / "你会发现" / "试着想一下".
-
-去 AI 味。 少用"不是 X，而是 Y"对仗句式；避开"值得深思 / 综合来看 / 让我们一起 / 总而言之"等模型口头禅；避开整齐到僵硬的并列、过度收尾总结。
+去 论文腔 / AI 味 (search and remove before shipping): 本文提出 / 综上所述 / 基于以上分析 / 不失一般性 / 值得
+注意的是 / 显然地 / 据此可知; the "不是 X，而是 Y" 对仗 (≤1–2 处); 值得深思 / 综合来看 / 让我们一起 / 总而言
+之; 僵硬并列与过度收尾。Density = information per sentence; let a sentence run as long as the reasoning needs.
 
 ## 7 · Color-coded variables
 

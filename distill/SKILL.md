@@ -78,6 +78,7 @@ The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the vi
 - [ ] Open your own JS and confirm each interaction's on-screen number comes from the formula beside it (no pre-rendered blend, no hardcoded result, no perturbed ground truth).
 - [ ] ≥6 interactions, ≥1 break-it demo, most reader-driven (rubric ③).
 - [ ] Key results derived, not asserted; edge cases shown (rubric ②).
+- [ ] **Voice = cs231n register** (principles.md §4): motivation-first, conversational 我们, 「核心思想」 signpost, preempt confusion, section recap; no 论文腔 / AI 味.
 - [ ] Cold open is begin-with-why; every concept has a napkin worked example first; quiz present (rubric ④).
 - [ ] **Quiz integrity**: each `.quiz` has exactly one `data-correct="1"` matching the `.fb` explanation. The skeleton's validator console-warns + outlines violators — open the console during QA. (Easy to introduce, invisible until clicked.)
 - [ ] **Math renders & fits**: no raw `$$`/`$` left on the page (every block matched — a leftover usually means a raw `<`/`>` inside the formula; use `\lt \gt \le \ge`); no formula overflows the reading column on desktop or mobile. The skeleton outlines unrendered blocks in dashed red — open the console during QA.

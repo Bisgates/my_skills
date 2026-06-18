@@ -224,6 +224,7 @@ Two failure modes show up: **blank canvas** and **blurry / stretched canvas**. B
 Run alongside the style-specific checklist in the loaded pedagogy / visual specs.
 
 **Writing**
+- [ ] Prose is in the **cs231n register** (pedagogy/principles.md §6): motivation-first, conversational 我们, 「核心思想」 signpost, preempt confusion, section recap — applied within the active pack's altitude (bird/frog), not flattening it.
 - [ ] Cold open is **begin-with-why** (predicament + naive + fatal flaw + prior comparison). Not "overview of our method."
 - [ ] Every new concept has a **worked example** with napkin-redoable numbers, preceding the abstraction.
 - [ ] No paper-boilerplate phrases (本文 / 综上 / 不失一般性 / 显然地).

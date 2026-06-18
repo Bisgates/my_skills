@@ -26,7 +26,7 @@ Count **and** quality: does each interaction let the reader drive a cause and se
 - **1** — few or only decorative interactions.
 
 ### ④ Teaching clarity — 16
-- **5** — begin-with-why cold open; a napkin worked example before each abstraction; quiz/checkpoints; no filler phrasing.
+- **5** — begin-with-why cold open; a napkin worked example before each abstraction; quiz/checkpoints; reads in the cs231n register (motivation-first, conversational, 「核心思想」 signposts, preempts confusion); no filler phrasing.
 - **3** — clear but flat opening; examples occasional; no self-test.
 - **1** — definition dump, no motivation, no examples.
 

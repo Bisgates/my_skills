@@ -20,6 +20,8 @@ Depth is the difference between stating a result and showing where it comes from
 
 Open on the predicament: what was the field stuck on, what's the naive thing to try, why does it fail? That tension makes the mechanism land. For each new concept, give a napkin-sized worked example with tiny concrete numbers before the general formula, so the reader anchors on the instance then generalizes. Chain it: end each section by creating the problem the next one solves.
 
+**Voice — the cs231n course-note register** (<https://cs231n.github.io/>, e.g. `optimization-1`): the prose teaches rather than states. Motivation-first (recap where we are → name this piece's role → foreshadow); conversational but authoritative ("我们", openly flagging the subtle points instead of hiding them); intuition before every formula (a concrete number or a pedagogical analogy, kept tied to the mechanism); name the core idea before the details (a 「核心思想：…」 line) and recap a section in plain Chinese; preempt the reader's likely question in line; connect each step to the last (问题在于… / 因此… / 注意… / 关键在于…). No 论文腔 / AI 味; no paragraph past 5–6 lines; density = information per sentence.
+
 ## 5. Reading scaffolding makes it feel complete (and is cheap)
 
 The layer that separates a polished report from a wall of text: a scroll-progress bar, a scroll-spy chapter nav, a comfortable reading column (~760–820px), semantic callouts, numbered equations each with a one-line plain-language gloss, clean math rendering. None of it is hard; together it reads as care. A self-test quiz turns passive reading into a checkpoint.
