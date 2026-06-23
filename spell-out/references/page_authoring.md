@@ -53,6 +53,16 @@ Every math symbol the reader sees is KaTeX: equations, **lab readouts, control l
 section titles, lab headers**. Never literal `√ᾱ_t` / `ε_θ` / `β_max`. Inside colored `<span class="y">`
 the KaTeX glyphs inherit the span color, so `<span class="y">调度 $\bar\alpha$</span>` renders gold.
 
+**Escape `<` and `>` inside math — always (the #1 silent formula-breaker).** The browser parses HTML
+*before* KaTeX runs, so a bare `<` in `$…$`/`$$…$$` (e.g. `0<s<m-1`, `0\le i,j,k<m`, `m>2`) is read as a
+tag start — `<s`, `<m` become phantom elements — which **corrupts that formula *and every formula after
+it*** until the parser recovers (this looks like "好多公式都坏了" from a single stray `<`). Write `\lt` /
+`\gt` (or the entities `&lt;` / `&gt;`), never raw `<` / `>`. Prefer the relation macros `\lt \le \ge \gt`;
+for integer bounds it's often cleanest to drop the `<` entirely, e.g. `0<s<m-1` → `1\le s\le m-2`.
+**Verify before shipping:** the `<`/`>` glitch passes any kernel check (it's pure rendering), so it must
+be caught separately — grep the finished page for raw `<`/`>` inside `$`-delimited spans, and if `node`
+has `katex`, render every `$…$`/`$$…$$` segment with `{throwOnError:true}` and assert zero failures.
+
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
