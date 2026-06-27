@@ -24,6 +24,7 @@ Common natural-language triggers (Chinese verbatim, kept here so trigger matchin
 - **`abandoned` hard gate:** `--reason "..."` is required.
 - **`delete` is a hard delete (no trace preserved):** `arc delete <id>` runs `rm -rf` on the canonical dir, removes every view symlink, and rebuilds the index — no confirmation, no gate. If you want to preserve a paper trail, use `arc abandon`; if you want it gone entirely, use `arc delete`.
 - **Multiple `active` arcs are allowed:** each terminal's cwd expresses its own focus; `resume` does not auto-pause anything else.
+- **Historical arcs are immutable:** never modify a past arc's code or info in place — a finished arc is a frozen trace; read it freely, never write into it. To reuse an old arc's functionality: if it was never promoted (落盘) to the main project, promote the (new) version into the project and reference *that*; if you only need to borrow, copy the code into the current arc and edit the copy. Reaching into another arc's directory to mutate it — to "fix", "improve", or repoint it — is a bug, not a shortcut.
 
 ## File layout
 
