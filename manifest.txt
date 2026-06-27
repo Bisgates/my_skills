@@ -18,3 +18,4 @@ extract-wisdom-to-skill
 deep-analysis
 distill_v2
 spell-out
+web-reach
