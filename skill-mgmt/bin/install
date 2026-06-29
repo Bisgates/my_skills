@@ -3,17 +3,15 @@
 # ~/.claude/skills/<name>, ~/.codex/skills/<name>, and
 # ~/.gemini/antigravity/skills/<name>.
 #
-# With no args, installs every manifest entry plus dependency closure, then
-# every generated knowledge skill under <repo>/wisdom/. With args, installs
-# only the named skills plus their dependency closure; a name with no
-# top-level dir falls back to <repo>/wisdom/<name>. Idempotent. Skips path
-# conflicts (real dirs / wrong-target symlinks) with a warning.
+# With no args, installs every manifest entry plus dependency closure. With
+# args, installs only the named skills plus their dependency closure.
+# Idempotent. Skips path conflicts (real dirs / wrong-target symlinks) with a
+# warning.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MANIFEST="$REPO/manifest.txt"
-WISDOM_DIR="$REPO/wisdom"
 TARGETS=(
   "$HOME/.claude/skills"
   "$HOME/.codex/skills"
@@ -75,57 +73,28 @@ link_skill() {
 }
 
 requested=()
-wisdom_requested=()
 if [[ $# -gt 0 ]]; then
   for name in "$@"; do
-    if [[ ! -d "$REPO/$name" && -d "$WISDOM_DIR/$name" ]]; then
-      wisdom_requested+=("$name")
-    else
-      requested+=("$name")
-    fi
+    requested+=("$name")
   done
 else
   while IFS= read -r name || [[ -n "$name" ]]; do
     requested+=("$name")
   done < <(skill_mgmt_manifest_skills "$MANIFEST")
-  if [[ -d "$WISDOM_DIR" ]]; then
-    for d in "$WISDOM_DIR"/*/; do
-      [[ -d "$d" ]] || continue
-      wisdom_requested+=("$(basename "${d%/}")")
-    done
-  fi
 fi
 
-if [[ "${#requested[@]}" -eq 0 && "${#wisdom_requested[@]}" -eq 0 ]]; then
+if [[ "${#requested[@]}" -eq 0 ]]; then
   echo "install: no skills requested" >&2
   exit 1
 fi
 
-if [[ "${#requested[@]}" -gt 0 ]]; then
-  skill_mgmt_resolve_install_set "${requested[@]}"
-  for name in ${skill_mgmt_install_names[@]+"${skill_mgmt_install_names[@]}"}; do
-    link_skill "$name" "$name"
-  done
-  if [[ "${#skill_mgmt_install_names[@]}" -ne "${#requested[@]}" ]]; then
-    echo "install: requested ${#requested[@]}, resolved ${#skill_mgmt_install_names[@]} including dependencies"
-  fi
-fi
-
-# Wisdom skills live under <repo>/wisdom/<name> and are linked by
-# basename, not via manifest.txt.
-for name in ${wisdom_requested[@]+"${wisdom_requested[@]}"}; do
-  if ! skill_mgmt_valid_name "$name"; then
-    echo "WARN: invalid wisdom skill name '$name'; skipping" >&2
-    warned=$((warned + 1))
-    continue
-  fi
-  if [[ ! -f "$WISDOM_DIR/$name/SKILL.md" ]]; then
-    echo "WARN: wisdom/$name has no SKILL.md; skipping" >&2
-    warned=$((warned + 1))
-    continue
-  fi
-  link_skill "wisdom/$name" "$name"
+skill_mgmt_resolve_install_set "${requested[@]}"
+for name in ${skill_mgmt_install_names[@]+"${skill_mgmt_install_names[@]}"}; do
+  link_skill "$name" "$name"
 done
+if [[ "${#skill_mgmt_install_names[@]}" -ne "${#requested[@]}" ]]; then
+  echo "install: requested ${#requested[@]}, resolved ${#skill_mgmt_install_names[@]} including dependencies"
+fi
 
 echo "install: $linked new, $skipped already-correct, $warned warnings"
 

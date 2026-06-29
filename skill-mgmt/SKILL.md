@@ -17,7 +17,6 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 - A skill may declare runtime dependencies in `SKILL.md` frontmatter with `dependencies:` (also accepted: `depends_on:` or `requires:`). Installing a skill installs its recursive dependency closure first.
 - Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
 - Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`.
-- **Wisdom skills** — knowledge skills compiled from books/documents — live under `<repo>/wisdom/<name>/`, not at the repo root and not in `manifest.txt`. `bin/install` auto-discovers every `wisdom/*/` dir containing a SKILL.md and links it by basename into the same runtime targets; since sync is plain git, `bin/sync` picks new ones up automatically.
 - **Project-local skills** under `<project>/.claude/skills/<name>/` are a separate category: Claude Code picks them up project-scoped (no symlinks), they do not belong in `manifest.txt`, and the `install / sync / adopt / new` ops do not apply. Only the **Edit** path (Op 5) applies, and commits land in the project's own git repo. See [Repo-local skills](#repo-local-skills).
 
 ## Conventions
@@ -52,9 +51,6 @@ Editing the content of an existing skill is in scope but takes the **Edit** path
 Reads `<repo>/manifest.txt` when no names are passed. When names are passed, treats those names as the requested install set. In both modes it resolves recursive dependencies declared in each skill's frontmatter before linking.
 
 For every resolved skill name, ensures `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, and `~/.gemini/antigravity/skills/<name>` are symlinks → `<repo>/<name>`. Idempotent: existing correct symlinks are skipped; conflicts (real dirs at the target) are warned, not overwritten — the user must run `bin/adopt` or manually move them.
-
-Wisdom skills are linked in the same pass: with no args, every `<repo>/wisdom/*/` dir containing a SKILL.md is linked by basename (`~/.claude/skills/<name>` → `<repo>/wisdom/<name>`); with args, a name with no top-level dir falls back to `wisdom/<name>`. Wisdom skills carry no dependency closure and never enter `manifest.txt`.
-
 ### Op 2 — Sync (pull remote, refresh symlinks)
 
 ```bash
@@ -162,7 +158,6 @@ After successful modifying operations (`new`, `adopt`, and any direct skill edit
 - Blank lines and `# comments` are ignored
 - **Line 1 must be `skill-mgmt`** — enforces self-management invariant
 - Same manifest is shared across all machines; per-machine subsetting is a non-goal
-- Wisdom skills (`wisdom/<name>/`) are deliberately absent — `install` auto-discovers them from the directory itself
 
 ## Gotchas
 
