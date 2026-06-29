@@ -1,6 +1,6 @@
 ---
 name: spark
-description: Pre-implementation design dialogue — turn a fresh idea into a user-approved written design doc before any code is written. Use when the user says "I want to build X", "help me design Y", "let's spec out Z", "brainstorm with me", "/spark", "先把这个想清楚", or is about to start a new feature / component / script / behavior change without an explicit design. Workflow — explore project context, ask one question at a time, propose 2-3 approaches, present the design in sections, write the spec to docs/specs/YYYY-MM-DD-<topic>.md, user reviews, then hand off to planning. Gate before that is done — no implementation code, no scaffolding, no project bootstrap. Distinct from grill-me / grill-with-docs (stress-test an existing plan) and qa (clarify vague thinking without producing a spec).
+description: Pre-implementation design dialogue — turn a fresh idea into a user-approved written design doc before any code is written. Use when the user says "I want to build X", "help me design Y", "let's spec out Z", "brainstorm with me", "/spark", "先把这个想清楚", or is about to start a new feature / component / script / behavior change without an explicit design. Workflow — explore project context, ask one question at a time, propose 2-3 approaches, present the design in sections, write the spec to docs/specs/YYYY-MM-DD-<topic>.md, user reviews, then hand off to planning. Gate before that is done — no implementation code, no scaffolding, no project bootstrap. Distinct from grill-me / grill-with-docs (stress-test an existing plan).
 ---
 
 # Spark — design before code
@@ -112,7 +112,6 @@ Do not invoke implementation skills (`frontend-design`, `3dgs_exp_report`, etc.)
 
 ## How spark differs from sibling skills
 
-- `qa` clarifies vague thinking through questions, but doesn't produce a spec artifact. Use `qa` when the user is still figuring out what they want; switch to spark when they're ready to commit to building something.
 - `grill-me` / `grill-with-docs` stress-test an *existing* plan or design. Spark produces the design that those skills can later challenge. Order: `spark` → spec → (optional) `grill-me` → plan → code.
 - `gsd:discuss-phase` is the gsd-workflow equivalent for a phase already on the roadmap. Spark is upstream of that — it produces the spec that becomes the phase.
 - `grill-with-docs` already incorporates project docs (CONTEXT.md, ADRs); spark assumes you don't yet have a stable enough idea for those docs to apply.
