@@ -17,7 +17,7 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 - A skill may declare runtime dependencies in `SKILL.md` frontmatter with `dependencies:` (also accepted: `depends_on:` or `requires:`). Installing a skill installs its recursive dependency closure first.
 - Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
 - Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`.
-- **Wisdom skills** — knowledge skills generated from books/documents by [extract-wisdom-to-skill](../extract-wisdom-to-skill/SKILL.md) — live under `<repo>/wisdom/<name>/`, not at the repo root and not in `manifest.txt`. `bin/install` auto-discovers every `wisdom/*/` dir containing a SKILL.md and links it by basename into the same runtime targets; since sync is plain git, `bin/sync` picks new ones up automatically.
+- **Wisdom skills** — knowledge skills compiled from books/documents — live under `<repo>/wisdom/<name>/`, not at the repo root and not in `manifest.txt`. `bin/install` auto-discovers every `wisdom/*/` dir containing a SKILL.md and links it by basename into the same runtime targets; since sync is plain git, `bin/sync` picks new ones up automatically.
 - **Project-local skills** under `<project>/.claude/skills/<name>/` are a separate category: Claude Code picks them up project-scoped (no symlinks), they do not belong in `manifest.txt`, and the `install / sync / adopt / new` ops do not apply. Only the **Edit** path (Op 5) applies, and commits land in the project's own git repo. See [Repo-local skills](#repo-local-skills).
 
 ## Conventions
@@ -176,6 +176,5 @@ After successful modifying operations (`new`, `adopt`, and any direct skill edit
 ## See also
 
 - `<repo>/write-a-skill/SKILL.md` — authoring guide (mandatory read for Op 4 New and Op 5 Edit)
-- `<repo>/extract-wisdom-to-skill/SKILL.md` — generates the knowledge skills under `<repo>/wisdom/`
 - Upstream reference: [anthropics/skills · skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) — original source of most authoring rules; also ships an automated eval / description-optimization harness we don't currently mirror
 - `<repo>/README.md` — repo overview and bootstrap instructions
