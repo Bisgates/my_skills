@@ -78,7 +78,7 @@ prose teaches rather than states:
 
 去 论文腔 / AI 味 (search and remove before shipping): 本文提出 / 综上所述 / 基于以上分析 / 不失一般性 / 值得
 注意的是 / 显然地 / 据此可知; the "不是 X，而是 Y" 对仗 (≤1–2 处); 值得深思 / 综合来看 / 让我们一起 / 总而言
-之; 僵硬并列与过度收尾。Density = information per sentence; let a sentence run as long as the reasoning needs.
+之; 僵硬并列与过度收尾; **自证式可信度表演** —— 只在向读者担保"作者没瞎编 / 这是真的 / 就写在那儿"、不携带任何关于主题的信息的句子（"这句话不是我编的，它就刻在 X 的权重名字里" / "答案就藏在名字里" / "这不是巧合" / "你没看错"），一律删；读者的信任靠内容本身赢得，不靠句子替自己作证。Density = information per sentence; let a sentence run as long as the reasoning needs.
 
 ## 7 · Color-coded variables
 

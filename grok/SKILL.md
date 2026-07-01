@@ -228,7 +228,7 @@ Run alongside the style-specific checklist in the loaded pedagogy / visual specs
 - [ ] Cold open is **begin-with-why** (predicament + naive + fatal flaw + prior comparison). Not "overview of our method."
 - [ ] Every new concept has a **worked example** with napkin-redoable numbers, preceding the abstraction.
 - [ ] No paper-boilerplate phrases (本文 / 综上 / 不失一般性 / 显然地).
-- [ ] AI 味自检: "不是 X，而是 Y" 对仗不超过 1–2 处; 没有"值得深思 / 综合来看 / 让我们一起 / 总而言之".
+- [ ] AI 味自检: "不是 X，而是 Y" 对仗不超过 1–2 处; 没有"值得深思 / 综合来看 / 让我们一起 / 总而言之"; 没有**自证式可信度表演**（"这句话不是我编的，就刻在权重名字里" / "答案藏在名字里" / "这不是巧合" / "你没看错"——只替自己作证、不带信息的句子）.
 - [ ] No paragraph longer than 5–6 lines.
 - [ ] Every new term gets a one-line intuition anchor before its definition.
 - [ ] Recurring variables are color-coded; same hex across formulas, SVG, prose.
