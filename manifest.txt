@@ -11,7 +11,6 @@ video2html
 remnote
 use_codex
 tester
-spark
 distill
 deep-analysis
 distill_v2
