@@ -78,7 +78,7 @@ Craft rules:
 
 - Render check: load the file in headless Chrome via playwright with `channel: 'chrome'` (system Chrome; `playwright install` hangs on mainland networks) and screenshot; a broken CDN load or JS error gets fixed before delivery.
 - Audit: every chart series traces to a `_drafts/` JSON or note; every footnote URL is well-formed; the breadth matrix has no thin rows — a row visibly thinner than its siblings goes back to step 2.
-- Deliver: the single HTML path plus a 3-sentence summary of what was found. Findings, never a re-narration of the pipeline.
+- Deliver: open the finished file in the user's default browser (`open <path>` on macOS, `xdg-open` on Linux) — the report is the deliverable, so hand it over already launched; this is the "build + launch, then let the user judge" handoff, not driving the UI. Skip the open only when the session is headless/remote or the user asked not to. Then give the single HTML path plus a 3-sentence summary of what was found. Findings, never a re-narration of the pipeline.
 
 ## Gotchas
 
