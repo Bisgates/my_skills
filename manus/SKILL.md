@@ -68,6 +68,7 @@ Write the full Chinese HTML in one pass from plan + notes + computed JSON.
 
 Craft rules:
 
+- 版式与字号：正文阅读列约束到 `max-width: 720px` 居中（书本行宽，比整幅容器窄约 1/3，长文更好读）；正文字号 `18px`、行高 `1.7`。宽元素——全景矩阵表格、图表、代码块——突破正文列，用更宽的容器（≤ 1080px）居中，不受 720px 约束。文字部分窄、数据部分宽，是这条规则的全部意图。
 - 结论先行；标题即论点；句句带新信息；形容词必配基线数字。
 - 零解码中文：禁比喻绰号、禁排比对仗、禁武侠/游戏隐喻 — the reader decodes nothing.
 - Interactivity must earn its keep: sortable matrix, tooltips, series toggles. Interaction that shows the same information fancier gets cut.
