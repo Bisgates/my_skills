@@ -52,6 +52,7 @@ Prefer English-language sources; fall back to Chinese sources for China-only sub
 - **Breadth (≥8 similar items)**: one `general-purpose` sub-agent per item, `model: "sonnet"` (web-crawl work is the token hog and the least tier-sensitive step). Concurrency ≤2 — parallel sessions share one rate-limit pool; queue the rest. Every agent returns the SAME schema: `field | value | source URL | access date`. The uniform schema is what makes every row of the final matrix equally deep.
 - **Depth (research mode, few items)**: 2–4 axis agents dispatched in one message — quant/timeline, mechanism/actors, counter-case. The counter-case axis is mandatory: a research report that never steelmans the opposing read caps its own credibility.
 - **Teaching**: read the actual source (PDF, code, docs) directly; fetch 2–3 secondary sources for contrasts and concrete numbers. Basics the user already knows (backprop / Adam / plain attention) get one line; budget goes to what is genuinely new.
+- **Community voice (research mode)**: when the question turns on what real users or practitioners actually experience — reception, pain points, firsthand comparisons, sentiment, controversy — articles and vendor pages flatten that signal. Go to Reddit and X for primary voices via the `agy-reach` skill (it reads both past their logged-out walls, no cookies/API) and cite the threads/posts like any other source. In breadth runs this is a per-item field (community sentiment + a representative quote + URL); in depth runs it feeds the mechanism and counter-case axes.
 
 Save every agent's result to `_drafts/notes_*.md` before moving on — sub-agent output that lives only in conversation is lost to compaction.
 
@@ -89,6 +90,7 @@ Craft rules:
 
 ## See also
 
+- `agy-reach` — reach Reddit/X for firsthand community voice during Gather (step 2), past their logged-out walls.
 - `deep-analysis` — 调研报告 asked without manus framing; zero-CDN, offline-forever, forensic-report rubric.
 - `grok` / `distill_v2` / `spell-out` — the learn_with_agent explainer family.
 - `dataviz` (harness skill) — read before authoring any chart code or choosing chart colors.
