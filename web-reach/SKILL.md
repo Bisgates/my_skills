@@ -1,18 +1,19 @@
 ---
 name: web-reach
 description: >-
-  Fetch and search content on platforms the built-in tools can't reach — Reddit,
-  X/Twitter, 小红书 (Xiaohongshu), YouTube, Bilibili — plus web pages, RSS feeds,
-  and GitHub. Each platform is routed to its working backend (yt-dlp, gh,
-  twitter-cli, rdt, Jina Reader, …) through the local clash proxy, reusing the
-  user's existing browser login for auth-gated sites. Use when the user shares a
-  reddit.com / x.com / twitter.com / xiaohongshu.com / youtube.com /
-  bilibili.com / github.com link, or asks to look something up, search, "see
-  what people are saying", get a video's transcript/captions, or pull
-  posts/comments/threads from those platforms. For gated platforms it reads login
-  cookies from the local Chrome profile (they stay on the machine, never
-  uploaded). Do NOT use for plain web search the built-in WebSearch already
-  handles, nor for multi-source fact-checked research reports (use deep-research).
+  Fetch and search platform content that needs the user's logged-in browser
+  session or a specialized backend — keyword-search on X/Twitter, 小红书
+  (Xiaohongshu) and Bilibili feeds, RSS, GitHub, and clean web-page reads via
+  Jina Reader. Each platform routes to its working backend (twitter-cli, rdt,
+  yt-dlp, gh, Jina, …) through the local clash proxy, reading login cookies from
+  the local Chrome profile for auth-gated sites (cookies stay on the machine).
+  Use when the user shares a xiaohongshu.com / bilibili.com / github.com link or
+  an RSS feed, wants to keyword-search X, or needs logged-in / gated content a
+  logged-out reader can't reach. For a plain logged-out read of a Reddit thread,
+  an X account or tweet, or a YouTube video, prefer `agy-reach` (zero-setup, via
+  the Gemini subscription) and fall back here only when agy is unavailable or a
+  login is required. Do NOT use for plain web search (built-in WebSearch) or
+  multi-source fact-checked reports (use deep-research).
 ---
 
 # web-reach
@@ -105,6 +106,7 @@ Anonymous is 403 everywhere — even the homepage and `.json`. Login is mandator
 
 ## See also
 
+- `agy-reach` skill — the zero-setup default for a logged-out read of a Reddit thread, an X account/tweet, or a YouTube video: it delegates the fetch to `agy`'s Gemini-subscription server-side reader (no cookies). Use web-reach when that isn't enough — keyword-search on X, 小红书/Bilibili, or anything needing your login.
 - [agent-reach](https://github.com/Panniantong/agent-reach) — upstream inspiration; multi-backend routing + a `doctor` that reports the live backend per platform.
 - `deep-research` skill — for multi-source, fact-checked research reports. web-reach only *fetches*; it doesn't synthesize or cite.
 - Built-in **WebSearch** — generic web search. Use that, not this, for a plain "search the web for X" with no specific platform.
