@@ -266,18 +266,33 @@ def _migrate_layout(root: Path) -> None:
     ``index.md``). Idempotent — fast-returns once the tree is already flat.
     Run on every command via ``require_root`` and by ``arc init`` directly, so
     an old tree self-heals the moment any ``arc`` subcommand touches it.
+
+    Only the old *active view* links (target ``all/<name>``) are removed. A
+    hand-made cross-tree reference symlink (absolute or ``../`` target — e.g.
+    surfacing a sub-project's arc in the parent list) is left untouched, so
+    the migration never eats a link the user placed on purpose.
     """
     arcs = root / ARCS_DIRNAME
     if not arcs.is_dir():
         return
     legacy_all = arcs / ALL_DIRNAME
     state_dirs = [arcs / s for s in STATES]
-    stray_links = [c for c in arcs.iterdir() if c.is_symlink()]
-    if not legacy_all.is_dir() and not any(d.exists() for d in state_dirs) and not stray_links:
+
+    def is_legacy_active_link(link: Path) -> bool:
+        if not link.is_symlink():
+            return False
+        try:
+            tgt = os.readlink(link)
+        except OSError:
+            return False
+        return tgt.startswith(f"{ALL_DIRNAME}/")
+
+    legacy_links = [c for c in arcs.iterdir() if is_legacy_active_link(c)]
+    if not legacy_all.is_dir() and not any(d.exists() for d in state_dirs) and not legacy_links:
         return
 
-    # 1. Drop active view symlinks sitting directly under arcs/.
-    for link in stray_links:
+    # 1. Drop the old active view symlinks (arcs/<name> -> all/<name>).
+    for link in legacy_links:
         link.unlink()
 
     # 2. Drop the state view folders (they only ever hold symlinks).
