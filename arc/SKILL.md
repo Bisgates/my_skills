@@ -16,13 +16,14 @@ Common natural-language triggers (Chinese verbatim, kept here so trigger matchin
 
 ## Core invariants (must hold; violations are bugs)
 
-- **Single physical path:** `arcs/all/<id>_<slug>/`. Every cwd / log / cross-task reference must point at this canonical path.
-- **Authoritative status:** the `status` field in `0_meta.md` (`active | paused | done | abandoned`). The `arcs/{active,paused,done,abandoned}/` symlink folders are derived views, not data.
-- **Status transitions go through the CLI** (`arc pause/resume/status/abandon`). **Agents must never hand-edit `0_meta.md`, never hand-create `ln -s`.**
+- **Single physical path:** `arcs/<id>_<slug>/` — one flat level, no `all/` layer, no state subfolders. Every cwd / log / cross-task reference points here.
+- **Authoritative status:** the `status` field in `0_meta.md` (`active | paused | done | abandoned`). Status lives only in `0_meta.md` and is surfaced in `index.md` — there are no view-symlink folders.
+- **Status transitions go through the CLI** (`arc pause/resume/status/abandon`). **Agents must never hand-edit `0_meta.md`.**
 - **ID references:** users say the 7-char `YYMMDDx` form; the CLI also accepts the full `<id>_<slug>` form for tab-completion.
 - **`done` hard gate:** `arc status <id> done` requires `9_summary.html` to exist and be non-empty. This file is always written by the reporter sub-agent — agents never hand-craft it.
 - **`abandoned` hard gate:** `--reason "..."` is required.
-- **`delete` is a hard delete (no trace preserved):** `arc delete <id>` runs `rm -rf` on the canonical dir, removes every view symlink, and rebuilds the index — no confirmation, no gate. If you want to preserve a paper trail, use `arc abandon`; if you want it gone entirely, use `arc delete`.
+- **`delete` is a hard delete (no trace preserved):** `arc delete <id>` runs `rm -rf` on the arc dir and rebuilds the index — no confirmation, no gate. If you want to preserve a paper trail, use `arc abandon`; if you want it gone entirely, use `arc delete`.
+- **Legacy layout self-heals:** an old tree (`arcs/all/…` + `arcs/{active,paused,done,abandoned}/` view symlinks) is flattened to the single level automatically the first time any `arc` subcommand touches it — `arc init`, `arc new`, and `arc rebuild` all trigger it. Never migrate by hand.
 - **Multiple `active` arcs are allowed:** each terminal's cwd expresses its own focus; `resume` does not auto-pause anything else.
 - **Historical arcs are immutable:** never modify a past arc's code or info in place — a finished arc is a frozen trace; read it freely, never write into it. To reuse an old arc's functionality: if it was never promoted (落盘) to the main project, promote the (new) version into the project and reference *that*; if you only need to borrow, copy the code into the current arc and edit the copy. Reaching into another arc's directory to mutate it — to "fix", "improve", or repoint it — is a bug, not a shortcut.
 
@@ -32,18 +33,17 @@ Common natural-language triggers (Chinese verbatim, kept here so trigger matchin
 
 ```
 <project_root>/arcs/
-  all/<id>_<slug>/                 # canonical physical location
-  paused/   done/   abandoned/     # symlink views (these three states only)
-  <id>_<slug>                      # active-state symlinks live directly under arcs/
-  index.md                         # auto-generated
+  <id>_<slug>/                     # canonical arc dir (one flat level)
+  <id>_<slug>/                     # ... one dir per arc, any status
+  index.md                         # auto-generated status view
 ```
 
-`active` has no dedicated subdirectory; active symlinks sit directly at `arcs/<id>_<slug>`.
+`arcs/` is a flat list of arc directories plus the generated `index.md`. Status is read from each arc's `0_meta.md` and grouped in `index.md`; the directory itself never moves between statuses.
 
 ### Inside a single arc
 
 ```
-arcs/all/<id>_<slug>/
+arcs/<id>_<slug>/
   0_meta.md                 # required; script-managed. frontmatter + ## history + ## log
   1_objective.html          # required; produced by /arc-objective (HTML, light product-doc visual; auto-opens on lock)
   2_plan.md                 # required; produced by /arc-plan (may be 1-3 lines for trivial tasks)
@@ -110,13 +110,13 @@ arc pause <id?> --note "..."
 arc resume <id>                       # echoes canonical path
 arc status <id> {active|paused|done|abandoned} [--note ...] [--reason ...]
 arc abandon <id> --reason "..."
-arc delete <id>                       # hard-delete canonical + symlinks + rebuild index (no gate)
+arc delete <id>                       # hard-delete arc dir + rebuild index (no gate)
 arc touch <id?>
 arc log [-i <id>] <text...>
 arc output [-i <id>] <name>           # echoes canonical output dir
 arc list                              # prints index.md
 arc cd <id>                           # echoes canonical path; usage: cd $(arc cd 260430c)
-arc rebuild                           # repair symlinks + index
+arc rebuild                           # flatten legacy layout (if any) + rebuild index
 ```
 
 ## Agent behavior guidance

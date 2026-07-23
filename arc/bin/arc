@@ -36,7 +36,7 @@ AGENTS_HOOK = """
 - agent **不主动**读 arcs/index.md；仅在用户显式触发 /arc-* skill 或 `arc <subcmd>` CLI 时进入任务流程。
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
 - 触发 CLI：arc {new,spawn,pause,resume,status,abandon,delete,touch,log,output,list,cd,rebuild,init}。
-- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/all/<id>_*`；状态权威在 `0_meta.md`。
+- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*`（单层，无 all/ 无 view 软链）；状态权威在 `0_meta.md`。
 - `done` 必须存在 `9_summary.html`；`abandoned` 必须有 `--reason`；`delete` 是硬删（直接全删，不留 trace）。
 """
 
@@ -72,7 +72,7 @@ def die(msg: str, code: int = 1) -> None:
 def find_project_root(start: Optional[Path] = None) -> Optional[Path]:
     p = (start or Path.cwd()).resolve()
     while True:
-        if (p / ARCS_DIRNAME / ALL_DIRNAME).is_dir():
+        if (p / ARCS_DIRNAME).is_dir():
             return p
         if p.parent == p:
             return None
@@ -83,6 +83,7 @@ def require_root() -> Path:
     root = find_project_root()
     if root is None:
         die("not initialized in this directory tree. Run: arc init")
+    _migrate_layout(root)
     return root
 
 
@@ -98,7 +99,7 @@ def slugify_brief(brief: str, max_words: int = 5) -> str:
 
 def next_letter(root: Path, day: str) -> str:
     used = set()
-    base = root / ARCS_DIRNAME / ALL_DIRNAME
+    base = root / ARCS_DIRNAME
     for child in base.iterdir():
         head = child.name.split("_", 1)[0]
         m = ID_RE.match(head)
@@ -112,7 +113,7 @@ def next_letter(root: Path, day: str) -> str:
 
 def find_arc_dir(root: Path, arg: str) -> Path:
     """Resolve user input (7-char id, or full <id>_<slug> name) to canonical dir."""
-    base = root / ARCS_DIRNAME / ALL_DIRNAME
+    base = root / ARCS_DIRNAME
     direct = base / arg
     if direct.is_dir():
         return direct
@@ -129,7 +130,7 @@ def find_arc_dir(root: Path, arg: str) -> Path:
 
 def cwd_arc_dir(root: Path) -> Optional[Path]:
     cwd = Path.cwd().resolve()
-    base = (root / ARCS_DIRNAME / ALL_DIRNAME).resolve()
+    base = (root / ARCS_DIRNAME).resolve()
     try:
         rel = cwd.relative_to(base)
     except ValueError:
@@ -254,34 +255,63 @@ def _migrate_legacy_log(arc_dir: Path) -> None:
     legacy.unlink()
 
 
-# ---------- view links + index ----------
+# ---------- layout migration + index ----------
 
-def view_link_path(arcs: Path, arc_name: str, status: str) -> Path:
-    """Active view links live at arcs/<name>; others at arcs/<status>/<name>."""
-    if status == "active":
-        return arcs / arc_name
-    return arcs / status / arc_name
+def _migrate_layout(root: Path) -> None:
+    """Flatten the legacy layout to the single-level form.
 
-
-def update_view_links(root: Path, arc_dir: Path, status: str) -> None:
+    Legacy: ``arcs/all/<name>/`` canonical dirs, with ``arcs/<name>`` active
+    symlinks and ``arcs/{active,paused,done,abandoned}/`` view folders full of
+    symlinks. New: ``arcs/<name>/`` canonical dirs and nothing else (besides
+    ``index.md``). Idempotent — fast-returns once the tree is already flat.
+    Run on every command via ``require_root`` and by ``arc init`` directly, so
+    an old tree self-heals the moment any ``arc`` subcommand touches it.
+    """
     arcs = root / ARCS_DIRNAME
-    name = arc_dir.name
-    for st in STATES:
-        link = view_link_path(arcs, name, st)
-        if link.is_symlink():
-            link.unlink()
-    target = view_link_path(arcs, name, status)
-    target.parent.mkdir(exist_ok=True)
-    if status == "active":
-        rel_target = Path(ALL_DIRNAME) / name
-    else:
-        rel_target = Path("..") / ALL_DIRNAME / name
-    target.symlink_to(rel_target)
+    if not arcs.is_dir():
+        return
+    legacy_all = arcs / ALL_DIRNAME
+    state_dirs = [arcs / s for s in STATES]
+    stray_links = [c for c in arcs.iterdir() if c.is_symlink()]
+    if not legacy_all.is_dir() and not any(d.exists() for d in state_dirs) and not stray_links:
+        return
+
+    # 1. Drop active view symlinks sitting directly under arcs/.
+    for link in stray_links:
+        link.unlink()
+
+    # 2. Drop the state view folders (they only ever hold symlinks).
+    for d in state_dirs:
+        if d.is_symlink():
+            d.unlink()
+        elif d.is_dir():
+            for c in list(d.iterdir()):
+                if c.is_symlink() or c.is_file():
+                    c.unlink()
+                elif c.is_dir():
+                    shutil.rmtree(c)
+            try:
+                d.rmdir()
+            except OSError:
+                pass
+
+    # 3. Lift arcs/all/<name>/ up to arcs/<name>/.
+    if legacy_all.is_dir():
+        for child in list(legacy_all.iterdir()):
+            dest = arcs / child.name
+            if dest.exists():
+                err(f"migrate: {dest} already exists; left {child} under all/.")
+                continue
+            child.rename(dest)
+        try:
+            legacy_all.rmdir()
+        except OSError:
+            err(f"migrate: {legacy_all} not empty; left in place.")
 
 
 def list_arcs(root: Path) -> List[Tuple[Path, Dict[str, str]]]:
     out = []
-    base = root / ARCS_DIRNAME / ALL_DIRNAME
+    base = root / ARCS_DIRNAME
     for child in sorted(base.iterdir()):
         if not child.is_dir():
             continue
@@ -368,7 +398,7 @@ def rebuild_index(root: Path) -> None:
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
             out.append(
-                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('created_at', '')[:10]} "
                 f"| {fm.get('last_active_at', '')[:16].replace('T', ' ')} "
                 f"| {hint_for(arc, fm)} |"
@@ -384,7 +414,7 @@ def rebuild_index(root: Path) -> None:
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
             out.append(
-                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('last_active_at', '')[:16].replace('T', ' ')} |"
             )
     out.append("")
@@ -398,7 +428,7 @@ def rebuild_index(root: Path) -> None:
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
             out.append(
-                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('last_active_at', '')[:10]} |"
             )
     out.append("")
@@ -412,7 +442,7 @@ def rebuild_index(root: Path) -> None:
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
             out.append(
-                f"| [{arc.name}](all/{arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('last_active_at', '')[:10]} "
                 f"| {fm.get('abandon_reason', '')} |"
             )
@@ -571,16 +601,9 @@ def _ensure_agents_claude(root: Path) -> None:
 def cmd_init(args: argparse.Namespace) -> None:
     root = Path.cwd().resolve()
     arcs = root / ARCS_DIRNAME
-    fresh = not (arcs / ALL_DIRNAME).is_dir()
-    if fresh:
-        (arcs / ALL_DIRNAME).mkdir(parents=True)
-    for st in ("paused", "done", "abandoned"):
-        (arcs / st).mkdir(exist_ok=True)
-
-    legacy_gi = arcs / ".gitignore"
-    if legacy_gi.is_symlink() or legacy_gi.exists():
-        legacy_gi.unlink()
-
+    fresh = not arcs.is_dir()
+    arcs.mkdir(exist_ok=True)
+    _migrate_layout(root)
     rebuild_index(root)
     if fresh:
         err(f"initialized {arcs}.")
@@ -607,7 +630,7 @@ def _create_arc(args: argparse.Namespace, parent: Optional[str]) -> None:
     letter = next_letter(root, day)
     arc_id = f"{day}{letter}"
     arc_name = f"{arc_id}_{slug}"
-    arc_dir = root / ARCS_DIRNAME / ALL_DIRNAME / arc_name
+    arc_dir = root / ARCS_DIRNAME / arc_name
     arc_dir.mkdir()
 
     fm = {
@@ -624,7 +647,6 @@ def _create_arc(args: argparse.Namespace, parent: Optional[str]) -> None:
     if parent:
         history.append(f"{now_iso()} parent set to {parent}")
     write_meta(arc_dir, fm, history)
-    update_view_links(root, arc_dir, "active")
     rebuild_index(root)
     print(arc_id)
     err(f"created {arc_name} at {arc_dir}.")
@@ -650,7 +672,6 @@ def cmd_pause(args: argparse.Namespace) -> None:
     root = require_root()
     arc_dir = resolve_arc_dir(root, args.id)
     update_status(arc_dir, "paused", note=args.note)
-    update_view_links(root, arc_dir, "paused")
     rebuild_index(root)
     print(arc_dir.name.split("_", 1)[0])
     err(f"paused {arc_dir.name}.")
@@ -667,7 +688,6 @@ def cmd_resume(args: argparse.Namespace) -> None:
         fm["last_active_at"] = now_iso()
         history.append(f"{now_iso()} {old} -> active")
         write_meta(arc_dir, fm, history, log_body=log_body)
-        update_view_links(root, arc_dir, "active")
         rebuild_index(root)
     print(arc_dir)
     err(f"resumed {arc_dir.name} (was {old}).")
@@ -677,7 +697,6 @@ def cmd_status(args: argparse.Namespace) -> None:
     root = require_root()
     arc_dir = resolve_arc_dir(root, args.id)
     update_status(arc_dir, args.new_status, note=args.note, reason=args.reason)
-    update_view_links(root, arc_dir, args.new_status)
     rebuild_index(root)
     err(f"{arc_dir.name} -> {args.new_status}.")
 
@@ -686,7 +705,6 @@ def cmd_abandon(args: argparse.Namespace) -> None:
     root = require_root()
     arc_dir = resolve_arc_dir(root, args.id)
     update_status(arc_dir, "abandoned", reason=args.reason)
-    update_view_links(root, arc_dir, "abandoned")
     rebuild_index(root)
     err(f"abandoned {arc_dir.name}.")
 
@@ -695,13 +713,6 @@ def cmd_delete(args: argparse.Namespace) -> None:
     root = require_root()
     arc_dir = resolve_arc_dir(root, args.id)
     name = arc_dir.name
-
-    arcs = root / ARCS_DIRNAME
-    for st in STATES:
-        link = view_link_path(arcs, name, st)
-        if link.is_symlink():
-            link.unlink()
-
     shutil.rmtree(arc_dir)
     rebuild_index(root)
     err(f"deleted {name}.")
@@ -763,36 +774,9 @@ def cmd_cd(args: argparse.Namespace) -> None:
 
 
 def cmd_rebuild(args: argparse.Namespace) -> None:
-    root = require_root()
-    arcs = root / ARCS_DIRNAME
-    for c in arcs.iterdir():
-        if c.is_symlink():
-            head = c.name.split("_", 1)[0]
-            if ID_RE.match(head):
-                c.unlink()
-    legacy_active = arcs / "active"
-    if legacy_active.is_dir():
-        for c in legacy_active.iterdir():
-            if c.is_symlink():
-                c.unlink()
-        try:
-            legacy_active.rmdir()
-        except OSError:
-            pass
-    for st in ("paused", "done", "abandoned"):
-        d = arcs / st
-        if not d.exists():
-            d.mkdir()
-            continue
-        for c in d.iterdir():
-            if c.is_symlink() or c.is_file():
-                c.unlink()
-            elif c.is_dir():
-                shutil.rmtree(c)
-    for arc, fm in list_arcs(root):
-        update_view_links(root, arc, fm.get("status", "active"))
+    root = require_root()  # require_root already ran _migrate_layout
     rebuild_index(root)
-    err("rebuilt arcs view symlinks and index.md.")
+    err("flattened legacy layout (if any) and rebuilt index.md.")
 
 
 def cmd_resolve(args: argparse.Namespace) -> None:
@@ -870,7 +854,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("id")
     sp.set_defaults(func=cmd_cd)
 
-    sp = sub.add_parser("rebuild", help="Rebuild view symlinks and index.md")
+    sp = sub.add_parser("rebuild", help="Flatten legacy layout (if any) and rebuild index.md")
     sp.set_defaults(func=cmd_rebuild)
 
     sp = sub.add_parser("_resolve", help="Resolve id to canonical path (internal)")

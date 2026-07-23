@@ -5,7 +5,7 @@ description: Hard-delete an arc (no trace preserved). Use when the user says "/a
 
 # /arc-delete — Hard-delete an arc
 
-Difference vs. `arc abandon`: `abandon` keeps the directory at `arcs/abandoned/<id>_*` as a trace; `delete` runs `rm -rf` on the canonical directory, clears every view symlink, and rebuilds the index — **no trace preserved**.
+Difference vs. `arc abandon`: `abandon` keeps the arc dir at `arcs/<id>_*` (status flips to `abandoned` in `0_meta.md`) as a trace; `delete` runs `rm -rf` on the arc dir and rebuilds the index — **no trace preserved**.
 
 ## When to delete vs. abandon
 
@@ -29,6 +29,6 @@ Difference vs. `arc abandon`: `abandon` keeps the directory at `arcs/abandoned/<
 ## Important
 
 - **The CLI has no gate.** It will not refuse just because the arc has `1_objective.html`, `output/`, etc. Intent confirmation is on the user / agent.
-- **If user intent is unclear** — e.g. you see the arc already has objective/plan/log — pause first and ask: "delete → no trace; abandon → trace kept at `arcs/abandoned/`. Which one?" Do not default to deleting.
-- **Do not `rm -rf arcs/all/<id>*` yourself.** Bypassing the CLI misses view symlinks (`arcs/<id>_*` / `arcs/abandoned/<id>_*` / ...) and the `index.md` refresh.
+- **If user intent is unclear** — e.g. you see the arc already has objective/plan/log — pause first and ask: "delete → no trace; abandon → trace kept as an `abandoned` arc. Which one?" Do not default to deleting.
+- **Do not `rm -rf arcs/<id>*` yourself.** Bypassing the CLI skips the `index.md` refresh.
 - **No `--reason` accepted.** The trace is being deleted, so there is nowhere to record a reason. If the user supplies a reason or wants to preserve one, suggest they use `arc abandon` instead.

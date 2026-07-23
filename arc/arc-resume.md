@@ -11,7 +11,7 @@ description: Resume an arc with full context load and a "where are we" report. U
    ```bash
    arc resume <id>
    ```
-   stdout is the canonical path (`arcs/all/<id>_<slug>`). stderr is the status-change message.
+   stdout is the canonical path (`arcs/<id>_<slug>`). stderr is the status-change message.
 
 2. **Tell the user how to cd in** (don't cd for them):
    ```

@@ -9,7 +9,7 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
 
 1. **Resolve the arc.**
    - User gave an id? Run `arc cd <id>` to get the path.
-   - No id? Use cwd (should be `arcs/all/<id>_*/`). If not, error out and ask for an id.
+   - No id? Use cwd (should be `arcs/<id>_*/`). If not, error out and ask for an id.
 
 2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.html` and `9_summary.html` (if present) to use as constraint context.
 
@@ -36,7 +36,7 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
 
 5. Once everything is locked, **compress** the conversation into `1_objective.html`, using `~/.claude/skills/arc/templates/1_objective.html` as the skeleton. Copy the template verbatim, then replace the four tokens — `{{ARC_NAME}}` (prose-cleaned brief, also used as `<h1>`), `{{BRIEF}}` (one-line problem statement, ≤ 18 字, the masthead deck), `{{ID}}` (7-char arc id), `{{DATE}}` (lock date, `YYYY-MM-DD`) — and fill the `<!-- FILL: ... -->` blocks. Delete any optional section (04 约束 / 假设, 06 风险) whose entire block is wrapped in HTML comments in the template if it doesn't earn its space; do not leave empty-bulleted sections — and do **not** renumber the remaining sections (numbering is fixed to the spine). **Write decisions only, not the dialogue transcript.** Preserve the inline `<style>` block as-is — light product-doc theme, zero CDN (same theme as `9_summary.html`). After locking, avoid repeated edits; goal changes are expressed via `4_pivot.md` or a new arc.
 
-6. After writing, call `arc touch <id>` (the script updates `last_active_at` and rebuilds the index), then `open <arcs/all/<id>_<slug>/1_objective.html>` so the user immediately sees the locked artifact in the browser. Silent open — don't prompt.
+6. After writing, call `arc touch <id>` (the script updates `last_active_at` and rebuilds the index), then `open <arcs/<id>_<slug>/1_objective.html>` so the user immediately sees the locked artifact in the browser. Silent open — don't prompt.
 
 7. **Auto-chain — do not stop and ask "what next?".** Estimate complexity from the locked objective and route accordingly. The user gets a one-line status, not a "pick A or B" prompt.
 
