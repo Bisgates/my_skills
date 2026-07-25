@@ -9,31 +9,28 @@
 ## Why a reporter exists
 
 The arc protocol already records *what happened* (`0_meta.md ## log`,
-`1_objective.html`, `2_plan.md`, `output/`). What it does not produce is a
+`1_objective.md`, `2_plan.md`, `output/`). What it does not produce is a
 **reader-facing artifact** that shows *the result first, the journey second,
 and a few honest after-thoughts* in a form the user can hand to a teammate
-or revisit cold a month later. The reporter fills that gap as a single-file HTML under the light
-product-doc visual shared with `1_objective.html` (neutral light palette,
-macOS system fonts, zero external CDN) — light, one-pager-ish, results-led,
-double-clicks open offline forever.
+or revisit cold a month later. The reporter fills that gap as one markdown
+file — light, one-pager-ish, results-led.
 
-`9_summary.html` doubles as the `done` gate: `arc status <id> done` requires
+`9_summary.md` doubles as the `done` gate: `arc status <id> done` requires
 the file to exist and be non-empty. The reporter is the only thing that
-writes it; agents must not hand-craft any `9_*.md` or `9_*.html` themselves.
+writes it; agents must not hand-craft any `9_*` file themselves.
 
 ## Hard rule: reporter never blocks the main flow
 
 The reporter is dispatched **in the background** (`run_in_background: true`
 on the Agent tool call). The main agent does **not** wait for it. The user's
 next instruction must be responsive immediately, even if the reporter is
-still drafting the HTML. When the background sub-agent completes (often
-minutes later), the main agent gets an automatic completion notification on
-its next turn — that is when `arc status done`, `open`, and `arc log` happen
-(see Phase C).
+still drafting. When the background sub-agent completes (often minutes
+later), the main agent gets an automatic completion notification on its next
+turn — that is when `arc status done` and `arc log` happen (see Phase C).
 
 **Do not** use a foreground Agent call for the reporter. A foreground call
-freezes the main agent for the full reporter runtime (commonly 3-8 minutes),
-which is exactly the behavior this protocol is designed to avoid.
+freezes the main agent for the full reporter runtime, which is exactly the
+behavior this protocol is designed to avoid.
 
 ## Two dispatch points (one reporter)
 
@@ -48,7 +45,7 @@ The reporter is dispatched **exactly once per arc**, at one of these points:
   anything — the suggestions are the user's to act on. The reporter folds them
   into the 留下的产物 / 接下来 sections as follow-ups.
 
-Same template (`templates/9_summary.html`), same Phase A staging, same
+Same template (`templates/9_summary.md`), same Phase A staging, same
 Phase B dispatch shape, same Phase C handler. The only difference between
 routes is whether `_tmp/report_notes.md` carries a `[finalize-suggestions]`
 block.
@@ -101,32 +98,23 @@ encoded by whether `_tmp/report_notes.md` carries a `[finalize-suggestions]` blo
 ```
 You are the arc reporter for arc <id> at canonical path <arcs/<id>_<slug>/>.
 
-Goal: produce a single-file, fully self-contained HTML report (zero external
-CDN — see Style section below) at
-<arcs/<id>_<slug>/9_summary.html> that lets a teammate (or the user a
-month from now) understand — in order — (a) what we ended up with, (b) how
-we got there, and (c) any honest after-thoughts worth keeping. Light,
-one-pager-ish. This file is also the `done` gate for the arc.
+Goal: produce a markdown report at <arcs/<id>_<slug>/9_summary.md> that lets a
+teammate (or the user a month from now) understand — in order — (a) what we
+ended up with, (b) how we got there, and (c) any honest after-thoughts worth
+keeping. Light, one-pager-ish. This file is also the `done` gate for the arc.
 
 Step 1 — Copy the template.
-Read ~/.claude/skills/arc/templates/9_summary.html. That file is the SKELETON:
-all CSS, layout, section comments, and FILL markers are already in place. Copy
-its full contents to <arc>/9_summary.html, then edit *that copy* — do not start
-from scratch and do not invent your own CSS. The template is the light
-product-doc visual (same theme as 1_objective.html): neutral light palette,
-macOS system sans body, numbered section heads (01 结果 / 02 过程 / …),
-ZERO external CDN. Preserve that contract — do not add Tailwind,
-Google Fonts, KaTeX, Prism, or any other external asset. All CSS stays in the
-one inline <style> block the template ships with.
+Read ~/.claude/skills/arc/templates/9_summary.md. That file is the SKELETON:
+the section spine and FILL placeholders are already in place. Copy its full
+contents to <arc>/9_summary.md, then edit *that copy*.
 
 Step 2 — Read the source material.
-1. <arc>/1_objective.html — goal, boundary, acceptance criteria. Strip HTML tags
-   when quoting; the file is an HTML doc, not Markdown. Legacy arcs
-   may still carry `1_objective.md` instead — read whichever exists.
+1. <arc>/1_objective.md — goal, boundary, acceptance criteria. Legacy arcs may
+   carry `1_objective.html` instead — read whichever exists, stripping tags.
 2. <arc>/2_plan.md — the route map.
 3. <arc>/_tmp/report_notes.md — pre-staged notes (skim once for narrative). If it
    carries a `[finalize-suggestions]` block (finalize route), fold those suggested
-   code / doc promotions and surviving STALE? items into the §3+ candidate sections
+   code / doc promotions and surviving STALE? items into the candidate sections
    as follow-ups (留下的产物 / 接下来) — frame them as *suggested* promotions the
    user may still act on, not as done work. If there is no such block (fast-done
    route), draw 留下的产物 from <arc>/output/ alone and skip promotion content.
@@ -138,45 +126,36 @@ Step 2 — Read the source material.
    (read top docstrings only); do not paste full source.
 
 Step 3 — Fill the template.
-Replace tokens ({{TITLE}} {{SUBTITLE}} {{ID}} {{DATE}}) and the FILL blocks. The
-template's section comments are explicit about what each section wants.
+Replace tokens ({{TITLE}} {{SUBTITLE}} {{ID}} {{DATE}}) and every <FILL: …>
+placeholder. The template's comments say what each section wants.
 
 Section spine (mirror the template):
-  §1 结果         mandatory. The headline number(s) + did we hit acceptance.
-                  Open with one tone-setting line, then 1-3 metric cards (or a
-                  one-line + link if the acceptance was visual, not numeric),
-                  then a 1-2 sentence conclusion. Don't talk about process here.
-  §2 过程         mandatory but SHORT. 3-5 short paragraphs total. Distill from
-                  log + notes; do not transcribe. Skip the bend-in-the-road
-                  paragraph if there wasn't one.
-  §3+            free-form, light. Pick 0-4 of the candidate sections in the
-                  template (关键决策 / 留下的产物 / 学到的东西 / 接下来). Use only
-                  the ones that genuinely earn space. Bias toward fewer, shorter
-                  sections. Padding here makes the report worse, not better.
-                  For the finalize route, 留下的产物 / 接下来 (the suggested
-                  code + doc promotions and surviving follow-ups / STALE? items
-                  from the `[finalize-suggestions]` note) usually earn their
-                  space — framed as suggestions, not as done work.
+  01 结果        mandatory. The headline number(s) + did we hit acceptance.
+                 Open with one tone-setting line, then 1-3 key numbers (or a
+                 one-line + link if the acceptance was visual, not numeric),
+                 then a 1-2 sentence conclusion. Don't talk about process here.
+  02 过程        mandatory but SHORT. 3-5 short paragraphs total. Distill from
+                 log + notes; do not transcribe. Skip the bend-in-the-road
+                 paragraph if there wasn't one.
+  after that     free-form, light. Keep 0-4 of the candidate sections the
+                 template ships with (关键决策 / 留下的产物 / 学到的东西 / 接下来)
+                 and delete the rest. Bias toward fewer, shorter sections;
+                 padding here makes the report worse. For the finalize route,
+                 留下的产物 / 接下来 (the suggested code + doc promotions and
+                 surviving follow-ups / STALE? items from the
+                 `[finalize-suggestions]` note) usually earn their space —
+                 framed as suggestions, not as done work.
 
 Style:
-- Single .html file, **zero external CDN** — the template's inline <style>
-  block is the entire visual system. Do not add Tailwind, Google Fonts, KaTeX,
-  Prism, or any other external dependency. The whole file must double-click
-  open offline forever.
-- Visual = light product-doc theme (shared with 1_objective.html): neutral
-  light palette (`--bg #fafafa`), macOS system sans body, mono code, numbered
-  section heads (01 结果 / 02 过程 / …). Keep the :root tokens — they are the
-  visual identity.
-- Natural-language content in **Chinese** (matches the user's reading language).
+- Plain markdown, no HTML, no embedded assets.
+- Natural-language content in Chinese (matches the user's reading language).
 - Light. The whole report should read in 2-3 minutes.
-- Diagrams as inline SVG only when load-bearing; do not invent decorative ones.
 - Code excerpts only when a specific snippet is the lesson; otherwise describe and
-  link to <code>utils/&lt;x&gt;.py</code> or <code>scripts/&lt;y&gt;.py</code>.
+  link to `utils/<x>.py` or `scripts/<y>.py`.
 
 When done, report back: (a) absolute path written, (b) size in KB, (c) one-line
-summary of the report's thesis. Do NOT call `arc log` yourself, do NOT call
-`arc status` yourself, do NOT run `open` yourself — the main agent handles
-all three in Phase C.
+summary of the report's thesis. Do NOT call `arc log` yourself and do NOT call
+`arc status` yourself — the main agent handles both in Phase C.
 ```
 
 Dispatch parameters (Agent tool):
@@ -196,17 +175,16 @@ The main agent gets an automatic notification when the background sub-agent
 completes — this can be in the next turn, several turns later, or in the
 middle of unrelated conversation. On receiving the notification:
 
-1. Verify `<arc>/9_summary.html` exists and is non-empty.
-2. Call `arc log "[summary] 9_summary.html generated by reporter sub-agent (<size>KB)"`.
+1. Verify `<arc>/9_summary.md` exists and is non-empty.
+2. Call `arc log "[summary] 9_summary.md generated by reporter sub-agent (<size>KB)"`.
 3. Call `arc status <id> done`. The CLI gate now passes (the file exists);
    if it rejects, something is wrong with the file — go to the failure path.
-4. Run `open <arcs/<id>_<slug>/9_summary.html>` from the shell (silent —
-   don't prompt; the user expects auto-open).
-5. Tell the user one short line: "Arc <id> done — `9_summary.html` opened."
+4. Tell the user one short line, with the path: "Arc <id> done — `arcs/<id>_<slug>/9_summary.md`."
    Do this even if the user is mid-conversation about something else; one
-   line is fine.
-6. **Do not** otherwise re-orient the conversation around the summary. If
-   the user is busy with other work, keep going — the line in step 5 is a
+   line is fine. **Do not open the file** in an editor or browser — the user
+   reads it when they want to.
+5. **Do not** otherwise re-orient the conversation around the summary. If
+   the user is busy with other work, keep going — the line in step 4 is a
    notice, not a topic shift.
 
 ## Failure handling
@@ -227,15 +205,12 @@ middle of unrelated conversation. On receiving the notification:
 
 ## Don't
 
-- Do not regenerate `9_summary.html` mid-flight — the in-flight notes file
-  is for that. The HTML is emitted once, at the point where the arc is about
+- Do not regenerate `9_summary.md` mid-flight — the in-flight notes file
+  is for that. The report is emitted once, at the point where the arc is about
   to flip to `done`.
-- Do not let the reporter sub-agent write outside `<arc>/9_summary.html`. No
+- Do not let the reporter sub-agent write outside `<arc>/9_summary.md`. No
   edits to `0_meta.md`, no `arc log` calls, no `arc status` calls, no
   touching `utils/` / `scripts/` / `_tmp/`.
-- Do not invent CSS or import additional libraries — the template is the
-  visual contract. Editing the copy in `<arc>/9_summary.html` is fine;
-  rewriting the skeleton is not.
 - Do not pass an explicit `model` parameter when dispatching.
 - Do not foreground-dispatch. The block-the-main-flow problem this protocol
   exists to prevent comes back the moment `run_in_background: true` is
@@ -243,7 +218,7 @@ middle of unrelated conversation. On receiving the notification:
 - Do not duplicate Phase C in `arc-execute.md` or `arc-finalize.md` — both
   entry points reference this file's Phase C and let the shared handler flip
   the status.
-- Do not skip the `open` or `arc status done` steps in Phase C. Auto-open is
-  the point; the status flip is what closes the arc lifecycle.
-- Do not write any other `9_*.md` or `9_*.html` file alongside `9_summary.html`
-  — the gate is the single filename, by design.
+- Do not skip `arc status done` in Phase C — the status flip is what closes
+  the arc lifecycle.
+- Do not write any other `9_*` file alongside `9_summary.md` — the gate is the
+  single filename, by design.

@@ -40,6 +40,6 @@ description: Spawn a child arc when a separable task is discovered during anothe
 
 ## Don't
 
-- Do not auto-write `1_objective.html` after spawning (violates the Q8 decision).
+- Do not auto-write `1_objective.md` after spawning (violates the Q8 decision).
 - Do not write the `parent` field anywhere other than the child's own meta — the index will show the reverse `children` relation automatically.
 - Do not pause the parent on spawn; spawn does not switch focus.

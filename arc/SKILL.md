@@ -20,7 +20,7 @@ Common natural-language triggers (Chinese verbatim, kept here so trigger matchin
 - **Authoritative status:** the `status` field in `0_meta.md` (`active | paused | done | abandoned`). Status lives only in `0_meta.md` and is surfaced in `index.md` — there are no view-symlink folders.
 - **Status transitions go through the CLI** (`arc pause/resume/status/abandon`). **Agents must never hand-edit `0_meta.md`.**
 - **ID references:** users say the 7-char `YYMMDDx` form; the CLI also accepts the full `<id>_<slug>` form for tab-completion.
-- **`done` hard gate:** `arc status <id> done` requires `9_summary.html` to exist and be non-empty. This file is always written by the reporter sub-agent — agents never hand-craft it.
+- **`done` hard gate:** `arc status <id> done` requires `9_summary.md` to exist and be non-empty. This file is always written by the reporter sub-agent — agents never hand-craft it. (Arcs finished before the markdown switch carry `9_summary.html`; the CLI still accepts that legacy name, but nothing generates HTML any more.)
 - **`abandoned` hard gate:** `--reason "..."` is required.
 - **`delete` is a hard delete (no trace preserved):** `arc delete <id>` runs `rm -rf` on the arc dir and rebuilds the index — no confirmation, no gate. If you want to preserve a paper trail, use `arc abandon`; if you want it gone entirely, use `arc delete`.
 - **Legacy layout self-heals:** an old tree (`arcs/all/…` + `arcs/{active,paused,done,abandoned}/` view symlinks) is flattened to the single level automatically the first time any `arc` subcommand touches it — `arc init`, `arc new`, and `arc rebuild` all trigger it. Never migrate by hand.
@@ -45,10 +45,10 @@ Common natural-language triggers (Chinese verbatim, kept here so trigger matchin
 ```
 arcs/<id>_<slug>/
   0_meta.md                 # required; script-managed. frontmatter + ## history + ## log
-  1_objective.html          # required; produced by /arc-objective (HTML, light product-doc visual; auto-opens on lock)
+  1_objective.md            # required; produced by /arc-objective
   2_plan.md                 # required; produced by /arc-plan (may be 1-3 lines for trivial tasks)
   4_*.md ~ 6_*.md           # free slots, free naming (pivot/eval/blocker/decision_*)
-  9_summary.html            # required for `done` state — written by reporter sub-agent (see reporter.md). Auto-opens.
+  9_summary.md              # required for `done` state — written by reporter sub-agent (see reporter.md)
   _tmp/                     # agent-internal scratch — notes for self, dotfiles, intermediate JSON / images. Includes _tmp/report_notes.md (reporter in-flight staging). Never promoted; agents read freely.
   doc/                      # freeform notes (create on demand)
   utils/                    # candidate code worth promoting to the main project (on demand)
@@ -67,8 +67,6 @@ arcs/<id>_<slug>/
 - **User-readable freeform notes:** `doc/<name>.md` (literature notes, design docs).
 - **Agent-internal scratch:** `_tmp/`. Anything the agent writes for *itself* — its own working notes (`_tmp/report_notes.md`), dotfiles (`_tmp/.cache.jpg`), intermediate JSONs not worth surfacing, throwaway screenshots — goes here. Freeform layout, no schema, never promoted by `/arc-finalize`. The contract: if a file is "for me to read later, not for the user", it lives under `_tmp/`. Keeps the root clean.
 
-**One root-level exemption:** `9_summary.html` is the reporter's single-file HTML output and lives at the arc root by design — it is also the gate file for `done`.
-
 ## Phase commands (entry points and sub-skills)
 
 | Phase | Trigger | See |
@@ -83,7 +81,7 @@ arcs/<id>_<slug>/
 | Hard delete (no trace) | `/arc-delete <id>` | `arc-delete.md` |
 
 **Auto-chain after objective.** `/arc-objective` does not stop and ask "what next?".
-Once `1_objective.html` is locked (and auto-opened), the agent estimates complexity and either (a) writes
+Once `1_objective.md` is locked, the agent estimates complexity and either (a) writes
 a 1-3 line `2_plan.md` inline and chains directly into execute (trivial task), or
 (b) chains into `/arc-plan` for the full plan flow (non-trivial task). User
 confirmation is **not** required between phases. See `arc-objective.md` for the
@@ -95,8 +93,7 @@ arc whose acceptance is unambiguously met and where there is **nothing to promot
 (no `utils/`, no `scripts/` worth surfacing, no `doc/`), the agent skips the formal
 `/arc-finalize` flow. It tells the user one line, waits for a yes/ok confirmation
 **only** (not a full review pass), then dispatches the reporter sub-agent to write
-`9_summary.html` and, when that completes, flips the arc to `done` and auto-opens
-the HTML. **When in doubt — anything substantive to promote, or acceptance unclear —
+`9_summary.md` and, when that completes, flips the arc to `done`. **When in doubt — anything substantive to promote, or acceptance unclear —
 take the formal `/arc-finalize` route.** See `arc-execute.md` for the routing
 heuristic.
 
@@ -125,11 +122,11 @@ arc rebuild                           # flatten legacy layout (if any) + rebuild
 - **When writing code**, sort it: potentially reusable → `utils/`; one-shot → `scripts/`. When in doubt, drop it in `scripts/`.
 - **For experiment outputs**, first grab a directory with `out=$(arc output <name>)`, then write everything under `$out`. Avoids stray files at the arc root.
 - **Default-on agent teams (execute + finalize).** During `/arc-execute` and `/arc-finalize`, identify work units with no data dependency between them and **default to dispatching multiple `general-purpose` sub-agents in parallel within a single message** (do not pass `model`; inherit the parent model so behavior stays consistent). Sub-agents do not write logs themselves; the main agent collects results and calls `arc log` once. Serialize only when there is a real data dependency, a shared mutable file, or an interactive decision needed. See `arc-execute.md` and `arc-finalize.md`. Objective and plan stay single-agent because they are user-facing dialogue.
-- **Reporter agent.** During `/arc-plan` and `/arc-execute`, the main agent maintains short notes in `_tmp/report_notes.md` (bullet jots — strategy, smoke result, key decisions, load-bearing artifacts). The reporter sub-agent is dispatched exactly once per arc, when the arc is about to flip to `done`. It fills `templates/9_summary.html` and writes `<arc>/9_summary.html` — the same file is also the `done` gate. There are two dispatch points (same reporter, same template):
+- **Reporter agent.** During `/arc-plan` and `/arc-execute`, the main agent maintains short notes in `_tmp/report_notes.md` (bullet jots — strategy, smoke result, key decisions, load-bearing artifacts). The reporter sub-agent is dispatched exactly once per arc, when the arc is about to flip to `done`. It fills `templates/9_summary.md` and writes `<arc>/9_summary.md` — the same file is also the `done` gate. There are two dispatch points (same reporter, same template):
   - **Fast-done path** — at the end of `/arc-execute`, after the user confirms with a one-line yes/ok.
   - **Finalize path** — `/arc-finalize` runs a single pass (sweep → print 落盘 suggestions in chat → dispatch reporter; the agent never edits the main project). Before dispatch it appends the suggestions as a `[finalize-suggestions]` block to `_tmp/report_notes.md`, which the reporter folds into the 留下的产物 / 接下来 candidate sections.
 
-  Dispatch is **always** a single `general-purpose` sub-agent **in the background (`run_in_background: true`, non-negotiable)**. The reporter must never block the main flow. On the background completion notification, the main agent verifies the file, calls `arc status <id> done` (gate now passes), runs `open`, and tells the user one short line. Section spine: §1 结果 / §2 过程 (短) / §3+ 自由发挥 (轻 — pick 0-4 of the candidates the template ships with). The reporter is **not** user-invocable; full protocol in `reporter.md`.
+  Dispatch is **always** a single `general-purpose` sub-agent **in the background (`run_in_background: true`, non-negotiable)**. The reporter must never block the main flow. On the background completion notification, the main agent verifies the file, calls `arc status <id> done` (gate now passes), and tells the user one short line with the path — it does not open the file. Section spine: 01 结果 / 02 过程 (短) / 之后自由发挥 (轻 — keep 0-4 of the candidates the template ships with). The reporter is **not** user-invocable; full protocol in `reporter.md`.
 - **When the plan does not anticipate the situation**, stop and ask the user. Do not silently rewrite the objective or plan.
 - **When boundary instincts fire, suggest a spawn.** If a chunk of work has its own objective and its own acceptance criteria, suggest the user run `/arc-spawn <brief>` — but never spawn unilaterally.
 - **Mid-session**: when the user says `pause / abandon / ...`, call the CLI directly. Do not attempt to write status into `0_meta.md` yourself.

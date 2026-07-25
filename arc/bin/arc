@@ -37,7 +37,7 @@ AGENTS_HOOK = """
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
 - 触发 CLI：arc {new,spawn,pause,resume,status,abandon,delete,touch,log,output,list,cd,rebuild,init}。
 - ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*`（单层，无 all/ 无 view 软链）；状态权威在 `0_meta.md`。
-- `done` 必须存在 `9_summary.html`；`abandoned` 必须有 `--reason`；`delete` 是硬删（直接全删，不留 trace）。
+- `done` 必须存在 `9_summary.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删（直接全删，不留 trace）。
 """
 
 
@@ -343,19 +343,26 @@ def list_arcs(root: Path) -> List[Tuple[Path, Dict[str, str]]]:
     return out
 
 
+def has_objective(arc: Path) -> bool:
+    # .html is the legacy form; arcs created before the markdown switch keep it.
+    return (arc / "1_objective.md").exists() or (arc / "1_objective.html").exists()
+
+
+def has_summary(arc: Path) -> bool:
+    # .html is the legacy form (see has_objective).
+    for name in ("9_summary.md", "9_summary.html"):
+        f = arc / name
+        if f.is_file() and f.stat().st_size > 0:
+            return True
+    return False
+
+
 def hint_for(arc: Path, fm: Dict[str, str]) -> str:
-    # Accept either the new HTML form (current default) or the legacy .md form
-    # so existing arcs created before the template change still validate.
-    if not ((arc / "1_objective.html").exists() or (arc / "1_objective.md").exists()):
-        return "needs 1_objective.html"
+    if not has_objective(arc):
+        return "needs 1_objective.md"
     if not (arc / "2_plan.md").exists():
         return "needs 2_plan.md"
-    summary_html = arc / "9_summary.html"
-    if (
-        summary_html.is_file()
-        and summary_html.stat().st_size > 0
-        and fm.get("status") == "active"
-    ):
+    if has_summary(arc) and fm.get("status") == "active":
         return "ready to mark done"
     last = fm.get("last_active_at", "")
     try:
@@ -480,9 +487,8 @@ def update_status(
     if old == new_status:
         die(f"arc already in status {new_status}.")
     if new_status == "done":
-        summary_html = arc_dir / "9_summary.html"
-        if not (summary_html.is_file() and summary_html.stat().st_size > 0):
-            die("cannot mark done: no non-empty 9_summary.html found.")
+        if not has_summary(arc_dir):
+            die("cannot mark done: no non-empty 9_summary.md found.")
     if new_status == "abandoned":
         if not reason:
             die("--reason required for abandoned.")

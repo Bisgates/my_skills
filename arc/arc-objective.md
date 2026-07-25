@@ -11,7 +11,7 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
    - User gave an id? Run `arc cd <id>` to get the path.
    - No id? Use cwd (should be `arcs/<id>_*/`). If not, error out and ask for an id.
 
-2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.html` and `9_summary.html` (if present) to use as constraint context.
+2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.md` and `9_summary.md` (if present) to use as constraint context.
 
 3. **Estimate complexity, then choose interrogation depth.** grill-with-docs inside arc is **adaptive**, not a fixed question count:
    - **Simple task** (single goal, narrow scope, acceptance readable straight off the brief, no ambiguous branches): **ask less**. Clarify only the 0–2 points that are genuinely missing; the moment you can write a crisp goal + checkable acceptance, **commit it to disk**. Do not pad questions just to "follow the flow".
@@ -26,7 +26,7 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
    - If a `CONTEXT.md` exists in the project, challenge any term the user uses that conflicts with the glossary before moving on. When a term is resolved, update `CONTEXT.md` inline — do not batch.
    - If a decision is hard to reverse, surprising without context, and the result of a real trade-off, offer to record it as an ADR under `docs/adr/`.
    - **Ask in priority order: core first, boundary second.** What is being done, why now, and what success looks like — these are first-class. Boundary / constraints / risks matter, but they are guardrails to tighten *after* the core is locked. Do not invert this and start by chasing scope / non-goals / risks; the user will feel the conversation has drifted.
-   - The branches below are a **menu**, used in priority order. **For simple tasks, only touch the items still unclear in the first two sections**; for the rest, either omit them entirely (delete the corresponding 04 / 06 section from the HTML — the template wraps them in HTML comments precisely so they can be dropped) or close them inside `1_objective.html` with a single line. Do not interrogate item by item.
+   - The branches below are a **menu**, used in priority order. **For simple tasks, only touch the items still unclear in the first two sections**; for the rest, either omit them entirely (delete the whole 04 / 06 section — the template marks both as optional) or close them inside `1_objective.md` with a single line. Do not interrogate item by item.
      1. **Core goal:** what problem to solve, why now (motivation / trigger), what success looks like. Verbs must be concrete — no "研究 / 探索 / 看看" / "investigate / explore / take a look".
      2. **Acceptance criteria:** L1 quantitative metric + L2 visualization (follow the workspace AGENTS.md rules), so "done" is checkable.
      3. **In-scope vs. non-goals** (boundary).
@@ -34,9 +34,9 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
      5. **Upstream dependencies** (data / upstream arc / main-project code).
      6. **Primary risks** (do not invent risks if there are none — write only the genuine ones).
 
-5. Once everything is locked, **compress** the conversation into `1_objective.html`, using `~/.claude/skills/arc/templates/1_objective.html` as the skeleton. Copy the template verbatim, then replace the four tokens — `{{ARC_NAME}}` (prose-cleaned brief, also used as `<h1>`), `{{BRIEF}}` (one-line problem statement, ≤ 18 字, the masthead deck), `{{ID}}` (7-char arc id), `{{DATE}}` (lock date, `YYYY-MM-DD`) — and fill the `<!-- FILL: ... -->` blocks. Delete any optional section (04 约束 / 假设, 06 风险) whose entire block is wrapped in HTML comments in the template if it doesn't earn its space; do not leave empty-bulleted sections — and do **not** renumber the remaining sections (numbering is fixed to the spine). **Write decisions only, not the dialogue transcript.** Preserve the inline `<style>` block as-is — light product-doc theme, zero CDN (same theme as `9_summary.html`). After locking, avoid repeated edits; goal changes are expressed via `4_pivot.md` or a new arc.
+5. Once everything is locked, **compress** the conversation into `1_objective.md`, using `~/.claude/skills/arc/templates/1_objective.md` as the skeleton. Copy the template verbatim, then replace the four tokens — `{{ARC_NAME}}` (prose-cleaned brief, also the `<h1>`), `{{BRIEF}}` (one-line problem statement, ≤ 18 字), `{{ID}}` (7-char arc id), `{{DATE}}` (lock date, `YYYY-MM-DD`) — and fill every `<FILL: …>` placeholder. Delete the optional sections (04 约束 / 假设, 06 风险) outright if they don't earn their space; do not leave empty-bulleted sections — and do **not** renumber the remaining sections (numbering is fixed to the spine). **Write decisions only, not the dialogue transcript.** After locking, avoid repeated edits; goal changes are expressed via `4_pivot.md` or a new arc.
 
-6. After writing, call `arc touch <id>` (the script updates `last_active_at` and rebuilds the index), then `open <arcs/<id>_<slug>/1_objective.html>` so the user immediately sees the locked artifact in the browser. Silent open — don't prompt.
+6. After writing, call `arc touch <id>` (the script updates `last_active_at` and rebuilds the index) and tell the user the path. Do not open the file for them.
 
 7. **Auto-chain — do not stop and ask "what next?".** Estimate complexity from the locked objective and route accordingly. The user gets a one-line status, not a "pick A or B" prompt.
 
@@ -55,7 +55,7 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
 
 ## Don't
 
-- **No zero-alignment fabrication.** When the brief is vague or acceptance is missing, do not just write a self-styled `1_objective.html`. If the brief is already clear enough, an extremely short confirmation (e.g. restating goal + acceptance and asking "OK to write this into the objective?") is allowed before committing — **do not** add loops just to inflate question count.
-- Do not write fuzzy acceptance ("works well", "roughly aligned"). Each L1 metric card needs a concrete target number plus, where it exists, a baseline.
-- Do not embed execution details in `1_objective.html` — those belong to the plan.
-- Do not introduce external CSS, Tailwind, Google Fonts, or any CDN asset into the HTML. The template ships the entire visual system inline; preserve it.
+- **No zero-alignment fabrication.** When the brief is vague or acceptance is missing, do not just write a self-styled `1_objective.md`. If the brief is already clear enough, an extremely short confirmation (e.g. restating goal + acceptance and asking "OK to write this into the objective?") is allowed before committing — **do not** add loops just to inflate question count.
+- Do not write fuzzy acceptance ("works well", "roughly aligned"). Each L1 metric needs a concrete target number plus, where it exists, a baseline.
+- Do not embed execution details in `1_objective.md` — those belong to the plan.
+- Do not write the objective as HTML, and do not open it for the user once written.
