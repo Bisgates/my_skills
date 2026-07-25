@@ -1,73 +1,67 @@
 ---
 name: arc
-description: Task management protocol with file-based traces. Use when the user explicitly invokes any /arc-* skill or `arc <subcmd>` CLI. Captures objective, plan, execution log, and finalization for tasks that may run in parallel, pause/resume, or be abandoned with traces preserved.
+description: Task isolation and handoff protocol. Work happens inside `arcs/<id>_*/` so the main project stays untouched, and each arc carries enough context (objective, plan, live state, log) that a fresh agent can take over cold. Use when the user invokes /arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize, /arc-delete, or any `arc <subcmd>` CLI — and when they say "立个 arc" / "新立项" / "这个事建个任务" / "把这个挂到 arc 上" / "继续 <id>" / "收尾这个 arc". Do NOT enter at session start, and do not read `arcs/index.md` unless asked.
 ---
 
-# Arc — Task Management Protocol
+# Arc — Task isolation and handoff protocol
 
-## When to use this skill
+## Why this exists
 
-- The user explicitly invokes `/arc-new <brief>`, `/arc-resume 260430c`, or any `arc <subcmd>` CLI.
-- The user describes work worth "filing" — multi-step, needs a paper trail, may span sessions, may be coordinated across multiple agents / terminals.
+Two lines, and every rule below serves one of them:
 
-Common natural-language triggers (Chinese verbatim, kept here so trigger matching works): "新立项 / 立个 arc / 这个事建个任务 / 把这个挂到 arc 上".
+- **A · Isolation.** The arc directory is the only surface the agent writes to. The main project stays read-only for the whole task, so N parallel experiments neither bloat the project nor collide with each other. Promotion (落盘) is the one reverse channel, and the **user** performs it.
+- **B · Self-sufficiency.** The arc directory holds enough context that an agent with zero conversation history can pick the task up and continue — objective, plan, current state, and the log of how we got here.
 
-**Do not auto-trigger.** This skill is never entered at session start; only when the user explicitly speaks the arc protocol.
+Concretely: (1) don't pollute the project, (2) pin down the objective, (3) pin down the plan, (4) leave a complete context trail in the arc, (5) hand back only what's worth keeping.
 
-## Core invariants (must hold; violations are bugs)
+Anything in this skill that serves neither line is dead weight — delete it rather than work around it.
 
-- **Single physical path:** `arcs/<id>_<slug>/` — one flat level, no `all/` layer, no state subfolders. Every cwd / log / cross-task reference points here.
-- **Authoritative status:** the `status` field in `0_meta.md` (`active | paused | done | abandoned`). Status lives only in `0_meta.md` and is surfaced in `index.md` — there are no view-symlink folders.
-- **Status transitions go through the CLI** (`arc pause/resume/status/abandon`). **Agents must never hand-edit `0_meta.md`.**
+## Core invariants (violations are bugs)
+
+- **The main project is read-only during an arc.** Every file the agent creates or edits while working a task lives under `arcs/<id>_<slug>/`. This holds for `/arc-execute` as much as for `/arc-finalize` — finalize *suggests* promotions and never performs them. If you find yourself editing a project file, stop and tell the user.
+- **Single physical path:** `arcs/<id>_<slug>/` — one flat level. No `all/` layer, no state subfolders, no view symlinks. Every cwd / log / cross-arc reference points here.
+- **Authoritative status:** the `status` field in `0_meta.md` (`active | paused | done | abandoned`), surfaced in `index.md`.
+- **Status transitions go through the CLI** (`arc pause/resume/status/abandon`). **Agents never hand-edit `0_meta.md`** — `arc log` is the only writer of its `## log` section.
+- **`done` hard gate:** `arc status <id> done` requires a non-empty `9_handoff.md`.
+- **`abandoned` hard gate:** `--reason "..."` is required. An abandoned arc is still valuable context ("this road is closed"), which is why it keeps its trace.
 - **ID references:** users say the 7-char `YYMMDDx` form; the CLI also accepts the full `<id>_<slug>` form for tab-completion.
-- **`done` hard gate:** `arc status <id> done` requires `9_summary.md` to exist and be non-empty. This file is always written by the reporter sub-agent — agents never hand-craft it. (Arcs finished before the markdown switch carry `9_summary.html`; the CLI still accepts that legacy name, but nothing generates HTML any more.)
-- **`abandoned` hard gate:** `--reason "..."` is required.
-- **`delete` is a hard delete (no trace preserved):** `arc delete <id>` runs `rm -rf` on the arc dir and rebuilds the index — no confirmation, no gate. If you want to preserve a paper trail, use `arc abandon`; if you want it gone entirely, use `arc delete`.
-- **Legacy layout self-heals:** an old tree (`arcs/all/…` + `arcs/{active,paused,done,abandoned}/` view symlinks) is flattened to the single level automatically the first time any `arc` subcommand touches it — `arc init`, `arc new`, and `arc rebuild` all trigger it. Never migrate by hand.
 - **Multiple `active` arcs are allowed:** each terminal's cwd expresses its own focus; `resume` does not auto-pause anything else.
-- **Historical arcs are immutable:** never modify a past arc's code or info in place — a finished arc is a frozen trace; read it freely, never write into it. To reuse an old arc's functionality: if it was never promoted (落盘) to the main project, promote the (new) version into the project and reference *that*; if you only need to borrow, copy the code into the current arc and edit the copy. Reaching into another arc's directory to mutate it — to "fix", "improve", or repoint it — is a bug, not a shortcut.
+- **Historical arcs are immutable.** A finished arc is a frozen trace: read it freely, never write into it. To reuse an old arc's code, copy it into the current arc and edit the copy — or promote it into the main project and reference that. Reaching into another arc to "fix" or repoint it is a bug, not a shortcut.
 
 ## File layout
 
-### Project root
-
 ```
 <project_root>/arcs/
-  <id>_<slug>/                     # canonical arc dir (one flat level)
-  <id>_<slug>/                     # ... one dir per arc, any status
-  index.md                         # auto-generated status view
+  <id>_<slug>/          # canonical arc dir (flat)
+  index.md              # auto-generated status view
 ```
 
-`arcs/` is a flat list of arc directories plus the generated `index.md`. Status is read from each arc's `0_meta.md` and grouped in `index.md`; the directory itself never moves between statuses.
-
-### Inside a single arc
+Inside one arc — five numbered files, one per requirement:
 
 ```
 arcs/<id>_<slug>/
-  0_meta.md                 # required; script-managed. frontmatter + ## history + ## log
-  1_objective.md            # required; produced by /arc-objective
-  2_plan.md                 # required; produced by /arc-plan (may be 1-3 lines for trivial tasks)
-  4_*.md ~ 6_*.md           # free slots, free naming (pivot/eval/blocker/decision_*)
-  9_summary.md              # required for `done` state — written by reporter sub-agent (see reporter.md)
-  _tmp/                     # agent-internal scratch — notes for self, dotfiles, intermediate JSON / images. Includes _tmp/report_notes.md (reporter in-flight staging). Never promoted; agents read freely.
-  doc/                      # freeform notes (create on demand)
-  utils/                    # candidate code worth promoting to the main project (on demand)
-  scripts/                  # one-shot scripts, not promoted (on demand)
-  output/<YYMMDD_HHMM>_<name>/   # experiment outputs (created by `arc output`)
+  0_meta.md        status + ## history + ## log      written by the CLI only
+  1_objective.md   goal + acceptance     (req 2)     locked once by /arc-objective
+  2_plan.md        route + spec          (req 3)     locked once by /arc-plan
+  3_state.md       live state snapshot   (req 4)     OVERWRITTEN as work proceeds
+  9_handoff.md     result + 落盘清单     (req 5)     written once at wrap-up
+  4_*.md ~ 6_*.md  free slots (pivot / eval / blocker / decision_*)
+  doc/             freeform notes worth keeping
+  utils/           code that might deserve promotion
+  scripts/         one-shot code, not promoted
+  output/<YYMMDD_HHMM>_<name>/   experiment outputs (created by `arc output`)
+  _tmp/            agent-internal scratch; never promoted
 ```
 
-`0_meta.md` carries three things at once: the frontmatter (id / status / parent / last_active_at / ...), `## history` (status-transition trace), and `## log` (execution stream, appended by `arc log`). **`arc log` only writes here**; no separate `3_process_log.md` is maintained any more. Legacy arcs that still have a `3_process_log.md` get auto-migrated into `0_meta.md` on the next CLI touch and the old file is deleted.
+**`3_state.md` is the load-bearing addition.** `## log` is append-only history — it answers *what happened*. A resuming agent needs *where are we now*, and reconstructing that from a long log costs O(log length). `3_state.md` answers it in O(1): where we are in the plan, how to re-run things (env / data paths / commands), facts already settled, and promotion candidates spotted along the way. `arc new` seeds it; `/arc-execute` overwrites it after each plan step.
 
-**All subdirs are created lazily.** `arc new` / `arc spawn` only writes `0_meta.md`; the agent creates subdirs with `mkdir -p` as it writes files, and `arc output` creates output dirs.
+**No loose `.py / .json / .ply / .html` at the arc root.** Routing: reusable code → `utils/`; one-shot → `scripts/`; experiment output → `output/` (via `arc output <name>`); user-readable notes → `doc/`; anything the agent writes for *itself* → `_tmp/`.
 
-**No loose `.py / .html / .json / .ply` at the arc root.** Keep the root readable to a human glancing in. The routing rule:
+**Subdirs are created lazily** — `arc new` writes only `0_meta.md` and `3_state.md`; `mkdir -p` the rest as you write.
 
-- **Code:** potentially reusable → `utils/`; one-shot → `scripts/`.
-- **Experiment outputs the user might inspect:** `output/<YYMMDD_HHMM>_<name>/` (created via `arc output <name>`).
-- **User-readable freeform notes:** `doc/<name>.md` (literature notes, design docs).
-- **Agent-internal scratch:** `_tmp/`. Anything the agent writes for *itself* — its own working notes (`_tmp/report_notes.md`), dotfiles (`_tmp/.cache.jpg`), intermediate JSONs not worth surfacing, throwaway screenshots — goes here. Freeform layout, no schema, never promoted by `/arc-finalize`. The contract: if a file is "for me to read later, not for the user", it lives under `_tmp/`. Keeps the root clean.
+## Phase commands
 
-## Phase commands (entry points and sub-skills)
+`/arc-*` are conventions this skill routes, not separately registered slash commands: when the user types one, read the matching file below and follow it.
 
 | Phase | Trigger | See |
 |---|---|---|
@@ -77,57 +71,40 @@ arcs/<id>_<slug>/
 | Execute | `/arc-execute [<id>]` | `arc-execute.md` |
 | Restore context | `/arc-resume <id>` | `arc-resume.md` |
 | Spawn a child task | `/arc-spawn <brief>` | `arc-spawn.md` |
-| Wrap up + promote | `/arc-finalize [<id>]` | `arc-finalize.md` |
+| Wrap up + hand off | `/arc-finalize [<id>]` | `arc-finalize.md` |
 | Hard delete (no trace) | `/arc-delete <id>` | `arc-delete.md` |
 
-**Auto-chain after objective.** `/arc-objective` does not stop and ask "what next?".
-Once `1_objective.md` is locked, the agent estimates complexity and either (a) writes
-a 1-3 line `2_plan.md` inline and chains directly into execute (trivial task), or
-(b) chains into `/arc-plan` for the full plan flow (non-trivial task). User
-confirmation is **not** required between phases. See `arc-objective.md` for the
-complexity heuristic. The user can always interrupt with `/arc-pause` or by speaking
-up — but the default is to keep moving.
+Pause / abandon have no sub-skill — call the CLI directly (`arc pause <id> --note "..."`, `arc abandon <id> --reason "..."`).
 
-**Fast-done after execute (trivial arcs).** When `/arc-execute` finishes a trivial
-arc whose acceptance is unambiguously met and where there is **nothing to promote**
-(no `utils/`, no `scripts/` worth surfacing, no `doc/`), the agent skips the formal
-`/arc-finalize` flow. It tells the user one line, waits for a yes/ok confirmation
-**only** (not a full review pass), then dispatches the reporter sub-agent to write
-`9_summary.md` and, when that completes, flips the arc to `done`. **When in doubt — anything substantive to promote, or acceptance unclear —
-take the formal `/arc-finalize` route.** See `arc-execute.md` for the routing
-heuristic.
+**The phases auto-chain.** objective → plan → execute → finalize runs without asking "what next?" between steps; the user gets a one-line status and can interrupt at any point. `/arc-objective` decides plan depth by complexity (trivial tasks get a 1-3 line `2_plan.md` written inline); `/arc-execute` chains into `/arc-finalize` once acceptance is met, and stops to ask when it isn't.
 
-## CLI cheatsheet (for direct agent use)
+## CLI cheatsheet
 
 ```bash
-arc init                              # bootstrap or migrate; ensures CLAUDE.md (real) + AGENTS.md → CLAUDE.md, appends Arc Protocol hook
-arc new <brief...>                    # create skeleton
+arc init                              # bootstrap arcs/ here; ensures CLAUDE.md + AGENTS.md → CLAUDE.md, appends the protocol hook
+arc new <brief...>                    # create skeleton (0_meta.md + 3_state.md); echoes the 7-char id
 arc spawn <brief...> [--parent <id>]  # child task
 arc pause <id?> --note "..."
 arc resume <id>                       # echoes canonical path
 arc status <id> {active|paused|done|abandoned} [--note ...] [--reason ...]
 arc abandon <id> --reason "..."
-arc delete <id>                       # hard-delete arc dir + rebuild index (no gate)
+arc delete <id>                       # hard-delete arc dir + rebuild index (no gate, no trace)
 arc touch <id?>
-arc log [-i <id>] <text...>
+arc log [-i <id>] <text...>           # append one line to 0_meta.md ## log
 arc output [-i <id>] <name>           # echoes canonical output dir
-arc list                              # prints index.md
-arc cd <id>                           # echoes canonical path; usage: cd $(arc cd 260430c)
-arc rebuild                           # flatten legacy layout (if any) + rebuild index
+arc list                              # rebuilds and prints index.md
+arc cd <id>                           # usage: cd $(arc cd 260430c)
+arc rebuild                           # rebuild index.md
 ```
+
+`arc init` operates on cwd only. Nesting an arc tree inside an existing one is a supported workflow: `new` / `spawn` walk up to the nearest root, so running `init` first is how you keep them local. Legacy `arcs/all/` trees flatten themselves on the next `arc init` / `arc new` in that project — never migrate by hand.
 
 ## Agent behavior guidance
 
 - **After every step that has a conclusion** — ran a script, got a number, made a decision — append one `arc log "..."` entry.
-- **When writing code**, sort it: potentially reusable → `utils/`; one-shot → `scripts/`. When in doubt, drop it in `scripts/`.
-- **For experiment outputs**, first grab a directory with `out=$(arc output <name>)`, then write everything under `$out`. Avoids stray files at the arc root.
-- **Default-on agent teams (execute + finalize).** During `/arc-execute` and `/arc-finalize`, identify work units with no data dependency between them and **default to dispatching multiple `general-purpose` sub-agents in parallel within a single message** (do not pass `model`; inherit the parent model so behavior stays consistent). Sub-agents do not write logs themselves; the main agent collects results and calls `arc log` once. Serialize only when there is a real data dependency, a shared mutable file, or an interactive decision needed. See `arc-execute.md` and `arc-finalize.md`. Objective and plan stay single-agent because they are user-facing dialogue.
-- **Reporter agent.** During `/arc-plan` and `/arc-execute`, the main agent maintains short notes in `_tmp/report_notes.md` (bullet jots — strategy, smoke result, key decisions, load-bearing artifacts). The reporter sub-agent is dispatched exactly once per arc, when the arc is about to flip to `done`. It fills `templates/9_summary.md` and writes `<arc>/9_summary.md` — the same file is also the `done` gate. There are two dispatch points (same reporter, same template):
-  - **Fast-done path** — at the end of `/arc-execute`, after the user confirms with a one-line yes/ok.
-  - **Finalize path** — `/arc-finalize` runs a single pass (sweep → print 落盘 suggestions in chat → dispatch reporter; the agent never edits the main project). Before dispatch it appends the suggestions as a `[finalize-suggestions]` block to `_tmp/report_notes.md`, which the reporter folds into the 留下的产物 / 接下来 candidate sections.
-
-  Dispatch is **always** a single `general-purpose` sub-agent **in the background (`run_in_background: true`, non-negotiable)**. The reporter must never block the main flow. On the background completion notification, the main agent verifies the file, calls `arc status <id> done` (gate now passes), and tells the user one short line with the path — it does not open the file. Section spine: 01 结果 / 02 过程 (短) / 之后自由发挥 (轻 — keep 0-4 of the candidates the template ships with). The reporter is **not** user-invocable; full protocol in `reporter.md`.
+- **After every completed plan step, overwrite `3_state.md`.** Not per action (that would just be a second log), and not only at the end (the value is being resumable *mid-task*).
+- **Record promotion candidates when you create them**, in `3_state.md` 落盘候选. The judgment "this might be worth keeping" is sharpest the moment you write the file; `/arc-finalize` reviews that table instead of reconstructing it.
+- **For experiment outputs**, grab a directory with `out=$(arc output <name>)` first, then write everything under `$out`.
 - **When the plan does not anticipate the situation**, stop and ask the user. Do not silently rewrite the objective or plan.
-- **When boundary instincts fire, suggest a spawn.** If a chunk of work has its own objective and its own acceptance criteria, suggest the user run `/arc-spawn <brief>` — but never spawn unilaterally.
-- **Mid-session**: when the user says `pause / abandon / ...`, call the CLI directly. Do not attempt to write status into `0_meta.md` yourself.
-- **`arc init` operates on cwd only — nested arc trees are normal; don't check for or warn about a parent root.** Making a new directory inside an existing arc and running `arc init` there to get an independent local arc tree is a frequent, supported workflow. `init` never walks up to a parent `arcs/` root and emits no warning about one — just run it. (Why nest: `arc new` / `arc spawn` *do* walk up to the nearest root, so running `init` first is how you keep subsequent `new`/`spawn` local instead of attaching to the outer project.)
+- **When boundary instincts fire, suggest a spawn.** If a chunk of work has its own objective and its own acceptance criteria, suggest `/arc-spawn <brief>` — never spawn unilaterally.
+- **Mid-session status words** (`pause` / `abandon` / …) go straight to the CLI.

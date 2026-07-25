@@ -15,7 +15,7 @@ A two-step chain: (1) `arc new` builds the skeleton, (2) automatically enter `/a
    ```bash
    arc new <brief words...>
    ```
-   stdout's first line is the 7-char id (e.g. `260430c`); stderr carries the human-readable message. Capture the id from stdout.
+   stdout's first line is the 7-char id (e.g. `260430c`); stderr carries the human-readable message. Capture the id from stdout. The command writes `0_meta.md` and seeds `3_state.md`; everything else is created lazily.
 
 3. **Tell the user how to cd in** (don't cd yourself — that pollutes the agent's cwd; let the user decide):
    ```

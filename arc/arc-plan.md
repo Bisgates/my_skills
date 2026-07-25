@@ -9,20 +9,13 @@ description: Generate 2_plan.md based on locked 1_objective.md. Use when the use
 
 1. **Resolve the arc** — same as `/arc-objective` (id or cwd).
 2. **Read `1_objective.md`.** If it does not exist or is still the bare skeleton (all `FILL` placeholders untouched), stop and tell the user to run `/arc-objective` first.
-3. **Pull parent context.** From `0_meta.md`, if `parent` is non-null, read the parent's `2_plan.md` / `9_summary.md` as reference.
+3. **Pull parent context.** From `0_meta.md`, if `parent` is non-null, read the parent's `2_plan.md` / `9_handoff.md` as reference.
 4. **Ask 1–3 clarifying questions** (only if needed), each with a recommended answer. If `1_objective.md` is already clear enough, write the plan directly.
 5. **Write `2_plan.md`** using `~/.claude/skills/arc/templates/2_plan.md` as the skeleton. Key requirements:
    - **The "Smoke Test First" section is required.** Validate the plan on tiny data first, then run the real experiment. This matches the workspace AGENTS.md emphasis on "data contract / preprocessing first + smoke train".
    - **The "Out-of-Scope" section is required.** "None" is acceptable, but it has to be a considered "none".
    - **Steps are free-form**, not forced into checkboxes; numbered headings with sub-items are fine.
-6. **Stage a reporter note.** Append one block to `_tmp/report_notes.md` (`mkdir -p _tmp` on first use):
-   ```md
-   ## <YYMMDD_HHMM> [plan]
-   - strategy: <one line from the Strategy section>
-   - steps: <comma-separated step verbs>
-   - smoke: <one line from the Smoke Test First section>
-   ```
-   This pre-stages context for the reporter sub-agent at the end of execute (see `reporter.md`).
+6. **Seed `3_state.md`** (`arc new` already created it): fill 现在在哪 with "plan locked, step 1 next" and 怎么重跑 with the env / data paths / smoke command the plan assumes. This is what a resuming agent reads first, so it should be usable from the moment the plan exists.
 7. **Auto-chain into `/arc-execute`.** After `arc touch <id>`, tell the user one line — `Plan ready; entering execute.` — then chain straight into the execute flow per `arc-execute.md`. **Do not** stop and wait for "ready?". The user can interrupt if they want to review `2_plan.md` first.
 
 ## Don't

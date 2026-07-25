@@ -11,7 +11,7 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
    - User gave an id? Run `arc cd <id>` to get the path.
    - No id? Use cwd (should be `arcs/<id>_*/`). If not, error out and ask for an id.
 
-2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.md` and `9_summary.md` (if present) to use as constraint context.
+2. **Read `0_meta.md`** for context (brief / parent). If `parent` is non-null, also read the parent's `1_objective.md` and `9_handoff.md` (if present) to use as constraint context.
 
 3. **Estimate complexity, then choose interrogation depth.** grill-with-docs inside arc is **adaptive**, not a fixed question count:
    - **Simple task** (single goal, narrow scope, acceptance readable straight off the brief, no ambiguous branches): **ask less**. Clarify only the 0–2 points that are genuinely missing; the moment you can write a crisp goal + checkable acceptance, **commit it to disk**. Do not pad questions just to "follow the flow".
@@ -43,7 +43,7 @@ description: Run grill-with-docs to define the arc objective with crisp boundary
    **Trivial route** (single concrete step, no smoke needed, no risky dependencies, acceptance is one number on one input):
    - Skip the formal `/arc-plan` flow.
    - Write a 1-3 line `2_plan.md` directly — numbered steps only, no `Strategy / Smoke Test First / Risks` sections required, just enough that `/arc-execute` knows what to run. (`2_plan.md` must exist for `/arc-finalize` to work; this is the minimum form.)
-   - Append one short note to `_tmp/report_notes.md` (mkdir on first use): `## <YYMMDD_HHMM> [plan]` + the step list.
+   - Fill in the 现在在哪 and 怎么重跑 sections of `3_state.md` (`arc new` already seeded the file).
    - Tell the user one line: `Objective locked; task is small — wrote a minimal plan and starting execute.` Then chain into the `/arc-execute` flow per `arc-execute.md`.
 
    **Non-trivial route** (multiple goals, fuzzy acceptance, cross-system, real dependencies, risk):

@@ -1,52 +1,40 @@
 ---
 name: arc-finalize
-description: Single-pass wrap-up — sweep the arc for anything worth promoting to the main project (code, docs, new knowledge), print those as 落盘 suggestions in chat, then dispatch the reporter sub-agent to write 9_summary.md. The agent never edits the main project — the user promotes the suggestions themselves. The completion notification handler flips the arc to done. Use when the user says "/arc-finalize" or "/arc-finalize 260430c".
+description: Wrap up an arc — review the promotion candidates in 3_state.md, print the 落盘 suggestions in chat, write 9_handoff.md, and flip the arc to done. The agent never edits the main project; the user promotes whatever they want. Use when the user says "/arc-finalize" or "/arc-finalize 260430c", or when /arc-execute chains in.
 ---
 
-# /arc-finalize — Single-pass wrap-up
+# /arc-finalize — Hand back what's worth keeping
 
-**The agent never touches the main project.** Finalize surveys the finished arc and hands the user a 落盘 (promotion) suggestion list — what code/docs/knowledge look worth lifting into the main project, and where. The **user** does the actual promoting themselves, on their own schedule.
+Finalize is the reverse channel of the arc: everything else in the protocol keeps work *inside* the arc directory, and this step decides what should leave it. The agent only *suggests* — the user promotes, on their own schedule.
 
-There is **no approval gate** and **no `8_handoff_plan.md` file**. Because the agent makes no project changes, there is nothing to gate: finalize runs straight through — sweep → print suggestions → dispatch the reporter — and the arc auto-flips to `done` when `9_summary.md` is ready.
+There is no approval gate and no handoff-draft file. Because the agent makes no project changes, there is nothing to gate.
 
 ## Flow
 
 1. **Resolve the arc** — id or cwd.
 
-2. **Full sweep — default to parallel sub-agents (agent teams ON).** The four scan units below are independent (different files, different outputs, no shared mutable state), so dispatch them to `general-purpose` sub-agents in **one** Agent tool call (no explicit `model` parameter — let them inherit the parent). Each sub-agent reports its findings back as a structured block; the main agent collates them into the single suggestion list it prints in step 3. **Sub-agents do not write any file and do not call `arc log`** — single writer rule, same as `/arc-execute`.
-   - **Unit A — `utils/*.py`.** For each file, assess promotion value: worth reusing? pure functions? does it conflict with existing code in the main project? Report a suggestion row per file: source → suggested dest path, modtype (new / merge / replace), one-line why.
-   - **Unit B — `scripts/*.py`.** Skip by default; list them and explicitly mark as skipped (one-shot, not promoted).
-   - **Unit C — `doc/*.md`.** Decide whether each is worth lifting into the main project's `docs/`. Report `[NEW]` / `[UPDATE]` / `[STALE?]` suggestions with the suggested target path.
-   - **Unit D — `0_meta.md ## log`.** Full scan for "stuck >15 min", "naming convention decided", "read a paper", "made a significant decision" → `[NEW]` knowledge suggestions (follows the workspace AGENTS.md "new-knowledge triggers"). Also cross-check `1_objective.md` acceptance (§03 验收 — L1 metrics + L2 evidence bullets): was it met? → the Verification line.
+2. **Review the 落盘候选 table in `3_state.md`.** It was filled in during execute, when each judgment was freshest. Your job is to *review* it, not to rebuild it:
+   - For each row: does it still hold? Is the suggested destination right? Does it collide with something already in the main project (read-only check — `grep` / `ls`, no edits)?
+   - Then sweep for what the table missed: `utils/*.py` with no row, `doc/*.md` worth lifting into the project's docs, and knowledge worth recording (stuck > 15 min, a naming convention decided, a paper read, a significant decision) visible in `0_meta.md ## log`.
+   - `scripts/` is skipped by default (one-shot). `output/` and `_tmp/` are never promoted.
 
-   **When to skip parallelism:** if `utils/`, `scripts/`, and `doc/` are all empty (or only have 1-2 trivial files), do the sweep inline serially — fan-out has overhead not worth it for tiny arcs. Default for normal arcs is parallel.
+3. **Print the 落盘 suggestions in chat.** This is the user-facing deliverable. Structure it so they can act directly:
+   - **Code to promote** — source → suggested destination, type (new / merge / replace), one line why. Every `utils/*.py` appears exactly once, either here or in the skip list.
+   - **Doc proposals** — `[NEW]` / `[UPDATE]` / `[STALE?]` with target paths.
+   - **Skipped** — explicitly not worth promoting.
+   - **Verification** — was acceptance met? Numbers and paths, not "probably".
+   - **Outstanding** — known follow-ups, risks.
 
-3. **Print the 落盘 suggestions inline in the chat.** No file is written. Structure it so the user can act on it directly:
-   - **Code to promote** — every `utils/*.py` appears exactly once, either as a promote suggestion (source → suggested dest, modtype, why) or in the skip list.
-   - **Doc proposals** — `[NEW]` / `[UPDATE]` / `[STALE?]`, each with the suggested target path.
-   - **Skipped** — explicitly not worth promoting (incl. `scripts/`).
-   - **Verification** — was the acceptance met? (numbers / paths, not "probably").
-   - **Risks / outstanding TODOs.**
+   Write "none" for an empty section rather than dropping it.
 
-   Write "none" for an empty section rather than omitting it. Then append the same content as one `## <ts> [finalize-suggestions]` block to `_tmp/report_notes.md` so the reporter folds it into the 留下的产物 / 接下来 sections of `9_summary.md`. (This note is internal reporter plumbing, not a user-facing deliverable — the user-facing surface is the chat.)
+4. **Write `9_handoff.md`** using `~/.claude/skills/arc/templates/9_handoff.md` as the skeleton — three sections: 结论 / 落盘清单 / 未尽事项. The 落盘清单 is the same table you just printed. **Do not re-tell the process** — that lives in `0_meta.md ## log`, and duplicating it there means two versions to trust.
 
-4. Call `arc touch <id>`.
-
-5. **Dispatch the reporter sub-agent (background).** Per `reporter.md` Phase B — `general-purpose`, no explicit `model`, `run_in_background: true`. The reporter writes `<arc>/9_summary.md` from the canonical inputs (`1_objective.md`, `2_plan.md`, `_tmp/report_notes.md` incl. the `[finalize-suggestions]` block, `0_meta.md` log, `output/` listing).
-
-6. **Do not flip status here.** The reporter is background. When the completion notification arrives (this turn, later, or mid-conversation), the shared handler in `reporter.md` Phase C verifies the file, calls `arc status <id> done` (gate now passes), and tells the user one line. If you call `arc status <id> done` here, the CLI rejects it because `9_summary.md` does not exist yet.
-
-7. **Report to the user one short line:** "Promotion suggestions above — promote whatever you want into the main project yourself. Drafting `9_summary.md` in the background; will mark done when it lands." Then yield.
-
-## On failure
-
-- If the reporter sub-agent fails on the notification: see `reporter.md` Phase C failure path. The arc stays `active`; the user decides whether to re-dispatch.
+5. **Close the arc.** `arc log "[handoff] 9_handoff.md written"`, then `arc status <id> done` (the gate now passes). Tell the user one line with the path. Do not open the file.
 
 ## Don't
 
-- **Do not edit, create, or move any main-project file.** Finalize only *suggests* 落盘; the user does it. This is the load-bearing invariant of the new flow — if you find yourself writing into the main project, stop.
-- Do not create `8_handoff_plan.md` or any handoff/promotion file. Suggestions live in the chat (plus the internal reporter note). There is no draft to "approve".
-- Do not wait for an `approved` reply — there is no approval gate any more. Run straight through to dispatching the reporter.
-- Do not call `arc status done` inline — the CLI rejects it until `9_summary.md` exists, and the notification handler in `reporter.md` Phase C is the only place that flips it.
-- Do not suggest promoting anything from `output/` (gitignored experiment artifacts) or `_tmp/` (agent-internal scratch). You may reference `output/` paths as evidence; never surface `_tmp/` contents.
-- Do not hand-craft `9_summary.md` or any other `9_*` file. The reporter sub-agent owns that slot; hand-writing it defeats the single-writer contract in `reporter.md`.
+- **Do not edit, create, or move any main-project file.** Finalize suggests; the user promotes. This is the load-bearing invariant — if you find yourself writing into the project, stop.
+- Do not rebuild the promotion list from scratch while ignoring `3_state.md` — the table is the point of having recorded it during execute.
+- Do not restate the journey in `9_handoff.md`. Result, promotion list, loose ends. Nothing else.
+- Do not suggest promoting anything from `output/` (experiment artifacts) or `_tmp/` (agent scratch). You may cite `output/` paths as evidence; never surface `_tmp/`.
+- Do not finalize an arc whose acceptance you cannot point at — go back and ask the user instead.

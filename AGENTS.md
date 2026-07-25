@@ -38,5 +38,6 @@
 - agent **不主动**读 arcs/index.md；仅在用户显式触发 /arc-* skill 或 `arc <subcmd>` CLI 时进入任务流程。
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
 - 触发 CLI：arc {new,spawn,pause,resume,status,abandon,touch,log,output,list,cd,rebuild,init}。
-- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*`（单层，无 all/ 无 view 软链）；状态权威在 `0_meta.md`。
-- `done` 必须存在 `9_*.md`；`abandoned` 必须有 `--reason`。
+- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*`（单层平铺）；状态权威在 `0_meta.md`。
+- 文件：`1_objective.md` 目标 / `2_plan.md` 路线 / `3_state.md` 活的状态快照（覆写）/ `9_handoff.md` 结论+落盘清单。
+- 任务期间只写 arc 目录，主项目只读；`done` 必须存在 `9_handoff.md`；`abandoned` 必须有 `--reason`。

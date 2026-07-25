@@ -33,11 +33,13 @@ META_FIELDS = (
 AGENTS_HOOK = """
 ## Arc Protocol
 - 任务管理协议：~/.claude/skills/arc/SKILL.md。
-- agent **不主动**读 arcs/index.md；仅在用户显式触发 /arc-* skill 或 `arc <subcmd>` CLI 时进入任务流程。
+- **arc 目录是唯一写入面**：任务期间 agent 只写 `arcs/<id>_*/`，主项目目录只读；落盘由用户手动执行。
+- agent **不主动**读 arcs/index.md；仅在用户显式触发 /arc-* 或 `arc <subcmd>` CLI 时进入任务流程。
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
 - 触发 CLI：arc {new,spawn,pause,resume,status,abandon,delete,touch,log,output,list,cd,rebuild,init}。
-- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*`（单层，无 all/ 无 view 软链）；状态权威在 `0_meta.md`。
-- `done` 必须存在 `9_summary.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删（直接全删，不留 trace）。
+- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*`（单层平铺）；状态权威在 `0_meta.md`。
+- 文件：`1_objective.md` 目标 / `2_plan.md` 路线 / `3_state.md` 活的状态快照（覆写）/ `9_handoff.md` 结论+落盘清单。
+- `done` 必须存在 `9_handoff.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删（不留 trace）。
 """
 
 
@@ -83,7 +85,6 @@ def require_root() -> Path:
     root = find_project_root()
     if root is None:
         die("not initialized in this directory tree. Run: arc init")
-    _migrate_layout(root)
     return root
 
 
@@ -264,8 +265,10 @@ def _migrate_layout(root: Path) -> None:
     symlinks and ``arcs/{active,paused,done,abandoned}/`` view folders full of
     symlinks. New: ``arcs/<name>/`` canonical dirs and nothing else (besides
     ``index.md``). Idempotent — fast-returns once the tree is already flat.
-    Run on every command via ``require_root`` and by ``arc init`` directly, so
-    an old tree self-heals the moment any ``arc`` subcommand touches it.
+    Runs only on ``arc init`` and on arc creation (``new`` / ``spawn``): those
+    are the moments a tree is being touched deliberately, so an old tree
+    flattens the next time real work starts in it, and read-only commands
+    never rewrite a tree behind the user's back.
 
     Only the old *active view* links (target ``all/<name>``) are removed. A
     hand-made cross-tree reference symlink (absolute or ``../`` target — e.g.
@@ -343,26 +346,28 @@ def list_arcs(root: Path) -> List[Tuple[Path, Dict[str, str]]]:
     return out
 
 
-def has_objective(arc: Path) -> bool:
-    # .html is the legacy form; arcs created before the markdown switch keep it.
-    return (arc / "1_objective.md").exists() or (arc / "1_objective.html").exists()
+def nonempty(arc: Path, name: str) -> bool:
+    f = arc / name
+    return f.is_file() and f.stat().st_size > 0
 
 
-def has_summary(arc: Path) -> bool:
-    # .html is the legacy form (see has_objective).
-    for name in ("9_summary.md", "9_summary.html"):
-        f = arc / name
-        if f.is_file() and f.stat().st_size > 0:
-            return True
-    return False
+def still_skeleton(arc: Path, name: str) -> bool:
+    """True when a template copy still carries unfilled ``<FILL:`` markers."""
+    f = arc / name
+    try:
+        return "<FILL" in f.read_text(encoding="utf-8")
+    except OSError:
+        return False
 
 
 def hint_for(arc: Path, fm: Dict[str, str]) -> str:
-    if not has_objective(arc):
+    if not nonempty(arc, "1_objective.md"):
         return "needs 1_objective.md"
-    if not (arc / "2_plan.md").exists():
+    if still_skeleton(arc, "1_objective.md"):
+        return "1_objective.md still has FILL markers"
+    if not nonempty(arc, "2_plan.md"):
         return "needs 2_plan.md"
-    if has_summary(arc) and fm.get("status") == "active":
+    if nonempty(arc, "9_handoff.md") and fm.get("status") == "active":
         return "ready to mark done"
     last = fm.get("last_active_at", "")
     try:
@@ -487,8 +492,11 @@ def update_status(
     if old == new_status:
         die(f"arc already in status {new_status}.")
     if new_status == "done":
-        if not has_summary(arc_dir):
-            die("cannot mark done: no non-empty 9_summary.md found.")
+        if not nonempty(arc_dir, "9_handoff.md"):
+            die(
+                "cannot mark done: no non-empty 9_handoff.md found. "
+                "(Arcs from before the handoff rename carry 9_summary.md — rename it.)"
+            )
     if new_status == "abandoned":
         if not reason:
             die("--reason required for abandoned.")
@@ -643,8 +651,24 @@ def cmd_init(args: argparse.Namespace) -> None:
             err("appended Arc Protocol hook to CLAUDE.md.")
 
 
+def _seed_state(arc_dir: Path) -> None:
+    """Copy templates/3_state.md into a fresh arc.
+
+    Seeded at creation rather than lazily so a resuming agent can always count
+    on one file answering "where are we right now". If the template is missing
+    (script copied out of the skill dir), skip quietly — the agent writes the
+    file on first execute step anyway.
+    """
+    tpl = Path(__file__).resolve().parent.parent / "templates" / "3_state.md"
+    try:
+        (arc_dir / "3_state.md").write_text(tpl.read_text(encoding="utf-8"), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def _create_arc(args: argparse.Namespace, parent: Optional[str]) -> None:
     root = require_root()
+    _migrate_layout(root)
     brief_text = " ".join(args.brief).strip()
     slug = slugify_brief(brief_text)
     day = today_id()
@@ -668,6 +692,7 @@ def _create_arc(args: argparse.Namespace, parent: Optional[str]) -> None:
     if parent:
         history.append(f"{now_iso()} parent set to {parent}")
     write_meta(arc_dir, fm, history)
+    _seed_state(arc_dir)
     rebuild_index(root)
     print(arc_id)
     err(f"created {arc_name} at {arc_dir}.")
@@ -777,14 +802,21 @@ def cmd_output(args: argparse.Namespace) -> None:
         stamp = dt.datetime.now().strftime("%y%m%d_%H%M%S")
         out_dir = arc_dir / "output" / f"{stamp}_{name}"
     out_dir.mkdir(parents=True)
+    # Producing an experiment output is activity: keep last_active_at honest so
+    # a long-running arc is not flagged stale by the index.
+    fm, history, log_body = parse_meta(arc_dir)
+    fm["last_active_at"] = now_iso()
+    write_meta(arc_dir, fm, history, log_body=log_body)
+    rebuild_index(root)
     print(out_dir)
 
 
 def cmd_list(args: argparse.Namespace) -> None:
+    # Rebuild first: hints depend on files the agent writes directly (objective,
+    # plan, handoff) and on wall-clock staleness, so a cached index lies.
     root = require_root()
+    rebuild_index(root)
     idx = root / ARCS_DIRNAME / "index.md"
-    if not idx.exists():
-        rebuild_index(root)
     sys.stdout.write(idx.read_text(encoding="utf-8"))
 
 
@@ -795,9 +827,9 @@ def cmd_cd(args: argparse.Namespace) -> None:
 
 
 def cmd_rebuild(args: argparse.Namespace) -> None:
-    root = require_root()  # require_root already ran _migrate_layout
+    root = require_root()
     rebuild_index(root)
-    err("flattened legacy layout (if any) and rebuilt index.md.")
+    err("rebuilt index.md.")
 
 
 def cmd_resolve(args: argparse.Namespace) -> None:
@@ -875,7 +907,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("id")
     sp.set_defaults(func=cmd_cd)
 
-    sp = sub.add_parser("rebuild", help="Flatten legacy layout (if any) and rebuild index.md")
+    sp = sub.add_parser("rebuild", help="Rebuild index.md from each arc's 0_meta.md")
     sp.set_defaults(func=cmd_rebuild)
 
     sp = sub.add_parser("_resolve", help="Resolve id to canonical path (internal)")

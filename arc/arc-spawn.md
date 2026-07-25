@@ -34,6 +34,8 @@ description: Spawn a child arc when a separable task is discovered during anothe
 
 ## When to suggest `/arc-spawn` vs. adding a step
 
+A spawn is how the protocol keeps two lines of work from contaminating each other's directory and trace. That is the test: would these two efforts want separate acceptance criteria and separate artifacts?
+
 - Refinement under the same objective → add a step in the current arc, do not spawn.
 - A different objective with its own acceptance criteria → suggest spawning.
 - Boundary unclear → ask the user "should we split this off?" and let them decide; do not spawn unilaterally.
