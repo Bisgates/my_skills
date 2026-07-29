@@ -1,6 +1,6 @@
 ---
 name: skill-mgmt
-description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills, ~/.codex/skills, and ~/.gemini/antigravity/skills). Use ONLY when the user explicitly says install/sync/adopt/new/create a skill, sync skills across machines, or asks how to set up the skills repo on a new machine. Do not trigger for general questions about what a particular skill does.
+description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills, ~/.codex/skills, and ~/.gemini/antigravity/skills). Use ONLY when the user explicitly says install/sync/adopt/new/create a skill, sync skills across machines, asks how to set up the skills repo on a new machine, or reports that a machine is running a stale or missing skill. Do not trigger for general questions about what a particular skill does.
 dependencies:
   - write-a-skill
 ---
@@ -16,7 +16,8 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 - `<repo>/manifest.txt` lists every top-level skill the user owns. **Line 1 must be `skill-mgmt`** (self-management).
 - A skill may declare runtime dependencies in `SKILL.md` frontmatter with `dependencies:` (also accepted: `depends_on:` or `requires:`). Installing a skill installs its recursive dependency closure first.
 - Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
-- Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`.
+- Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`. A machine holding the current commit can still be missing skills: `git pull` writes files, it does not create symlinks. `bin/install` is what closes that gap, so `bin/sync` runs it and `install` also plants git hooks that re-run it after any pull.
+- `<repo>/skill-mgmt/hosts.txt` lists the other machines with a checkout, so `bin/sync --all` can push an update outward instead of waiting for someone to log into each one.
 - **Project-local skills** under `<project>/.claude/skills/<name>/` are a separate category: Claude Code picks them up project-scoped (no symlinks), they do not belong in `manifest.txt`, and the `install / sync / adopt / new` ops do not apply. Only the **Edit** path (Op 5) applies, and commits land in the project's own git repo. See [Repo-local skills](#repo-local-skills).
 
 ## Conventions
@@ -32,6 +33,7 @@ Trigger this skill when the user says any of:
 - "把 ~/.claude/skills/X 收编 / 纳入 / adopt"  /  "adopt skill X"
 - "在这台机器装 / 安装 my skills"  /  "install my skills here"  /  "bootstrap skills on this machine"
 - "安装 skill X" / "install skill X" / "rebuild links for X"
+- "gpu7 上的 X 不是最新的" / "服务器上没有 skill X" / "this machine is running an old version of skill X"
 
 Do NOT trigger this skill's lifecycle ops for:
 - Asking what a particular skill does (read that skill's SKILL.md instead)
@@ -46,18 +48,34 @@ Editing the content of an existing skill is in scope but takes the **Edit** path
 ```bash
 <repo>/skill-mgmt/bin/install              # install every manifest skill + dependencies
 <repo>/skill-mgmt/bin/install <name> [...] # install named skill(s) + dependencies
+<repo>/skill-mgmt/bin/install --no-prune   # keep dangling links (used by the git hooks)
+<repo>/skill-mgmt/bin/install --no-hooks   # skip planting the git hooks
 ```
 
 Reads `<repo>/manifest.txt` when no names are passed. When names are passed, treats those names as the requested install set. In both modes it resolves recursive dependencies declared in each skill's frontmatter before linking.
 
 For every resolved skill name, ensures `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, and `~/.gemini/antigravity/skills/<name>` are symlinks → `<repo>/<name>`. Idempotent: existing correct symlinks are skipped; conflicts (real dirs at the target) are warned, not overwritten — the user must run `bin/adopt` or manually move them.
-### Op 2 — Sync (pull remote, refresh symlinks)
+
+Three things happen alongside the linking:
+
+- **Pruning.** Symlinks that point into `<repo>` at a path that no longer exists are deleted — a renamed or removed skill otherwise lingers in every runtime's skill list as a broken entry. Links pointing anywhere outside `<repo>` are never touched, since those belong to the user. `--no-prune` disables it.
+- **Git hooks.** `post-merge`, `post-rewrite`, and `post-checkout` are written into the repo's hooks dir; each re-runs `install --no-prune --no-hooks`. This is what makes a plain `git pull` self-healing: without it, a machine can sit on the current commit with skills that were never linked. Hooks not written by skill-mgmt (no marker comment) are reported and left alone. `--no-hooks` disables it. Hooks are per-clone and untracked, so every machine gets them from its own first `install`.
+- **Problem list.** Anything skipped (conflicting real dir, foreign symlink, over-long codex description) is reprinted as a summary block at the end. A single `WARN:` in a 60-line link log is exactly how a machine ends up quietly missing half its skills.
+
+### Op 2 — Sync (pull, push, relink — locally and on other machines)
 
 ```bash
-<repo>/skill-mgmt/bin/sync
+<repo>/skill-mgmt/bin/sync                 # this machine
+<repo>/skill-mgmt/bin/sync --all           # this machine, then every host in hosts.txt
+<repo>/skill-mgmt/bin/sync gpu7            # this machine, then the named host(s)
+<repo>/skill-mgmt/bin/sync gpu7:~/my_skills  # pin the remote repo path
 ```
 
-Equivalent to `git -C <repo> pull --rebase && <repo>/skill-mgmt/bin/install`. Run on the second machine after pushing changes from the first. Dependency closure is handled by `install`.
+Local pass: `git pull --rebase --autostash` (a dirty worktree must not abort the run), push any commit that is local-only, then `install`. Dependency closure is handled by `install`.
+
+Remote pass: ssh into each host and run *its* `bin/sync`. Without a path the remote probes `~/my_skills` then `~/project/agent/skills`. A host that fails is reported and does not stop the others; the script exits non-zero if any failed. Running `git pull` on the remote replaces the script file's inode, so a `sync` that updates itself finishes on the old copy rather than corrupting mid-run.
+
+Reach for the remote pass whenever a change should land everywhere — the machine that never gets logged into is the one that ends up weeks behind.
 
 ### Op 3 — Adopt (move an existing scattered skill into the repo)
 
@@ -159,14 +177,23 @@ After successful modifying operations (`new`, `adopt`, and any direct skill edit
 - **Line 1 must be `skill-mgmt`** — enforces self-management invariant
 - Same manifest is shared across all machines; per-machine subsetting is a non-goal
 
+## Hosts format
+
+`<repo>/skill-mgmt/hosts.txt`, read by `bin/sync --all`:
+- One entry per line: `<ssh-target>[:<repo-path>]`
+- The path is optional — without it the remote probes `~/my_skills` then `~/project/agent/skills`
+- Blank lines and `# comments` are ignored
+- Shared across machines, so an entry a given machine cannot reach (wrong subnet, no key) simply fails and is reported
+
 ## Gotchas
 
 - **Do not hardcode paths**: all scripts resolve `<repo>` via `$(cd "$(dirname "$0")/../.." && pwd)`. Mac repo lives at `~/project/agent/skills/`, server at `~/my_skills/` — both work.
 - **Antigravity + symlinks**: some Antigravity builds have been reported not to traverse symlinked skill folders during discovery ([discussion](https://github.com/vercel-labs/skills/issues/633)). If listed skills never appear after `install`, check the app version/docs or keep a copy under project `.agents/skills/` until symlink support is reliable.
 - **Editor atomic-write**: vim/cursor with `write-temp + rename` save mode can replace a symlink with a real file. If `~/.claude/skills/<name>` (or Codex/Antigravity paths) becomes a real dir unexpectedly, an editor wrote through the symlink incorrectly. Recover: `bin/install` will warn; manually `rm` the bad path and re-run install. Set `vim: :set backupcopy=yes` to avoid.
 - **Conflict on adopt**: if multiple agent dirs contain diverged copies, adopt refuses until you pick `bin/adopt <name> --from claude|codex|antigravity`.
-- **codex description ≤ 1024 chars**: codex 0.128+ silently drops any skill whose frontmatter `description:` (after joining folded continuation lines) exceeds 1024 characters — the error appears in stderr as `failed to load skill .../SKILL.md: invalid description: exceeds maximum length of 1024 characters` but the rest of the session continues without it, so the loss is easy to miss. Claude and Antigravity have no comparable hard limit. `bin/install` checks each manifest skill and prints a `WARN: <name> description is N chars (>1024); codex will silently drop this skill` line for any over the cap. Pruning fix: move visual / formatting / mechanical detail into the body — `description:` is read by the model only for "should this skill trigger?", not for the skill's mechanics.
+- **codex description ≤ 1024 chars**: codex 0.128+ silently drops any skill whose frontmatter `description:` (after joining folded continuation lines) exceeds 1024 characters — the error appears in stderr as `failed to load skill .../SKILL.md: invalid description: exceeds maximum length of 1024 characters` but the rest of the session continues without it, so the loss is easy to miss. Claude and Antigravity have no comparable hard limit. `bin/install` checks each manifest skill and reports any over the cap in its end-of-run problem list. Pruning fix: move visual / formatting / mechanical detail into the body — `description:` is read by the model only for "should this skill trigger?", not for the skill's mechanics.
 - **arcs/ is not synced**: `arcs/` (arc task tracking) is in `.gitignore`. Per-machine task state, not shared.
+- **A current repo is not a synced machine**: `git pull` alone leaves every newly added skill unlinked, and the machine looks fine — right commit, missing skills. The git hooks planted by `install` cover pulls from now on, but a clone that has never run `install` still has no hooks. When diagnosing a machine, compare `manifest.txt` against the actual links, not just `git log`.
 
 ## See also
 

@@ -1,18 +1,96 @@
 #!/usr/bin/env bash
-# sync — pull remote changes, then re-run install to pick up any newly added skills.
+# sync [--all | <ssh-target>[:<repo-path>] ...] — bring this machine's skills
+# up to date, then optionally push the same update out to other machines.
+#
+#   sync              this machine only
+#   sync --all        this machine, then every host in skill-mgmt/hosts.txt
+#   sync gpu7         this machine, then gpu7 over ssh
+#
+# Local pass: pull (autostashing local edits so a dirty worktree can't abort
+# the run), push anything committed locally but never pushed, then re-run
+# install so newly added skills actually get linked.
+#
+# Remote pass: ssh into each host and run its own bin/sync. Without this, the
+# only way a second machine ever updates is someone remembering to log in —
+# which is how a machine ends up weeks behind on a skill it uses daily. A host
+# that fails is reported and does not stop the others; the script exits
+# non-zero if any failed.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+HOSTS_FILE="$REPO/skill-mgmt/hosts.txt"
 # shellcheck source=/dev/null
 source "$REPO/skill-mgmt/bin/common"
 skill_mgmt_capture_git_state
 cd "$REPO"
 
-echo "sync: git pull --rebase in $REPO"
-git pull --rebase
+hosts=()
+for arg in "$@"; do
+  case "$arg" in
+    --all)
+      if [[ ! -f "$HOSTS_FILE" ]]; then
+        echo "sync: --all needs $HOSTS_FILE" >&2
+        exit 1
+      fi
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        line="$(skill_mgmt_trim "$line")"
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        hosts+=("$line")
+      done < "$HOSTS_FILE"
+      ;;
+    -*) echo "sync: unknown option '$arg'" >&2; exit 2 ;;
+    *) hosts+=("$arg") ;;
+  esac
+done
+
+echo "sync: git pull --rebase --autostash in $REPO"
+git pull --rebase --autostash
+
+# A machine that only ever pulls will happily tell the *other* machines to pull
+# commits that never left this one.
+if git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' > /dev/null 2>&1; then
+  ahead="$(git rev-list --count '@{upstream}..HEAD')"
+  if [[ "$ahead" -gt 0 ]] && skill_mgmt_autopush_enabled; then
+    echo "sync: pushing $ahead local commit(s)"
+    git push
+  elif [[ "$ahead" -gt 0 ]]; then
+    echo "sync: $ahead local commit(s) unpushed (SKILL_MGMT_AUTOPUSH=0)"
+  fi
+fi
 
 echo "sync: running install"
 SKILL_MGMT_AUTOCOMMIT=0 "$REPO/skill-mgmt/bin/install"
 
 skill_mgmt_auto_commit_push "sync skills"
+
+if [[ "${#hosts[@]}" -eq 0 ]]; then exit 0; fi
+
+# The remote repo path differs per machine (~/my_skills on the server,
+# ~/project/agent/skills on the Mac), so probe unless the host entry pins it.
+# Kept to one line and free of single quotes so it survives being wrapped in
+# `bash -lc '...'` on the far side.
+PROBE_CMD='for d in "$HOME/my_skills" "$HOME/project/agent/skills"; do [ -x "$d/skill-mgmt/bin/sync" ] && exec "$d/skill-mgmt/bin/sync"; done; echo "sync: no my_skills checkout on this host" >&2; exit 1'
+
+failed=()
+for entry in "${hosts[@]}"; do
+  target="${entry%%:*}"
+  remote_cmd="$PROBE_CMD"
+  if [[ "$entry" == *:* ]]; then
+    remote_cmd="exec \"${entry#*:}/skill-mgmt/bin/sync\""
+  fi
+  echo
+  echo "=== sync: $target ==="
+  if ssh -o BatchMode=yes -o ConnectTimeout=15 "$target" "bash -lc '$remote_cmd'"; then
+    echo "=== sync: $target ok ==="
+  else
+    echo "=== sync: $target FAILED ===" >&2
+    failed+=("$target")
+  fi
+done
+
+if [[ "${#failed[@]}" -gt 0 ]]; then
+  echo
+  echo "sync: failed hosts: ${failed[*]}" >&2
+  exit 1
+fi

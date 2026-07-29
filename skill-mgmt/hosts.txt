@@ -1,0 +1,9 @@
+# Machines that hold a checkout of this repo, for `bin/sync --all`.
+# One per line: <ssh-target>[:<repo-path>]
+# The path is optional — without it the remote probes ~/my_skills then
+# ~/project/agent/skills. Lines starting with # are ignored.
+#
+# This file is shared across machines, so an entry a given machine cannot
+# reach (wrong subnet, no key) will simply fail and be reported.
+
+gpu7
