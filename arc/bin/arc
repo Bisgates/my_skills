@@ -37,7 +37,7 @@ AGENTS_HOOK = """
 - agent **不主动**读 arcs/index.md；仅在用户显式触发 /arc-* 或 `arc <subcmd>` CLI 时进入任务流程。
 - 触发 skill：/arc-new, /arc-objective, /arc-plan, /arc-execute, /arc-resume, /arc-spawn, /arc-finalize。
 - 触发 CLI：arc {new,spawn,pause,resume,status,abandon,delete,touch,log,output,list,cd,rebuild,init}。
-- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*`（单层平铺）；状态权威在 `0_meta.md`。
+- ID 永远 7 字符 YYMMDDx；canonical 路径 `arcs/<id>_*` 或 `arcs/<track>/<id>_*`（track 只改放置位置）；状态权威在 `0_meta.md`。
 - 文件：`1_objective.md` 目标 / `2_plan.md` 路线 / `3_state.md` 活的状态快照（覆写）/ `9_handoff.md` 结论+落盘清单。
 - `done` 必须存在 `9_handoff.md`；`abandoned` 必须有 `--reason`；`delete` 是硬删（不留 trace）。
 """
@@ -98,10 +98,48 @@ def slugify_brief(brief: str, max_words: int = 5) -> str:
     return "_".join(parts)
 
 
+def _is_arc_dir(path: Path) -> bool:
+    if not path.is_dir() or not (path / "0_meta.md").exists():
+        return False
+    return bool(ID_RE.match(path.name.split("_", 1)[0]))
+
+
+def iter_arc_dirs(root: Path) -> List[Path]:
+    """Arc dirs at `arcs/<id>_*` and one level down at `arcs/<track>/<id>_*`."""
+    base = root / ARCS_DIRNAME
+    if not base.is_dir():
+        return []
+    out: List[Path] = []
+    for child in sorted(base.iterdir()):
+        if _is_arc_dir(child):
+            out.append(child)
+        elif child.is_dir() and child.name != ALL_DIRNAME:
+            for grandchild in sorted(child.iterdir()):
+                if _is_arc_dir(grandchild):
+                    out.append(grandchild)
+    return out
+
+
+def split_track(words: List[str]) -> Tuple[List[str], Optional[str]]:
+    """Pull a trailing `track <name>` off the brief. Placement only."""
+    if len(words) >= 2 and words[-2] == "track":
+        name = words[-1]
+        if not name or name in (".", "..") or "/" in name or "\\" in name:
+            die(f"invalid track name {name!r}.")
+        reserved = {ALL_DIRNAME, "index.md", *STATES}
+        if name in reserved:
+            die(f"track name {name!r} is reserved.")
+        if ID_RE.match(name.split("_", 1)[0]):
+            die(f"track name {name!r} looks like an arc id.")
+        return words[:-2], name
+    if words and words[-1] == "track":
+        die("track requires a name (e.g. arc new fix pipeline track data_process).")
+    return words, None
+
+
 def next_letter(root: Path, day: str) -> str:
     used = set()
-    base = root / ARCS_DIRNAME
-    for child in base.iterdir():
+    for child in iter_arc_dirs(root):
         head = child.name.split("_", 1)[0]
         m = ID_RE.match(head)
         if m and m.group(1) == day:
@@ -114,19 +152,17 @@ def next_letter(root: Path, day: str) -> str:
 
 def find_arc_dir(root: Path, arg: str) -> Path:
     """Resolve user input (7-char id, or full <id>_<slug> name) to canonical dir."""
-    base = root / ARCS_DIRNAME
-    direct = base / arg
-    if direct.is_dir():
-        return direct
-    if not ID_RE.match(arg):
-        die(f"invalid id {arg!r}. Expected 7 chars: YYMMDDx (6 digits + lowercase letter).")
-    matches = sorted(base.glob(f"{arg}_*"))
-    if len(matches) == 0:
-        die(f"no arc found with id {arg}.")
+    matches = [p for p in iter_arc_dirs(root) if p.name == arg or p.name.split("_", 1)[0] == arg]
+    if len(matches) == 1:
+        return matches[0]
     if len(matches) > 1:
-        names = ", ".join(m.name for m in matches)
+        base = root / ARCS_DIRNAME
+        names = ", ".join(str(m.relative_to(base)) for m in matches)
         die(f"multiple arcs match {arg}: {names}")
-    return matches[0]
+    head = arg.split("_", 1)[0]
+    if not ID_RE.match(arg) and not ID_RE.match(head):
+        die(f"invalid id {arg!r}. Expected 7 chars: YYMMDDx (6 digits + lowercase letter).")
+    die(f"no arc found with id {arg}.")
 
 
 def cwd_arc_dir(root: Path) -> Optional[Path]:
@@ -136,12 +172,15 @@ def cwd_arc_dir(root: Path) -> Optional[Path]:
         rel = cwd.relative_to(base)
     except ValueError:
         return None
-    if not rel.parts:
-        return None
-    arc = base / rel.parts[0]
-    if not ID_RE.match(arc.name.split("_", 1)[0]):
-        return None
-    return arc
+    if len(rel.parts) >= 2:
+        nested = base / rel.parts[0] / rel.parts[1]
+        if _is_arc_dir(nested):
+            return nested
+    if rel.parts:
+        top = base / rel.parts[0]
+        if _is_arc_dir(top):
+            return top
+    return None
 
 
 def resolve_arc_dir(root: Path, arc_id: Optional[str]) -> Path:
@@ -329,15 +368,7 @@ def _migrate_layout(root: Path) -> None:
 
 def list_arcs(root: Path) -> List[Tuple[Path, Dict[str, str]]]:
     out = []
-    base = root / ARCS_DIRNAME
-    for child in sorted(base.iterdir()):
-        if not child.is_dir():
-            continue
-        if not (child / "0_meta.md").exists():
-            continue
-        head = child.name.split("_", 1)[0]
-        if not ID_RE.match(head):
-            continue
+    for child in iter_arc_dirs(root):
         try:
             fm, _, _ = parse_meta(child)
         except SystemExit:
@@ -424,8 +455,9 @@ def rebuild_index(root: Path) -> None:
         out.append("|---|---|---|---|---|")
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
+            rel = arc.relative_to(arcs_dir).as_posix()
             out.append(
-                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({rel}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('created_at', '')[:10]} "
                 f"| {fm.get('last_active_at', '')[:16].replace('T', ' ')} "
                 f"| {hint_for(arc, fm)} |"
@@ -440,8 +472,9 @@ def rebuild_index(root: Path) -> None:
         out.append("|---|---|---|")
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
+            rel = arc.relative_to(arcs_dir).as_posix()
             out.append(
-                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({rel}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('last_active_at', '')[:16].replace('T', ' ')} |"
             )
     out.append("")
@@ -454,8 +487,9 @@ def rebuild_index(root: Path) -> None:
         out.append("|---|---|---|")
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
+            rel = arc.relative_to(arcs_dir).as_posix()
             out.append(
-                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({rel}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('last_active_at', '')[:10]} |"
             )
     out.append("")
@@ -468,8 +502,9 @@ def rebuild_index(root: Path) -> None:
         out.append("|---|---|---|---|")
         for arc, fm in rows:
             sid = arc.name.split("_", 1)[0]
+            rel = arc.relative_to(arcs_dir).as_posix()
             out.append(
-                f"| [{arc.name}]({arc.name}) | {fmt_brief(fm, sid)} "
+                f"| [{arc.name}]({rel}) | {fmt_brief(fm, sid)} "
                 f"| {fm.get('last_active_at', '')[:10]} "
                 f"| {fm.get('abandon_reason', '')} |"
             )
@@ -669,13 +704,18 @@ def _seed_state(arc_dir: Path) -> None:
 def _create_arc(args: argparse.Namespace, parent: Optional[str]) -> None:
     root = require_root()
     _migrate_layout(root)
-    brief_text = " ".join(args.brief).strip()
+    brief_words, track = split_track(list(args.brief))
+    brief_text = " ".join(brief_words).strip()
     slug = slugify_brief(brief_text)
     day = today_id()
     letter = next_letter(root, day)
     arc_id = f"{day}{letter}"
     arc_name = f"{arc_id}_{slug}"
-    arc_dir = root / ARCS_DIRNAME / arc_name
+    parent_dir = root / ARCS_DIRNAME
+    if track:
+        parent_dir = parent_dir / track
+        parent_dir.mkdir(exist_ok=True)
+    arc_dir = parent_dir / arc_name
     arc_dir.mkdir()
 
     fm = {
@@ -848,7 +888,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_init)
 
     sp = sub.add_parser("new", help="Create a new arc")
-    sp.add_argument("brief", nargs="+", help="Brief description (≤5 words after slugify)")
+    sp.add_argument(
+        "brief",
+        nargs="+",
+        help="Brief description (≤5 words after slugify). Optional suffix: track <name>",
+    )
     sp.add_argument("--actor", default=None)
     sp.set_defaults(func=cmd_new)
 

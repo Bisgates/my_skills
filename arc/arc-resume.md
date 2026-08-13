@@ -13,7 +13,7 @@ The test this flow has to pass: an agent with zero conversation history reads th
    ```bash
    arc resume <id>
    ```
-   stdout is the canonical path (`arcs/<id>_<slug>`); stderr is the status-change message.
+   stdout is the canonical path (`arcs/<id>_<slug>` or `arcs/<track>/<id>_<slug>`); stderr is the status-change message.
 
 2. **Tell the user how to cd in** (don't cd for them):
    ```

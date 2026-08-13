@@ -14,8 +14,10 @@ A two-step chain: (1) `arc new` builds the skeleton, (2) automatically enter `/a
 2. **Call the CLI:**
    ```bash
    arc new <brief words...>
+   # if the user said `track <name>`, pass those two words through:
+   arc new <brief words...> track <name>
    ```
-   stdout's first line is the 7-char id (e.g. `260430c`); stderr carries the human-readable message. Capture the id from stdout. The command writes `0_meta.md` and seeds `3_state.md`; everything else is created lazily.
+   stdout's first line is the 7-char id (e.g. `260430c`); stderr carries the human-readable message. Capture the id from stdout. The command writes `0_meta.md` and seeds `3_state.md`; everything else is created lazily. `track <name>` only changes the parent folder to `arcs/<name>/` — IDs, resume, and the rest stay the same.
 
 3. **Tell the user how to cd in** (don't cd yourself — that pollutes the agent's cwd; let the user decide):
    ```

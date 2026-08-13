@@ -18,8 +18,8 @@ Anything in this skill that serves neither line is dead weight — delete it rat
 
 ## Core invariants (violations are bugs)
 
-- **The main project is read-only during an arc.** Every file the agent creates or edits while working a task lives under `arcs/<id>_<slug>/`. This holds for `/arc-execute` as much as for `/arc-finalize` — finalize *suggests* promotions and never performs them. If you find yourself editing a project file, stop and tell the user.
-- **Single physical path:** `arcs/<id>_<slug>/` — one flat level. No `all/` layer, no state subfolders, no view symlinks. Every cwd / log / cross-arc reference points here.
+- **The main project is read-only during an arc.** Every file the agent creates or edits while working a task lives under the arc dir (`arcs/<id>_<slug>/` or `arcs/<track>/<id>_<slug>/`). This holds for `/arc-execute` as much as for `/arc-finalize` — finalize *suggests* promotions and never performs them. If you find yourself editing a project file, stop and tell the user.
+- **Single physical path:** `arcs/<id>_<slug>/`, or `arcs/<track>/<id>_<slug>/` when created with `track <name>`. Track is only a folder name — same ID space, same resume/status/log. No `all/` layer, no state subfolders, no view symlinks. Every cwd / log / cross-arc reference points at the arc dir.
 - **Authoritative status:** the `status` field in `0_meta.md` (`active | paused | done | abandoned`), surfaced in `index.md`.
 - **Status transitions go through the CLI** (`arc pause/resume/status/abandon`). **Agents never hand-edit `0_meta.md`** — `arc log` is the only writer of its `## log` section.
 - **`done` hard gate:** `arc status <id> done` requires a non-empty `9_handoff.md`.
@@ -32,8 +32,9 @@ Anything in this skill that serves neither line is dead weight — delete it rat
 
 ```
 <project_root>/arcs/
-  <id>_<slug>/          # canonical arc dir (flat)
-  index.md              # auto-generated status view
+  <id>_<slug>/               # default placement
+  <track>/<id>_<slug>/       # optional: same arc, grouped by track
+  index.md                   # auto-generated status view
 ```
 
 Inside one arc — five numbered files, one per requirement:
@@ -82,7 +83,7 @@ Pause / abandon have no sub-skill — call the CLI directly (`arc pause <id> --n
 
 ```bash
 arc init                              # bootstrap arcs/ here; ensures CLAUDE.md + AGENTS.md → CLAUDE.md, appends the protocol hook
-arc new <brief...>                    # create skeleton (0_meta.md + 3_state.md); echoes the 7-char id
+arc new <brief...> [track <name>]     # create skeleton (0_meta.md + 3_state.md); echoes the 7-char id. `track <name>` places it under arcs/<name>/
 arc spawn <brief...> [--parent <id>]  # child task
 arc pause <id?> --note "..."
 arc resume <id>                       # echoes canonical path
