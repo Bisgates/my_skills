@@ -1,6 +1,6 @@
 ---
 name: cross-agent-call
-description: Dispatch a named model as a headless sub-agent by shelling out to its harness CLI (cursor-agent, grok, codex, or claude). Use whenever the user 派/用/让/问问 a model as a sub agent — sol, terra, luna, gpt-5.6, grok, grok-4.6, opus, sonnet, fable, codex, cursor — alone or as a pipeline like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试", or wants a second opinion or cross-check from another model or vendor. Do NOT use for the `grok` learning-HTML skill (用 grok 讲解/学习 a paper or folder) or for Claude Code's built-in Agent tool subagents.
+description: Dispatch a named model as a headless sub-agent by shelling out to its harness CLI (cursor-agent, grok, codex, or claude). Use whenever the user 派/用/让/问问 a model as a sub agent — sol, terra, luna, gpt-5.6, grok, grok-4.6, opus, sonnet, fable, codex, cursor — alone or as a pipeline like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试", or wants a second opinion or cross-check from another model or vendor. Cross-harness only: a model the current harness serves natively goes through the harness's own subagent mechanism, and this skill covers the rest.
 ---
 
 # Cross-agent call
@@ -10,6 +10,8 @@ Four agent harnesses are installed here, and every one of them has a headless si
 This skill records the entrypoints that were run and confirmed working, plus the flags that keep a headless sub-agent from stalling on a permission prompt.
 
 Requests usually name only models ("派 luna 去实现, grok 和 sol 并行测试"): decode each name via [Model names and discovery](#model-names-and-discovery), then chain the calls — sequential stages one after another, independent ones as background jobs (`cmd1 & cmd2 & wait`).
+
+Route each model by ownership. One the current harness serves natively (opus/sonnet/fable inside Claude Code, sol/terra/luna inside codex, grok-4.6 inside grok) goes through that harness's own subagent mechanism, which keeps shared context and permissions; shell out through this skill only for models that live in another harness. A mixed pipeline splits accordingly — from Claude Code, "用 opus 调研后派 luna 实现" runs opus via the Agent tool and luna via `codex exec`.
 
 ## Quick reference
 
