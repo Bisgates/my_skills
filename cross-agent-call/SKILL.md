@@ -13,12 +13,24 @@ This skill records the entrypoints that were run and confirmed working, plus the
 
 | Harness | Minimal verified command | Model slugs tested |
 | --- | --- | --- |
-| cursor-agent | `cursor-agent -p '<prompt>' --model cursor-grok-4.6-medium --output-format text` | `cursor-grok-4.6-low`, `cursor-grok-4.6-medium` |
-| grok | `grok -p '<prompt>' -m grok-4.6 --output-format plain` | `grok-4.6`, `grok-4.5` |
-| codex | `codex exec -m gpt-5.6-sol -c model_reasoning_effort=low '<prompt>'` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` |
-| claude | `claude -p '<prompt>'` | harness default; `--model <m>` to override |
+| cursor-agent | `cursor-agent -p '<prompt>' --model cursor-grok-4.6-high --output-format text` | `cursor-grok-4.6-{low,medium,high}` |
+| grok | `grok -p '<prompt>' -m grok-4.6 --reasoning-effort high --output-format plain` | `grok-4.6`, `grok-4.5` |
+| codex | `codex exec -m gpt-5.6-sol -c model_reasoning_effort=xhigh '<prompt>'` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` |
+| claude | `claude -p '<prompt>' --effort high` | harness default; `--model <m>` to override |
 
 Binaries, for shells whose PATH is thinner than an interactive one: `~/.local/bin/cursor-agent`, `~/.grok/bin/grok`, `codex` (on PATH), `~/.local/bin/claude`.
+
+### Default effort
+
+When the request names no effort, use these (all verified); go lower only when the user asks for speed or cheapness:
+
+| Callee | Default |
+| --- | --- |
+| claude (any model) | `--effort high` |
+| codex `gpt-5.6-sol` / `gpt-5.6-terra` | `-c model_reasoning_effort=xhigh` |
+| codex `gpt-5.6-luna` | `-c model_reasoning_effort=max` |
+| grok `grok-4.6` | `--reasoning-effort high` |
+| cursor-agent Grok 4.6 | `cursor-grok-4.6-high` slug |
 
 ## cursor-agent
 
@@ -50,7 +62,7 @@ codex exec -m gpt-5.6-sol -c model_reasoning_effort=low 'Explain what this scrip
 ```
 
 - `codex exec` is the headless mode. Pass `-` as the prompt argument to read it from stdin.
-- Effort comes in as a config override: `-c model_reasoning_effort=low|medium|high|xhigh`. An unquoted value is fine — anything that fails TOML parsing is taken as a literal string.
+- Effort comes in as a config override: `-c model_reasoning_effort=low|medium|high|xhigh|max`. An unquoted value is fine — anything that fails TOML parsing is taken as a literal string.
 - Sandbox: `-s read-only | workspace-write | danger-full-access`, or `--dangerously-bypass-approvals-and-sandbox` to drop both approvals and the sandbox. See the gotcha below before letting a sandboxed codex call another harness.
 - `--skip-git-repo-check` is required outside a git repo. `-C <dir>` sets the working root. `--ephemeral` skips writing session files.
 - Clean output: plain stdout wraps the answer in a banner and token-usage lines, so use `-o` / `--output-last-message <file>` to get just the final message, or `--json` for JSONL events.
@@ -62,6 +74,7 @@ claude -p 'Give a second opinion on this design'
 ```
 
 - `-p` / `--print` is headless and was confirmed callable both from inside another Claude Code session and from inside cursor-agent.
+- `--effort <level>` sets reasoning effort.
 - `--model <m>`, `--allowedTools`, `--output-format`, `--append-system-prompt`, `--agents <json>`, and `--max-turns` are all available; `claude --help` is the full list.
 - Long prompts go in on stdin.
 
