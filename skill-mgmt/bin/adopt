@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# adopt <name> [--from claude|codex|antigravity] — move an existing real-directory
-# skill at ~/.claude/skills/<name>, ~/.codex/skills/<name>, or
-# ~/.gemini/antigravity/skills/<name> into <repo>/<name>, append to manifest,
-# and refresh symlinks via install.
+# adopt <name> [--from claude|codex|antigravity|grok] — move an existing
+# real-directory skill at ~/.claude/skills/<name>, ~/.codex/skills/<name>,
+# ~/.gemini/antigravity/skills/<name>, or ~/.grok/skills/<name> into
+# <repo>/<name>, append to manifest, and refresh symlinks via install.
 #
 # Refuses if multiple agent dirs contain diverged copies unless --from is given.
 
@@ -15,7 +15,7 @@ source "$REPO/skill-mgmt/bin/common"
 skill_mgmt_capture_git_state
 
 usage() {
-  echo "usage: adopt <name> [--from claude|codex|antigravity]" >&2
+  echo "usage: adopt <name> [--from claude|codex|antigravity|grok]" >&2
   exit 2
 }
 
@@ -27,7 +27,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --from)
       from="${2:-}"
-      [[ "$from" == "claude" || "$from" == "codex" || "$from" == "antigravity" ]] || usage
+      [[ "$from" == "claude" || "$from" == "codex" || "$from" == "antigravity" || "$from" == "grok" ]] || usage
       shift 2
       ;;
     *) usage ;;
@@ -37,6 +37,7 @@ done
 claude_path="$HOME/.claude/skills/$name"
 codex_path="$HOME/.codex/skills/$name"
 antigravity_path="$HOME/.gemini/antigravity/skills/$name"
+grok_path="$HOME/.grok/skills/$name"
 
 is_real_dir() { [[ -d "$1" && ! -L "$1" ]]; }
 
@@ -57,9 +58,10 @@ declare -a real_paths=()
 is_real_dir "$claude_path" && real_paths+=("$claude_path")
 is_real_dir "$codex_path" && real_paths+=("$codex_path")
 is_real_dir "$antigravity_path" && real_paths+=("$antigravity_path")
+is_real_dir "$grok_path" && real_paths+=("$grok_path")
 
 if [[ "${#real_paths[@]}" -eq 0 ]]; then
-  echo "adopt: no real directory found at $claude_path, $codex_path, or $antigravity_path" >&2
+  echo "adopt: no real directory found at $claude_path, $codex_path, $antigravity_path, or $grok_path" >&2
   exit 1
 fi
 
@@ -74,6 +76,7 @@ if [[ -n "$from" ]]; then
     claude) src="$claude_path" ;;
     codex) src="$codex_path" ;;
     antigravity) src="$antigravity_path" ;;
+    grok) src="$grok_path" ;;
   esac
   if ! is_real_dir "$src"; then
     echo "adopt: expected a real directory for --from $from at $src" >&2
@@ -83,18 +86,20 @@ elif [[ "${#real_paths[@]}" -eq 1 ]]; then
   src="${real_paths[0]}"
 else
   if all_identical_dirs "${real_paths[@]}"; then
-    echo "adopt: $name identical in all agent dirs; preferring claude > codex > antigravity"
+    echo "adopt: $name identical in all agent dirs; preferring claude > codex > antigravity > grok"
     if is_real_dir "$claude_path"; then
       src="$claude_path"
     elif is_real_dir "$codex_path"; then
       src="$codex_path"
-    else
+    elif is_real_dir "$antigravity_path"; then
       src="$antigravity_path"
+    else
+      src="$grok_path"
     fi
   else
     echo "adopt: $name differs between agent dirs" >&2
     echo "       compare with e.g.: diff -rq $claude_path $codex_path" >&2
-    echo "       then re-run with: --from claude|codex|antigravity" >&2
+    echo "       then re-run with: --from claude|codex|antigravity|grok" >&2
     exit 1
   fi
 fi
@@ -103,7 +108,7 @@ echo "adopt: moving $src -> $REPO/$name"
 mv "$src" "$REPO/$name"
 
 # Any other remaining real dirs at agent paths would shadow install symlinks — back them up.
-for candidate in "$claude_path" "$codex_path" "$antigravity_path"; do
+for candidate in "$claude_path" "$codex_path" "$antigravity_path" "$grok_path"; do
   if [[ "$candidate" == "$src" ]]; then
     continue
   fi

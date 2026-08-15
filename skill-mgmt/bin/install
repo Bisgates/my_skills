@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install [--no-prune] [--no-hooks] [<skill> ...] — create/refresh symlinks
-# from <repo>/<name> to ~/.claude/skills/<name>, ~/.codex/skills/<name>, and
-# ~/.gemini/antigravity/skills/<name>.
+# from <repo>/<name> to ~/.claude/skills/<name>, ~/.codex/skills/<name>,
+# ~/.gemini/antigravity/skills/<name>, and ~/.grok/skills/<name>.
 #
 # With no skill args, installs every manifest entry plus dependency closure.
 # With args, installs only the named skills plus their dependency closure.
@@ -27,6 +27,7 @@ TARGETS=(
   "$HOME/.claude/skills"
   "$HOME/.codex/skills"
   "$HOME/.gemini/antigravity/skills"
+  "$HOME/.grok/skills"
 )
 
 # shellcheck source=/dev/null

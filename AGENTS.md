@@ -4,7 +4,7 @@
 
 - 仓库位置：Mac `~/project/agent/skills/`，服务器 `~/my_skills/`，远端 `github.com/Bisgates/my_skills`。
 - 每个顶层子目录是一个 skill；`<repo>/<name>/SKILL.md` 是该 skill 的**唯一物理源文件**。
-- `~/.claude/skills/<name>`、`~/.codex/skills/<name>`、`~/.gemini/antigravity/skills/<name>` 全部是指向仓库的 **symlink**，编辑仓库内 SKILL.md 即对所有 runtime 生效，无需 copy。
+- `~/.claude/skills/<name>`、`~/.codex/skills/<name>`、`~/.gemini/antigravity/skills/<name>`、`~/.grok/skills/<name>` 全部是指向仓库的 **symlink**，编辑仓库内 SKILL.md 即对所有 runtime 生效，无需 copy。
 - 跨机器同步 = 标准 `git push` / `git pull --rebase`。
 - `manifest.txt` 列出所有应该被链接的 skill；**第一行必须是 `skill-mgmt`**。
 

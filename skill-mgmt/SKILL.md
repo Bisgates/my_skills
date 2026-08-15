@@ -1,6 +1,6 @@
 ---
 name: skill-mgmt
-description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills, ~/.codex/skills, and ~/.gemini/antigravity/skills). Use ONLY when the user explicitly says install/sync/adopt/new/create a skill, sync skills across machines, asks how to set up the skills repo on a new machine, or reports that a machine is running a stale or missing skill. Do not trigger for general questions about what a particular skill does.
+description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills, ~/.codex/skills, ~/.gemini/antigravity/skills, and ~/.grok/skills). Use ONLY when the user explicitly says install/sync/adopt/new/create a skill, sync skills across machines, asks how to set up the skills repo on a new machine, or reports that a machine is running a stale or missing skill. Do not trigger for general questions about what a particular skill does.
 dependencies:
   - write-a-skill
 ---
@@ -12,7 +12,7 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 ## Architecture (read this first)
 
 - `<repo>/<name>/SKILL.md` is the **only** physical source of truth for any user-authored skill.
-- `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, and `~/.gemini/antigravity/skills/<name>` are **symlinks** pointing into the repo ([Antigravity global skills](https://antigravity.google/docs/skills)).
+- `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, `~/.gemini/antigravity/skills/<name>`, and `~/.grok/skills/<name>` are **symlinks** pointing into the repo ([Antigravity global skills](https://antigravity.google/docs/skills)). Grok also scans other runtimes' skill dirs on its own and dedupes by name (native `~/.grok/skills` wins), so its native link keeps grok working even on a machine without `~/.claude`.
 - `<repo>/manifest.txt` lists every top-level skill the user owns. **Line 1 must be `skill-mgmt`** (self-management).
 - A skill may declare runtime dependencies in `SKILL.md` frontmatter with `dependencies:` (also accepted: `depends_on:` or `requires:`). Installing a skill installs its recursive dependency closure first.
 - Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
@@ -54,7 +54,7 @@ Editing the content of an existing skill is in scope but takes the **Edit** path
 
 Reads `<repo>/manifest.txt` when no names are passed. When names are passed, treats those names as the requested install set. In both modes it resolves recursive dependencies declared in each skill's frontmatter before linking.
 
-For every resolved skill name, ensures `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, and `~/.gemini/antigravity/skills/<name>` are symlinks → `<repo>/<name>`. Idempotent: existing correct symlinks are skipped; conflicts (real dirs at the target) are warned, not overwritten — the user must run `bin/adopt` or manually move them.
+For every resolved skill name, ensures `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, `~/.gemini/antigravity/skills/<name>`, and `~/.grok/skills/<name>` are symlinks → `<repo>/<name>`. Idempotent: existing correct symlinks are skipped; conflicts (real dirs at the target) are warned, not overwritten — the user must run `bin/adopt` or manually move them.
 
 Three things happen alongside the linking:
 
@@ -83,7 +83,7 @@ Reach for the remote pass whenever a change should land everywhere — the machi
 <repo>/skill-mgmt/bin/adopt <name>
 ```
 
-Looks for a real directory (not symlink) at `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, or `~/.gemini/antigravity/skills/<name>`. When several exist and contents differ, refuses until `diff -rq`; rerun with `--from claude`, `--from codex`, or `--from antigravity`. When identical, adopts using preference claude → codex → antigravity. Otherwise: `mv` the chosen source into `<repo>/<name>`, append `<name>` to `manifest.txt`, then run `install` to refresh symlinks everywhere.
+Looks for a real directory (not symlink) at `~/.claude/skills/<name>`, `~/.codex/skills/<name>`, `~/.gemini/antigravity/skills/<name>`, or `~/.grok/skills/<name>`. When several exist and contents differ, refuses until `diff -rq`; rerun with `--from claude`, `--from codex`, `--from antigravity`, or `--from grok`. When identical, adopts using preference claude → codex → antigravity → grok. Otherwise: `mv` the chosen source into `<repo>/<name>`, append `<name>` to `manifest.txt`, then run `install` to refresh symlinks everywhere.
 
 After adopt, the script auto-commits and pushes by default if the repo was clean when the script started.
 
@@ -189,7 +189,7 @@ After successful modifying operations (`new`, `adopt`, and any direct skill edit
 
 - **Do not hardcode paths**: all scripts resolve `<repo>` via `$(cd "$(dirname "$0")/../.." && pwd)`. Mac repo lives at `~/project/agent/skills/`, server at `~/my_skills/` — both work.
 - **Antigravity + symlinks**: some Antigravity builds have been reported not to traverse symlinked skill folders during discovery ([discussion](https://github.com/vercel-labs/skills/issues/633)). If listed skills never appear after `install`, check the app version/docs or keep a copy under project `.agents/skills/` until symlink support is reliable.
-- **Editor atomic-write**: vim/cursor with `write-temp + rename` save mode can replace a symlink with a real file. If `~/.claude/skills/<name>` (or Codex/Antigravity paths) becomes a real dir unexpectedly, an editor wrote through the symlink incorrectly. Recover: `bin/install` will warn; manually `rm` the bad path and re-run install. Set `vim: :set backupcopy=yes` to avoid.
+- **Editor atomic-write**: vim/cursor with `write-temp + rename` save mode can replace a symlink with a real file. If `~/.claude/skills/<name>` (or Codex/Antigravity/Grok paths) becomes a real dir unexpectedly, an editor wrote through the symlink incorrectly. Recover: `bin/install` will warn; manually `rm` the bad path and re-run install. Set `vim: :set backupcopy=yes` to avoid.
 - **Conflict on adopt**: if multiple agent dirs contain diverged copies, adopt refuses until you pick `bin/adopt <name> --from claude|codex|antigravity`.
 - **codex description ≤ 1024 chars**: codex 0.128+ silently drops any skill whose frontmatter `description:` (after joining folded continuation lines) exceeds 1024 characters — the error appears in stderr as `failed to load skill .../SKILL.md: invalid description: exceeds maximum length of 1024 characters` but the rest of the session continues without it, so the loss is easy to miss. Claude and Antigravity have no comparable hard limit. `bin/install` checks each manifest skill and reports any over the cap in its end-of-run problem list. Pruning fix: move visual / formatting / mechanical detail into the body — `description:` is read by the model only for "should this skill trigger?", not for the skill's mechanics.
 - **arcs/ is not synced**: `arcs/` (arc task tracking) is in `.gitignore`. Per-machine task state, not shared.
