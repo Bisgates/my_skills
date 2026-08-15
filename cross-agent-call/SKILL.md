@@ -1,6 +1,6 @@
 ---
 name: cross-agent-call
-description: Spawn another agent harness installed on this machine — cursor-agent, grok, codex, or claude — as a one-shot headless sub-agent by shelling out to its CLI, using verified entrypoints, model slugs, and caller-side sandbox/proxy workarounds. Use when the user asks to call, ask, or delegate to grok / codex / cursor / gpt-5.6 / sol / terra / luna / grok-4.6, wants a second opinion or cross-check from a different model or vendor, says "派 grok 去做", "用 sol 跑一下", "让 codex 看看", "问问 grok 4.6", or asks how to invoke another agent CLI headless. Do NOT use for Claude Code's own built-in subagents (the Agent tool, `.claude/agents/`), for the codex plugin's rescue workflow, for skill lifecycle work like install/sync/adopt/new (that is skill-mgmt), or for the `grok` learning-HTML skill when the user says "用 grok 讲解/学习" a paper or folder.
+description: Dispatch a named model as a headless sub-agent by shelling out to its harness CLI (cursor-agent, grok, codex, or claude). Use whenever the user 派/用/让/问问 a model as a sub agent — sol, terra, luna, gpt-5.6, grok, grok-4.6, opus, sonnet, fable, codex, cursor — alone or as a pipeline like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试", or wants a second opinion or cross-check from another model or vendor. Do NOT use for the `grok` learning-HTML skill (用 grok 讲解/学习 a paper or folder) or for Claude Code's built-in Agent tool subagents.
 ---
 
 # Cross-agent call
@@ -8,6 +8,8 @@ description: Spawn another agent harness installed on this machine — cursor-ag
 Four agent harnesses are installed here, and every one of them has a headless single-shot mode. So any harness can use any other as a sub-agent: pick a model from a different vendor, shell out to its CLI, read the answer off stdout.
 
 This skill records the entrypoints that were run and confirmed working, plus the flags that keep a headless sub-agent from stalling on a permission prompt.
+
+Requests usually name only models ("派 luna 去实现, grok 和 sol 并行测试"): decode each name via [Model names and discovery](#model-names-and-discovery), then chain the calls — sequential stages one after another, independent ones as background jobs (`cmd1 & cmd2 & wait`).
 
 ## Quick reference
 
@@ -98,6 +100,7 @@ The user's shorthand maps to slugs like this:
 | terra, terral | `gpt-5.6-terra` (codex) |
 | luna, tuna | `gpt-5.6-luna` (codex) |
 | grok 4.6 | `grok-4.6` (grok CLI) or `cursor-grok-4.6-high` (cursor) |
+| opus, sonnet, fable | `claude -p --model opus\|sonnet\|fable` (aliases; opus and fable verified) |
 
 Snapshot of what each harness exposed at verification time:
 
