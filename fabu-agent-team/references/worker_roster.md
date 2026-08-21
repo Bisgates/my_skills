@@ -34,8 +34,8 @@ Default worker set for a fabu-agent-team campaign. "Perf" is the manager's after
 
 ## Model notes (observed on the fabu provider)
 
-- qwen3.8-max: 11 tasks, 0 crashes, best at following file-scope rules; prefer for anything that touches GPUs or the filesystem.
+- k3: **user's first choice for execution/infra/eval workers** whenever the backend serves it. One backend 503 death observed (after it had already written a working script) — always pair it with the qwen fallback rule below.
+- qwen3.8-max: fallback for the same worker types; 11 tasks, 0 crashes, best at following file-scope rules. Re-dispatch a dead k3 worker here with "resume from existing artifacts".
 - gpt-5.6-sol: best writing/research depth; give it a time box and progress file, it will otherwise run to `timeout`.
 - gpt-5.6-terra: use for review; it recomputes rather than paraphrases.
-- k3: one backend 503 death; fine as spare.
 - Backend 503 is transient; a re-dispatch with "resume from artifacts" lost ~15 min, not the work.

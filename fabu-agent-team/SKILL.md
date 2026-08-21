@@ -1,6 +1,6 @@
 ---
 name: fabu-agent-team
-description: Run a long autonomous experiment campaign as an agent team — a Claude manager (Fable 5 / Opus 5) that only plans, dispatches, patrols and synthesizes, plus fabu-codex workers (`codex exec --model qwen3.8-max | gpt-5.6-sol | gpt-5.6-terra | k3`) that do research, infra, GPU jobs, evaluation, adversarial review and report building. Use when the user says "用 agent team / 多开 subagent 推进 / 派 worker / 你当 manager / 18h 自主执行 / 晚上自己推进 / subagent 用 fabu-codex", or hands over an arc with a multi-hour budget and wants parallel workers. Do NOT trigger for a single short codex question (use use_codex), for arc bookkeeping alone (use arc), or for GPU booking rules alone (read agent_gpu_coord/PROTOCOL.md).
+description: Run a long autonomous experiment campaign as an agent team — a Claude manager (Fable 5 / Opus 5) that only plans, dispatches, patrols and synthesizes, plus fabu-codex workers (`codex exec --model k3 | qwen3.8-max | gpt-5.6-sol | gpt-5.6-terra`) that do research, infra, GPU jobs, evaluation, adversarial review and report building. Use when the user says "用 agent team / 多开 subagent 推进 / 派 worker / 你当 manager / 18h 自主执行 / 晚上自己推进 / subagent 用 fabu-codex", or hands over an arc with a multi-hour budget and wants parallel workers. Do NOT trigger for a single short codex question (use use_codex), for arc bookkeeping alone (use arc), or for GPU booking rules alone (read agent_gpu_coord/PROTOCOL.md).
 ---
 
 # fabu-agent-team — manager + fabu-codex workers
@@ -29,7 +29,7 @@ Then set the hourly patrol (`CronCreate` with `templates/patrol_prompt.md`) and 
 
 **Workers (fabu-codex)** — `codex exec` processes. Each gets the common rules + one task prompt, writes files into the arc (or the arc's scratch root on /ssd), and returns a ≤15-line summary. Workers never call the `arc` CLI, never write `3_state.md`/`0_meta.md`, never touch the main project. The roster of worker types that proved useful, with the model that suited each, is in `references/worker_roster.md`.
 
-Model choice (observed, not benchmarked): `qwen3.8-max` for infra/execution/eval (11 tasks, zero crashes, obeys file-scope rules); `gpt-5.6-sol` for research and report building (strong, but can run to timeout — set a time box and ask for progress files); `gpt-5.6-terra` for adversarial review (caught real errors both times); `k3` died once on backend 503 — keep as spare. `gpt-5.6-luna` is the CLI default.
+Model choice (user policy + observed behaviour): for infra / execution / eval / GPU work the order is **`k3` first, `qwen3.8-max` as fallback** — k3 is the user's preferred worker when the fabu backend serves it; it died once on a transient 503 after writing its script, so if a k3 worker exits with rc≠0 and no `final.md`, re-dispatch the same prompt on `qwen3.8-max` with "复用已有产物续跑" (qwen ran 11 such tasks with zero crashes and obeys file-scope rules). `gpt-5.6-sol` for research and report building (strong, but can run to timeout — set a time box and ask for progress files); `gpt-5.6-terra` for adversarial review (caught real errors both times). `gpt-5.6-luna` is the CLI default.
 
 ## The campaign loop
 
