@@ -64,6 +64,14 @@ Full spec in [`references/page_authoring.md`](references/page_authoring.md). The
 - **Explanation depth — teach, don't label** (load-bearing; thin one-liners fail — "讲解性内容太单薄" is an explicit failure). Every page carries, as real content (≳3× a terse baseline): a **core background** (begin-with-why: predicament → naive approaches & why they fail → what this method does differently → why it works, with lineage); a **derivation/intuition paragraph per equation** (where it comes from, why defined this way); a **phenomenon-reading paragraph per lab**; and a **"scale up to the real model" coda** (what changes vs what's identical). Depth comes from mechanism, derivation, and concrete worked examples, taught in the cs231n voice (§ Prose); dense because of information, never padded. Two failure poles: "讲解性内容太单薄" (too thin) and "讲解我看不懂" (dense-but-unreadable) — aim between them, rich and legible. This explains the *subject* (not the *page* — distinct from the banned meta-prose). See `references/page_authoring.md` § Explanation depth.
 - **Close with 白纸复述** — the equations to reproduce + 2–3 self-test `<details>` questions (the Feynman gate).
 
+## Charts and layout
+
+`dataviz` and `artifact-design` are harness skills the runtime ships. Read them before drawing or laying out — they carry a runnable color validator and a theme-token contract this skill has no reason to re-derive.
+
+- **Any chart, plot, or canvas that encodes data** → `dataviz` first. Run its `scripts/validate_palette.js` over the categorical colors rather than picking hexes by eye, and fix what it marks FAIL.
+- **Any hand-rolled section or new component** → `artifact-design` first: type scale, spacing, neutral derivation, both themes.
+- **Precedence.** `artifact-design`'s own first rule is to honor an existing design system, so the LearnHub warm-paper palette and `templates/page-skeleton.html` stays the ground. The harness skills govern everything it leaves open.
+
 ## Critic gate
 
 The mandatory adversarial design review before code. Template + dispatch contract in [`references/critic_prompt.md`](references/critic_prompt.md). It is a real gate: in both dogfood builds it changed the toy (→ closed-form GMM), added a missing equation (ε↔score bridge), killed a CFG-masquerading lab, and forced "trainable copy" to be a literal weight copy. Run it once per topic; save the record; act on it.

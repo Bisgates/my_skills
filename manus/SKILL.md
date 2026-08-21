@@ -82,6 +82,14 @@ Craft rules:
 - Audit: every chart series traces to a `_drafts/` JSON or note; every footnote URL is well-formed; the breadth matrix has no thin rows — a row visibly thinner than its siblings goes back to step 2.
 - Deliver: open the finished file in the user's default browser (`open <path>` on macOS, `xdg-open` on Linux) — the report is the deliverable, so hand it over already launched; this is the "build + launch, then let the user judge" handoff, not driving the UI. Skip the open only when the session is headless/remote or the user asked not to. Then give the single HTML path plus a 3-sentence summary of what was found. Findings, never a re-narration of the pipeline.
 
+## Charts and layout
+
+`dataviz` and `artifact-design` are harness skills the runtime ships. Read them before drawing or laying out — they carry a runnable color validator and a theme-token contract this skill has no reason to re-derive.
+
+- **Any chart, plot, or canvas that encodes data** → `dataviz` first. Run its `scripts/validate_palette.js` over the categorical colors rather than picking hexes by eye, and fix what it marks FAIL.
+- **Any hand-rolled section or new component** → `artifact-design` first: type scale, spacing, neutral derivation, both themes.
+- **Precedence.** `artifact-design`'s own first rule is to honor an existing design system, so the output contract in § Output contract stays the ground. The harness skills govern everything it leaves open.
+
 ## Gotchas
 
 - The skill name collides with a product name. "manus 的报告为什么好" is a question ABOUT Manus — answer it directly; do not build a report.
@@ -93,4 +101,3 @@ Craft rules:
 - `agy-reach` — reach Reddit/X for firsthand community voice during Gather (step 2), past their logged-out walls.
 - `deep-analysis` — 调研报告 asked without manus framing; zero-CDN, offline-forever, forensic-report rubric.
 - `grok` / `distill_v2` / `spell-out` — the learn_with_agent explainer family.
-- `dataviz` (harness skill) — read before authoring any chart code or choosing chart colors.

@@ -210,6 +210,14 @@ Paper-grokking is naturally chunked. Fan independent units out as sub-agents —
 - **CSS namespacing.** Rules from bird skeleton scoped under `.tab-bird`; frog skeleton under `.tab-frog`. Shared CDN deps load once at document level.
 - **Narrow-screen rules.** Every template's `<style>` carries `@media (max-width:720px)` + `@media (max-width:480px)` blocks: (a) tab bar `white-space:nowrap; flex-shrink:0;` + `overflow-x:auto`; (b) code blocks `overflow-x:auto` + shrunk font; (c) section padding ≤14px at 720px, ≤12px at 480px; (d) tables `display:block; overflow-x:auto`; (e) lab controls stack vertically, `.lab canvas` `max-width:100%; height:auto`. Add narrow-screen rules for new components.
 
+## Charts and layout
+
+`dataviz` and `artifact-design` are harness skills the runtime ships. Read them before drawing or laying out — they carry a runnable color validator and a theme-token contract this skill has no reason to re-derive.
+
+- **Any chart, plot, or canvas that encodes data** → `dataviz` first. Run its `scripts/validate_palette.js` over the categorical colors rather than picking hexes by eye, and fix what it marks FAIL.
+- **Any hand-rolled section or new component** → `artifact-design` first: type scale, spacing, neutral derivation, both themes.
+- **Precedence.** `artifact-design`'s own first rule is to honor an existing design system, so the loaded `references/visual/<name>.md` pack and its skeleton stay the ground. The harness skills govern everything it leaves open.
+
 ## Interactive correctness
 
 Two failure modes show up: **blank canvas** and **blurry / stretched canvas**. Both skeletons bake the fixes in; if you hand-roll a lab, copy the same pattern.

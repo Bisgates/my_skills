@@ -56,7 +56,7 @@ The writer prompt must inline: the evidence sheet path, the outline, `templates/
 
 - Every number traces to the evidence sheet; a number without a source line does not enter the report. Fabrication is the one unrecoverable failure.
 - Key claims carry numbered footnotes (`sup.fn` → `ol.footnotes`): source name + direct URL + 检索日期 + what it supports.
-- Charts are inline SVG authored in-document. Zero CDN, no external images — the file must open offline forever.
+- Charts are inline SVG authored in-document, designed per `dataviz` (form, palette, marks). Zero CDN, no external images — the file must open offline forever.
 - 中文叙事规范: 结论先行、句句带新信息、形容词配基线数字、禁比喻/排比/设问。
 - Uncertainty is stated as ranges with the sensitivity shown (脏数据给区间+敏感性), graded 独立可核 / 单源 / 有争议.
 
@@ -67,6 +67,14 @@ Score the draft against `references/rubric.md` dimension by dimension. Any dimen
 ### 5. Deliver
 
 Write `<topic_slug>.html` where the user asked (default: cwd), `open` it, and report: 核心结论 one-liner + file path + any single-source flags worth knowing.
+
+## Charts and layout
+
+`dataviz` and `artifact-design` are harness skills the runtime ships. Read them before drawing or laying out — they carry a runnable color validator and a theme-token contract this skill has no reason to re-derive.
+
+- **Any chart, plot, or canvas that encodes data** → `dataviz` first. Run its `scripts/validate_palette.js` over the categorical colors rather than picking hexes by eye, and fix what it marks FAIL.
+- **Any hand-rolled section or new component** → `artifact-design` first: type scale, spacing, neutral derivation, both themes.
+- **Precedence.** `artifact-design`'s own first rule is to honor an existing design system, so `templates/report.html` stays the ground. The harness skills govern everything it leaves open.
 
 ## Gotchas
 

@@ -71,7 +71,15 @@ Assemble the report rather than hand-writing one blob, so generation parallelize
    Resolve `<output-dir>/<source-stem>` per § Output; keep the section / lab fragments in `<output-dir>/_drafts/`.
 4. **Self-audit + QA** (below), then `open "<absolute-output-path>"`, exercise every lab, and print the absolute output path on its own line in your final message.
 
-The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the visual system, scroll-progress + scroll-spy furniture (sections render flat, all at once — no scroll-reveal), `setupCanvas`/`drawArrow`/`C`/`quizPick`, the KaTeX loader, a quiz-integrity validator, and the component classes (`.callout`, `.math-block`, `.lab`, `.quiz`, `.map`, `table.cmp`). It exposes a shared palette `C` so canvas drawing matches the prose/math colors — give each recurring entity one color and keep it across prose, formulas, and canvas.
+The skeleton ([`templates/skeleton.html`](templates/skeleton.html)) ships the visual system, scroll-progress + scroll-spy furniture (sections render flat, all at once — no scroll-reveal), `setupCanvas`/`drawArrow`/`C`/`quizPick`, the KaTeX loader, a quiz-integrity validator, and the component classes (`.callout`, `.math-block`, `.lab`, `.quiz`, `.map`, `table.cmp`). It exposes a shared palette `C` — where the dataviz-validated colors land, so canvas drawing matches the prose and math.
+
+## Charts and layout
+
+`dataviz` and `artifact-design` are harness skills the runtime ships. Read them before drawing or laying out — they carry a runnable color validator and a theme-token contract this skill has no reason to re-derive.
+
+- **Any chart, plot, or canvas that encodes data** → `dataviz` first. Run its `scripts/validate_palette.js` over the categorical colors rather than picking hexes by eye, and fix what it marks FAIL.
+- **Any hand-rolled section or new component** → `artifact-design` first: type scale, spacing, neutral derivation, both themes.
+- **Precedence.** `artifact-design`'s own first rule is to honor an existing design system, so `templates/skeleton.html` stays the ground. The harness skills govern everything it leaves open.
 
 ## Self-audit (= references/rubric.md, plus the easy-to-miss checks)
 

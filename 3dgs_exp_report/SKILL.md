@@ -133,6 +133,14 @@ The chrome and typography come from grok. Do not re-derive — copy and use:
 
 For the canonical visual ground truth, open `~/project/what_new/weekly/2026-19.html` and `~/project/learn_with_agent/260507_OmniRe/OmniRe Urban Scene Reconstruction.html` — same theme this skill commits to.
 
+## Charts and layout
+
+`dataviz` and `artifact-design` are harness skills the runtime ships. Read them before drawing or laying out — they carry a runnable color validator and a theme-token contract this skill has no reason to re-derive.
+
+- **Any chart, plot, or canvas that encodes data** → `dataviz` first. Run its `scripts/validate_palette.js` over the categorical colors rather than picking hexes by eye, and fix what it marks FAIL.
+- **Any hand-rolled section or new component** → `artifact-design` first: type scale, spacing, neutral derivation, both themes.
+- **Precedence.** `artifact-design`'s own first rule is to honor an existing design system, so grok's magazine chrome (§ Style) stays the ground. The harness skills govern everything it leaves open.
+
 ## Hard constraints
 
 - **Single HTML file.** All CSS inlined in `<style>`. Fonts via Google Fonts; KaTeX / Prism via pinned CDN (`katex@0.16.11`, `prismjs@1.29.0`). **No `@latest`. No build step.** No npm / vite / webpack.
@@ -148,7 +156,7 @@ For the canonical visual ground truth, open `~/project/what_new/weekly/2026-19.h
 - **Don't drift into reportage style.** The previous version of this skill produced a reportage-style HTML with `max-w-4xl` Tailwind layout. That's deprecated. If a tab named `.cmp` shows up in your CSS or a `max-w-4xl mx-auto px-6` shows up in your HTML, you're regenerating the old skeleton — stop and re-copy grok's.
 - **Don't drift into `frontend-design` mode.** This is not a landing page. No marketing copy, no oversized gradients, no hero animations beyond the grok skeleton's scroll-driven progress bar and IntersectionObserver rail highlight.
 - **Don't bury the conclusion.** It goes in the `.editor-note` / hero `.lede` — if the reader stops scrolling after the hero, they still know the result.
-- **Don't gild the metrics.** `.num.win` / `.num.lose` color is enough. No emojis in cells, no traffic-light pills, no `+/−` arrows. The numbers and the delta in parens do the work.
+- **Don't gild the metrics.** `.num.win` / `.num.lose` plus the signed delta in parens carries win/lose — that parenthesised sign is the non-color encoding `dataviz` asks for, so nothing further is needed. No emojis in cells, no traffic-light pills, no `+/−` arrows.
 - **Image bloat.** Base64 inflates ~33%. 32 panels × 1MB → 40MB HTML, multi-second cold open. Downscale first (`sips -Z 1600`); prefer JPEG for photographs; keep depth maps PNG to preserve palette.
 - **Video bloat compounds.** All-intra mp4 is ~1.5–3× normal H.264; base64 adds another 33%. A 30 s screencast easily becomes a 20 MB embed. With 8 videos (4 agents × 2 scenes) you can hit 100 MB+ HTML. Check `du -h` after embedding; if the total HTML > 80 MB, surface the choice to the user explicitly: "8 videos = ~120 MB inlined; switch to thumbnail-with-link?".
 - **`open` doesn't always reload.** If the user already had the HTML in a browser tab, `open <path>` brings focus but may reuse the cached `file://` version — mention "cmd+R to reload" in the hand-off when re-running.

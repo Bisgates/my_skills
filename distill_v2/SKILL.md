@@ -42,6 +42,14 @@ Every lab computes the quantity it shows — a slider re-runs the solver, a drag
 
 P1 cold open + roadmap · P2 problem framing + intuition (state the naive view, subvert it) · P3 mechanism derived + headline lab · P4 worked example + secondary labs + break-it + honest caveats · P5 context / why-not-X + honest open-problem close + appendix. One running example threaded through all five.
 
+## Charts and layout
+
+`dataviz` and `artifact-design` are harness skills the runtime ships. Read them before drawing or laying out — they carry a runnable color validator and a theme-token contract this skill has no reason to re-derive.
+
+- **Any chart, plot, or canvas that encodes data** → `dataviz` first. Run its `scripts/validate_palette.js` over the categorical colors rather than picking hexes by eye, and fix what it marks FAIL.
+- **Any hand-rolled section or new component** → `artifact-design` first: type scale, spacing, neutral derivation, both themes.
+- **Precedence.** `artifact-design`'s own first rule is to honor an existing design system, so the Distill web-component template stays the ground. The harness skills govern everything it leaves open.
+
 ## Acceptance (distill-grade, in Chinese)
 
 The artifact is Chinese, so a literal "can't tell it from English distill.pub" test does not apply. Split the bar by what is language-agnostic vs language-bound:
