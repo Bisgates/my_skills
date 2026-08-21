@@ -22,6 +22,8 @@ Route each model by ownership. One the current harness serves natively (opus/son
 | codex | `codex exec -m gpt-5.6-sol -c model_reasoning_effort=xhigh '<prompt>'` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` |
 | claude | `claude -p '<prompt>' --effort high` | harness default; `--model <m>` to override |
 
+Fabu-hosted `k3`, `qwen3.8-max`, `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` are reached with `fabux exec -m <slug>`; from the Mac, plain `codex` uses the personal quota.
+
 Binaries, for shells whose PATH is thinner than an interactive one: `~/.local/bin/cursor-agent`, `~/.grok/bin/grok`, `codex` (on PATH), `~/.local/bin/claude`.
 
 ### Default effort

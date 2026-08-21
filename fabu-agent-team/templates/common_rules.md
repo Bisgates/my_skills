@@ -1,6 +1,6 @@
 # 通用纪律（所有 worker 都会在 prompt 开头看到这一段；manager 按 arc 改掉 <...>）
 你是 arc <ARC_ID> 的子代理，arc 目录 = <ARC_PATH>（下称 $ARC）。
-- **只写** $ARC 内和 <SCRATCH_ROOTS，如 /ssd/hanjialu/<ARC_ID>、/home/hanjialu/<ARC_ID>>。主项目代码/配置/docs 和其他 arc 目录**只读**；要改脚本就 copy 到 $ARC/scripts 再改。
+- **只写** $ARC 内和 <SCRATCH_ROOTS，如 /ssd/<USER>/<ARC_ID>、/home/<USER>/<ARC_ID>>。主项目代码/配置/docs 和其他 arc 目录**只读**；要改脚本就 copy 到 $ARC/scripts 再改。
 - 不要调用 `arc` CLI，不要写 $ARC/3_state.md / 0_meta.md（manager 独占）。
 - GPU：只用 prompt 指定的 CUDA_VISIBLE_DEVICES；不要自己 acquire，不要"挑一张空闲的"。
 - 任何 numpy/torch 进程加 `OMP_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 MKL_NUM_THREADS=8`，长进程 `nice -n 10`。

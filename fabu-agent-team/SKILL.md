@@ -1,6 +1,6 @@
 ---
 name: fabu-agent-team
-description: Run a long autonomous experiment campaign as an agent team — a Claude manager (Fable 5 / Opus 5) that only plans, dispatches, patrols and synthesizes, plus fabu-codex workers (`codex exec --model k3 | qwen3.8-max | gpt-5.6-sol | gpt-5.6-terra`) that do research, infra, GPU jobs, evaluation, adversarial review and report building. Use when the user says "用 agent team / 多开 subagent 推进 / 派 worker / 你当 manager / 18h 自主执行 / 晚上自己推进 / subagent 用 fabu-codex", or hands over an arc with a multi-hour budget and wants parallel workers. Do NOT trigger for a single short codex question (use use_codex), for arc bookkeeping alone (use arc), or for GPU booking rules alone (read agent_gpu_coord/PROTOCOL.md).
+description: Run a long autonomous experiment campaign as an agent team — a Claude manager (Fable 5 / Opus 5) that only plans, dispatches, patrols and synthesizes, plus fabu-codex workers (`fabux exec`) that do research, infra, GPU jobs, evaluation, adversarial review and report building. Use when the user says "用 agent team", "多开 subagent 推进", "派 worker", "你当 manager", "18h 自主执行", "subagent 用 fabu-codex", "用 fabu 的 codex", or mentions fabux, k3, or qwen for campaign workers. Do NOT trigger for a single short codex question (use use_codex), for arc bookkeeping alone (use arc), or for GPU booking rules alone (read agent_gpu_coord/PROTOCOL.md).
 ---
 
 # fabu-agent-team — manager + fabu-codex workers
@@ -23,13 +23,24 @@ nohup bash $ARC/scripts/run_codex.sh r1 gpt-5.6-sol 5400 $ARC/_tmp/r1.prompt.md 
 
 Then set the hourly patrol (`CronCreate` with `templates/patrol_prompt.md`) and go back to being the manager.
 
+## Using fabux
+
+`fabux` is the one entrypoint for the fabu gateway on Mac and gpu7. It runs `codex --profile fabu` after a 3-second reachability check of the gateway; `doctor` and `models` are the only words it handles itself, everything else is passed to codex unchanged.
+
+- `fabux` — open the interactive TUI; `fabux -m k3` selects a model at launch.
+- `fabux exec -m qwen3.8-max '...'` — run a headless worker; `fabux exec` also accepts every normal Codex flag.
+- `fabux doctor` — check binary, profile, auth, gateway reachability, and catalog.
+- `fabux models` — print catalog slugs, display names, and default effort.
+
+If the wrapper returns rc=3, the machine is off the fabu network; switch workers to plain `codex exec -m gpt-5.6-sol` until the manager is back on VPN/office network. The TUI's `/model` picker reads the configured fabu catalog.
+
 ## Roles
 
 **Manager (Fable 5 / Opus 5)** — writes the objective/plan, designs arms and controls, dispatches workers, patrols hourly, reads `final.md` summaries (not worker logs), writes `arc log` / `3_state.md` / `9_handoff.md` itself. It does not read large files, run long GPU commands in the foreground, or re-derive numbers a worker already verified. Memory `feedback_autonomous_context_protection` is the reason: every MB of worker output the manager reads is context it cannot spend on decisions.
 
-**Workers (fabu-codex)** — `codex exec` processes. Each gets the common rules + one task prompt, writes files into the arc (or the arc's scratch root on /ssd), and returns a ≤15-line summary. Workers never call the `arc` CLI, never write `3_state.md`/`0_meta.md`, never touch the main project. The roster of worker types that proved useful, with the model that suited each, is in `references/worker_roster.md`.
+**Workers (fabu-codex)** — `fabux exec` processes. Each gets the common rules + one task prompt, writes files into the arc (or the arc's scratch root on /ssd), and returns a ≤15-line summary. Workers never call the `arc` CLI, never write `3_state.md`/`0_meta.md`, never touch the main project. The roster of worker types that proved useful, with the model that suited each, is in `references/worker_roster.md`.
 
-Model choice (user policy + observed behaviour): for infra / execution / eval / GPU work the order is **`k3` first, `qwen3.8-max` as fallback** — k3 is the user's preferred worker when the fabu backend serves it; it died once on a transient 503 after writing its script, so if a k3 worker exits with rc≠0 and no `final.md`, re-dispatch the same prompt on `qwen3.8-max` with "复用已有产物续跑" (qwen ran 11 such tasks with zero crashes and obeys file-scope rules). `gpt-5.6-sol` for research and report building (strong, but can run to timeout — set a time box and ask for progress files); `gpt-5.6-terra` for adversarial review (caught real errors both times). `gpt-5.6-luna` is the CLI default.
+Model choice (user policy + observed behaviour): for infra / execution / eval / GPU work the order is **`k3` first, `qwen3.8-max` as fallback** — invoke them with `fabux exec -m <slug>`. k3 is the user's preferred worker when the fabu backend serves it; it died once on a transient 503 after writing its script, so if a k3 worker exits with rc≠0 and no `final.md`, re-dispatch the same prompt on `qwen3.8-max` with "复用已有产物续跑" (qwen ran 11 such tasks with zero crashes and obeys file-scope rules). Use `gpt-5.6-sol` for research and report building (strong, but can run to timeout — set a time box and ask for progress files), `gpt-5.6-terra` for adversarial review (caught real errors both times), and `gpt-5.6-luna` as the CLI default.
 
 ## The campaign loop
 
@@ -45,7 +56,7 @@ Model choice (user policy + observed behaviour): for infra / execution / eval / 
 
 The prompt file is `common_rules.md` + task. The task section always has: goal in one line; exact input paths; exact output paths (doc in `$ARC/doc/`, scripts in `$ARC/scripts/`, data under the arc's `/ssd` root); which GPUs by `CUDA_VISIBLE_DEVICES` (never "pick a free one"); a time box; "all numbers must be reproducible — give the command"; "write `未得到` rather than invent". For execution workers add: write a progress/status file after each unit so the patrol can see liveness.
 
-Why `< /dev/null`, `timeout`, `-o final.md`: codex hangs on an open stdin (memory `feedback_autonomous_heartbeat`), runs to the backend's patience otherwise, and the chain-of-thought on stdout is not the deliverable.
+Why `< /dev/null`, `timeout`, `-o final.md`: `fabux exec` hangs on an open stdin (memory `feedback_autonomous_heartbeat`), runs to the backend's patience otherwise, and the chain-of-thought on stdout is not the deliverable.
 
 Why `-s danger-full-access`: workers must write to `/ssd` and spawn GPU jobs; the file-scope discipline therefore lives in the prompt, and the manager verifies it (`git status` on the main project after each delivery — memory `feedback_subagent_shared_file_diff`).
 
