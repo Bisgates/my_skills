@@ -35,22 +35,49 @@ Use `GET /readme` only when a needed endpoint or helper is unclear.
 
 ## Static canvas workflow
 
-1. Discover documents with `api.getDocs()` and select by the requested name or explicit focused target. Do not treat a different sole open document as a replacement for one that closed.
-2. For a fresh deliverable, call `/api/docs/create` with a clear name and optional existing output directory. Never create or overwrite a `.tldraw` archive through filesystem tools.
-3. Read `api.getShapes(doc.id)` before changing an existing canvas. If it holds unrelated content, stop rather than clearing it.
-4. Use `/exec` to create or change shapes. Import SDK primitives dynamically: `const { createShapeId, toRichText } = await import('tldraw')`.
-5. Use `helpers.createArrowBetweenShapes(fromId, toId, options)` for semantic diagram edges so endpoints stay bound when nodes move. Reserve raw arrows for explicitly decorative marks.
-6. Run `helpers.getLints()` and repair actionable output. For a locally owned doc, call `await helpers.saveDoc()` after the mutation; do not save a remote/shared board.
-7. Verify once with `api.getShapes()`, `api.getBindings()`, and a canvas screenshot only when layout needs visual confirmation. Report the document name/id, created IDs, binding/lint result, and saved path.
+Normal board work has one persistent destination:
 
-### Create a fresh document
+```text
+/Users/han/project/learn_with_agent/tldraw/agent.tldraw
+```
+
+Create each new board as a page in that document. Its name is exactly `YYMMDD_board-name`: use the local date and a short lower-case board name, for example `260825_encoder`. A separately named `.tldraw` file is an explicit user override, not the default.
+
+1. Discover documents with `api.getDocs()` and select `agent.tldraw` by its `filePath`. Do not treat a different sole open document as a replacement. If the file exists but is closed, open it non-activating with `open -gj /Users/han/project/learn_with_agent/tldraw/agent.tldraw`, then query again.
+2. Only if that file is genuinely absent, create it through `/api/docs/create` with `name: "agent.tldraw"` and `directory: "/Users/han/project/learn_with_agent/tldraw"`. Never create or overwrite a `.tldraw` archive through filesystem tools.
+3. At the beginning of a new board, create and select its dated page before adding shapes. If the exact page name already exists, inspect it and stop for an explicit continuation instruction; do not clear, replace, or silently suffix it.
+4. Read `api.getShapes(doc.id)` before changing an existing canvas. If it holds unrelated content, stop rather than clearing it.
+5. Use `/exec` to create or change shapes. Import SDK primitives dynamically: `const { createShapeId, toRichText } = await import('tldraw')`.
+6. Use `helpers.createArrowBetweenShapes(fromId, toId, options)` for semantic diagram edges so endpoints stay bound when nodes move. Reserve raw arrows for explicitly decorative marks.
+7. Run `helpers.getLints()` and repair actionable output. For a locally owned doc, call `await helpers.saveDoc()` after the mutation; do not save a remote/shared board.
+8. Verify once with `api.getShapes()`, `api.getBindings()`, and a canvas screenshot only when layout needs visual confirmation. Report the document name/id, page name, created IDs, binding/lint result, and saved path.
+
+### Initialize the default document only when missing
 
 ```bash
 sh /Users/han/project/agent/skills/tldraw-offline/scripts/tq POST /api/docs/create \
-  '{"name":"Transformer Encoder Demo","directory":"/absolute/existing/output/folder"}'
+  '{"name":"agent.tldraw","directory":"/Users/han/project/learn_with_agent/tldraw"}'
 ```
 
-Use the returned `id` verbatim in later `/exec` requests. The create endpoint returns `409` rather than overwriting an existing file; choose another name instead of bypassing it.
+Use the returned `id` verbatim in later `/exec` requests. The create endpoint returns `409` rather than overwriting an existing file; re-query the documents instead of bypassing it.
+
+### Prepare a dated board page
+
+Run this as the first `/exec` transaction for a new board, replacing `260825_encoder` with the required `YYMMDD_board-name` value:
+
+```js
+const pageName = '260825_encoder'
+if (editor.getPages().some((page) => page.name === pageName)) {
+  throw new Error(`Page already exists: ${pageName}. Inspect it and obtain explicit continuation authorization.`)
+}
+editor.createPage({ name: pageName })
+const page = editor.getPages().find((candidate) => candidate.name === pageName)
+if (!page) throw new Error(`Could not create page: ${pageName}`)
+editor.setCurrentPage(page)
+return { pageId: page.id, pageName: page.name }
+```
+
+Create the diagram in a following transaction after this page setup succeeds. This makes the page target unambiguous and prevents shapes from landing on whichever page happened to be active.
 
 ### Execute a focused edit
 
@@ -77,7 +104,7 @@ Request `/api/doc/:id/script-workspace`, read existing `script/main.js` before c
 
 ## Validation prompts
 
-- "Create a system architecture diagram in a new tldraw file" should create a named local file, bind arrows, lint, save, and report its path.
+- "Create a system architecture diagram" should create `YYMMDD_architecture` in `agent.tldraw`, bind arrows, lint, save, and report its path and page name.
 - "Rearrange this open tldraw board" should inspect its shapes first and modify only the requested components.
 - "Add an interactive play button to a tldraw file" should use the document script workspace, verify script status, and save the local document.
 
