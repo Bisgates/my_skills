@@ -1,0 +1,39 @@
+#!/bin/sh
+# Authenticated local tldraw request helper. The app rotates this token per launch.
+set -eu
+
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+  echo "usage: tq METHOD PATH [BODY]" >&2
+  exit 64
+fi
+
+TQ_METHOD=$1
+TQ_PATH=$2
+TQ_BODY=${3-}
+TQ_SERVER_PATH="$HOME/Library/Application Support/tldraw/server.json"
+
+if [ ! -r "$TQ_SERVER_PATH" ]; then
+  echo "tldraw offline is not running or has not written server.json" >&2
+  exit 69
+fi
+
+TQ_PORT=$(jq -r '.port // empty' "$TQ_SERVER_PATH")
+TQ_TOKEN=$(jq -r '.token // empty' "$TQ_SERVER_PATH")
+if [ -z "$TQ_PORT" ] || [ -z "$TQ_TOKEN" ]; then
+  echo "tldraw server.json is missing port or token" >&2
+  exit 69
+fi
+
+if [ "$#" -eq 2 ]; then
+  exec curl -fsS -X "$TQ_METHOD" "http://localhost:$TQ_PORT$TQ_PATH" \
+    -H "authorization: Bearer $TQ_TOKEN"
+fi
+
+case "$TQ_BODY" in
+  \{*) TQ_CONTENT_TYPE='application/json' ;;
+  *) TQ_CONTENT_TYPE='text/plain' ;;
+esac
+exec curl -fsS -X "$TQ_METHOD" "http://localhost:$TQ_PORT$TQ_PATH" \
+  -H "authorization: Bearer $TQ_TOKEN" \
+  -H "content-type: $TQ_CONTENT_TYPE" \
+  -d "$TQ_BODY"
