@@ -95,6 +95,25 @@ Static diagrams belong in `/exec`. Use document scripts only for behavior that m
 
 Request `/api/doc/:id/script-workspace`, read existing `script/main.js` before changing it, and inspect `/script-status` after writing. Keep host-owned mutations behind the document's host guard for boards that may be shared. Scripts execute on every participant, so never clear and redraw a shared page on startup.
 
+`main.js` runs on mount and reruns on save. Registering new shape types, bindings, or canvas overlays needs a sibling `script/config.js`, which rebuilds the editor when saved. Read the matching entry in `api.recipes` for the mechanics of the specific feature:
+
+```json
+{"code": "return Object.keys(api.recipes)"}
+```
+
+Read [references/interactive-board-scripts.md](references/interactive-board-scripts.md) when the script goes past a single recipe — draggable knobs or buttons made of ordinary shapes, arrows read as a wiring graph, pooled rendering of many marks, or a tick loop that has to stay cheap. It covers which state belongs in shape geometry versus script memory, and how to reconcile the board after a rerun.
+
+### Verifying a script that animates
+
+The editor's tick loop is tied to on-screen rendering, so it pauses while the app window is hidden or occluded — the usual state while an agent works. Give the script a global step function and a state dump, then drive both from one `/exec` call instead of asking the user to bring the window forward:
+
+```js
+globalThis.__myStep = (ms) => tick(ms)          // in script/main.js
+globalThis.__myState = () => ({ /* plain JSON */ })
+```
+
+Wrap the tick body in `try/catch` and stash the stack on a global; the editor swallows handler exceptions, so a broken frame otherwise shows up only as a board that stopped moving.
+
 ## Safety boundaries
 
 - Do not edit an open `.tldraw` archive, database, metadata, lock, or generated `.script-workspace` file directly; the live editor owns those state transitions.
@@ -107,5 +126,6 @@ Request `/api/doc/:id/script-workspace`, read existing `script/main.js` before c
 - "Create a system architecture diagram" should create `YYMMDD_architecture` in `agent.tldraw`, bind arrows, lint, save, and report its path and page name.
 - "Rearrange this open tldraw board" should inspect its shapes first and modify only the requested components.
 - "Add an interactive play button to a tldraw file" should use the document script workspace, verify script status, and save the local document.
+- "Make these boxes into knobs I can drag" should build controls from stock shapes whose values live in the canvas, and survive a script rerun without redrawing user-editable shapes.
 
 Do not trigger this skill merely to explain tldraw concepts, browse tldraw.com, or edit a standalone SVG/PNG outside an open tldraw offline document.
