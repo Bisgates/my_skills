@@ -1,6 +1,6 @@
 ---
 name: cross-agent-call
-description: Dispatch a named model as a headless sub-agent by shelling out to its harness CLI (cursor-agent, grok, codex, or claude). Use whenever the user 派/用/让/问问 a model as a sub agent — sol, terra, luna, gpt-5.6, grok, grok-4.6, opus, sonnet, fable, codex, cursor — alone or as a pipeline like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试", or wants a second opinion or cross-check from another model or vendor. Cross-harness only: a model the current harness serves natively goes through the harness's own subagent mechanism, and this skill covers the rest.
+description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke sol/terra/luna (codex), grok (grok CLI), or cursor-grok (cursor); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→sol/terra/luna use codex's Agent tool; grok→grok-4.6/grok-4.5 use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
 ---
 
 # Cross-agent call
@@ -9,9 +9,20 @@ Four agent harnesses are installed here, and every one of them has a headless si
 
 This skill records the entrypoints that were run and confirmed working, plus the flags that keep a headless sub-agent from stalling on a permission prompt.
 
-Requests usually name only models ("派 luna 去实现, grok 和 sol 并行测试"): decode each name via [Model names and discovery](#model-names-and-discovery), then chain the calls — sequential stages one after another, independent ones as background jobs (`cmd1 & cmd2 & wait`).
+## Scope: when to use this skill
 
-Route each model by ownership. One the current harness serves natively (opus/sonnet/fable inside Claude Code, sol/terra/luna inside codex, grok-4.6 inside grok) goes through that harness's own subagent mechanism, which keeps shared context and permissions; shell out through this skill only for models that live in another harness. A mixed pipeline splits accordingly — from Claude Code, "用 opus 调研后派 luna 实现" runs opus via the Agent tool and luna via `codex exec`.
+Route each model by ownership, not by its name:
+- **Own harness:** a model the current harness serves natively goes through that harness's own subagent mechanism (Agent tool in Claude Code, Agent tool in codex, grok's native agent in grok). This keeps shared context and permissions.
+  - Claude Code: use the `Agent` tool for opus, sonnet, fable
+  - codex: use the `Agent` tool for sol, terra, luna
+  - grok: use grok's native agent for grok-4.6, grok-4.5
+- **Other harness:** shell out through *this skill only for models that live in another harness* — codex models from Claude Code, claude models from codex, etc.
+
+A mixed pipeline splits accordingly: from Claude Code, "用 opus 调研后派 luna 实现" runs opus via the `Agent` tool and luna via `codex exec`.
+
+## How to invoke
+
+Requests usually name only models ("派 luna 去实现, grok 和 sol 并行测试"): decode each name via [Model names and discovery](#model-names-and-discovery), then chain the calls — sequential stages one after another, independent ones as background jobs (`cmd1 & cmd2 & wait`).
 
 ## Quick reference
 
