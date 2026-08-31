@@ -32,7 +32,7 @@ Then set the hourly patrol (`CronCreate` with `templates/patrol_prompt.md`) and 
 - `fabux doctor` — check binary, profile, auth, gateway reachability, and catalog.
 - `fabux models` — print catalog slugs, display names, and default effort.
 
-If the wrapper returns rc=3, the machine is off the fabu network; switch workers to plain `codex exec -m gpt-5.6-sol` until the manager is back on VPN/office network. The TUI's `/model` picker reads the configured fabu catalog.
+If the wrapper returns rc=3, the machine is off the fabu network; switch workers to plain `codex exec -m qwen3.8-max` (or `k3` if available) until the manager is back on VPN/office network. The TUI's `/model` picker reads the configured fabu catalog.
 
 ## Roles
 
@@ -40,7 +40,11 @@ If the wrapper returns rc=3, the machine is off the fabu network; switch workers
 
 **Workers (fabu-codex)** — `fabux exec` processes. Each gets the common rules + one task prompt, writes files into the arc (or the arc's scratch root on /ssd), and returns a ≤15-line summary. Workers never call the `arc` CLI, never write `3_state.md`/`0_meta.md`, never touch the main project. The roster of worker types that proved useful, with the model that suited each, is in `references/worker_roster.md`.
 
-Model choice (user policy + observed behaviour): for infra / execution / eval / GPU work the order is **`k3` first, `qwen3.8-max` as fallback** — invoke them with `fabux exec -m <slug>`. k3 is the user's preferred worker when the fabu backend serves it; it died once on a transient 503 after writing its script, so if a k3 worker exits with rc≠0 and no `final.md`, re-dispatch the same prompt on `qwen3.8-max` with "复用已有产物续跑" (qwen ran 11 such tasks with zero crashes and obeys file-scope rules). Use `gpt-5.6-sol` for research and report building (strong, but can run to timeout — set a time box and ask for progress files), `gpt-5.6-terra` for adversarial review (caught real errors both times), and `gpt-5.6-luna` as the CLI default.
+**Model choice (default + user override):** The default strategy is **stability-first** — use `k3` (preferred) or `qwen3.8-max` (fallback) for all work. Invoke with `fabux exec -m <slug>`. k3 is reliable for infra / execution / eval / GPU work; if k3 exits with rc≠0 and no `final.md`, re-dispatch the same prompt on `qwen3.8-max` with "复用已有产物续跑" (qwen ran 11 such tasks with zero crashes and obeys file-scope rules).
+
+Do **not** use codex's `sol` / `terra` / `luna` models by default — they are prone to transient 503 errors and timeouts. These models are available **only if the user explicitly requests them** in the campaign design (e.g. "use sol for research" or "use terra for review"). When the user names a specific codex model in their prompt, honor it and switch the corresponding worker to `codex exec -m <model>` instead of `fabux exec`. Otherwise, stick to k3/qwen.
+
+For reference, when explicitly requested: use `codex exec -m gpt-5.6-sol` for research and report building (strong, but can run to timeout — set a time box and ask for progress files), `codex exec -m gpt-5.6-terra` for adversarial review (caught real errors both times), and `codex exec -m gpt-5.6-luna` as fallback only if explicitly named by the user.
 
 ## The campaign loop
 
