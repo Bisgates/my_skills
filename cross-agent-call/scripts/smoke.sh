@@ -30,12 +30,12 @@ for h in "${requested[@]}"; do
   case "$h" in
     grok)
       token="CROSSCALL-GROK-OK"
-      cmd=(grok -p "Reply with exactly this token and nothing else: $token" -m grok-4.6 --output-format plain)
+      cmd=(grok -p "Reply with exactly this token and nothing else: $token" -m "${GROK_MODEL:?Resolve and export GROK_MODEL from grok models first}" --output-format plain)
       ;;
     codex)
       token="CROSSCALL-CODEX-OK"
       # `command codex` so the user's interactive alias (--dangerously-bypass...) can't interfere.
-      cmd=(command codex exec -s read-only -m gpt-5.6-sol -c model_reasoning_effort=low "Reply with exactly this token and nothing else: $token")
+      cmd=(command codex exec -s read-only -m "${CODEX_MODEL:?Resolve and export CODEX_MODEL from the model catalog first}" -c model_reasoning_effort=low "Reply with exactly this token and nothing else: $token")
       ;;
     claude)
       token="CROSSCALL-CLAUDE-OK"

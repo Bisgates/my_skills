@@ -1,6 +1,6 @@
 ---
 name: cross-agent-call
-description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke astra/sol/terra/luna (codex) or grok (grok CLI); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→astra/sol/terra/luna use codex's Agent tool; grok→grok-4.6/grok-4.5 use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
+description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke astra/sol/luna (codex) or grok (grok CLI); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→astra/sol/luna use codex's Agent tool; grok→its native models use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
 ---
 
 # Cross-agent call
@@ -14,8 +14,8 @@ This skill records the entrypoints that were run and confirmed working, plus the
 Route each model by ownership, not by its name:
 - **Own harness:** a model the current harness serves natively goes through that harness's own subagent mechanism (Agent tool in Claude Code, Agent tool in codex, grok's native agent in grok). This keeps shared context and permissions.
   - Claude Code: use the `Agent` tool for opus, sonnet, fable
-  - codex: use the `Agent` tool for astra, sol, terra, luna
-  - grok: use grok's native agent for grok-4.6, grok-4.5
+  - codex: use the `Agent` tool for astra, sol, luna
+  - grok: use grok's native agent for its available models
 - **Other harness:** shell out through *this skill only for models that live in another harness* — codex models from Claude Code, claude models from codex, etc.
 
 A mixed pipeline splits accordingly: from Claude Code, "用 opus 调研后派 luna 实现" runs opus via the `Agent` tool and luna via `codex exec`.
@@ -26,13 +26,15 @@ Requests usually name only models ("派 luna 去实现, grok 和 sol 并行测�
 
 ## Quick reference
 
-| Harness | Minimal verified command | Model slugs tested |
+Resolve the variables below using [Model names and discovery](#model-names-and-discovery) before running these commands.
+
+| Harness | Command pattern | Model selection |
 | --- | --- | --- |
-| grok | `grok -p '<prompt>' -m grok-4.6 --reasoning-effort high --output-format plain` | `grok-4.6`, `grok-4.5` |
-| codex | `codex exec -m gpt-5.6-sol -c model_reasoning_effort=xhigh '<prompt>'` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` |
+| grok | `grok -p '<prompt>' -m "$GROK_MODEL" --reasoning-effort high --output-format plain` | Latest available Grok |
+| codex | `codex exec -m "$CODEX_MODEL" -c "model_reasoning_effort=$CODEX_EFFORT" '<prompt>'` | Latest available model in the requested GPT family |
 | claude | `claude -p '<prompt>' --effort high` | harness default; `--model <m>` to override |
 
-Fabu-hosted `k3`, `qwen3.8-max`, `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` are reached with `fabux exec -m <slug>`; from the Mac, plain `codex` uses the personal quota.
+Fabu-hosted models are reached with `fabux exec -m <slug>` using that provider's own available model catalog; from the Mac, plain `codex` uses the personal quota.
 
 Binaries, for shells whose PATH is thinner than an interactive one: `~/.grok/bin/grok`, `codex` (on PATH), `~/.local/bin/claude`.
 
@@ -43,15 +45,15 @@ These are this skill's invocation defaults, not necessarily the harness or model
 | Callee | Default |
 | --- | --- |
 | claude (any model) | `--effort high` |
-| codex `gpt-6-astra` | `-c model_reasoning_effort=medium` |
-| codex `gpt-5.6-sol` / `gpt-5.6-terra` | `-c model_reasoning_effort=xhigh` |
-| codex `gpt-5.6-luna` | `-c model_reasoning_effort=max` |
-| grok `grok-4.6` | `--reasoning-effort high` |
+| codex Astra | `-c model_reasoning_effort=medium` |
+| codex Sol | `-c model_reasoning_effort=high` |
+| codex Luna | `-c model_reasoning_effort=max` |
+| grok (latest available) | `--reasoning-effort high` |
 
 ## grok
 
 ```bash
-grok -p 'Review this diff for logic errors' -m grok-4.6 --output-format plain
+grok -p 'Review this diff for logic errors' -m "$GROK_MODEL" --reasoning-effort high --output-format plain
 ```
 
 - `-p` / `--single` is single-turn headless. `--output-format plain | json | streaming-json | streaming-messages-json`.
@@ -62,7 +64,7 @@ grok -p 'Review this diff for logic errors' -m grok-4.6 --output-format plain
 ## codex
 
 ```bash
-codex exec -m gpt-6-astra -c model_reasoning_effort=medium 'Explain what this script does'
+codex exec -m "$CODEX_MODEL" -c "model_reasoning_effort=$CODEX_EFFORT" 'Explain what this script does'
 ```
 
 - `codex exec` is the headless mode. Pass `-` as the prompt argument to read it from stdin.
@@ -94,25 +96,22 @@ claude -p 'Give a second opinion on this design'
 
 ## Model names and discovery
 
-The user's shorthand maps to slugs like this:
+Use the latest available model by default, resolving it once per dispatch batch from the target harness's model catalog. Versioned slugs in old transcripts are not defaults. Explicit user versions or full slugs take precedence: preserve them exactly.
 
-| Said | Slug |
-| --- | --- |
-| astra | `gpt-6-astra` (codex) |
-| sol | `gpt-5.6-sol` (codex) |
-| terra, terral | `gpt-5.6-terra` (codex) |
-| luna, tuna | `gpt-5.6-luna` (codex) |
-| grok 4.6 | `grok-4.6` (grok CLI) |
-| opus, sonnet, fable | `claude -p --model opus\|sonnet\|fable` (aliases; opus and fable verified) |
+| Said | Selection | Default effort |
+| --- | --- | --- |
+| astra | Latest available Astra family model | medium |
+| sol | Latest available Sol family model | high |
+| luna, tuna | Latest available Luna family model | max |
+| gpt, codex (no family) | Latest available general-purpose GPT generation; prefer the flagship when several families share that generation | Selected family's default above, otherwise catalog default |
+| grok (no version) | Latest available general-purpose Grok model | high |
+| opus, sonnet, fable | Pass the Claude CLI's latest-model alias directly | high |
 
-Snapshot of what each harness exposed at verification time:
-
-- **codex** (`~/.codex/models_cache.json`, visible entries; parentheses show catalog defaults): `gpt-6-astra` (`medium`), `gpt-5.6-sol` (`low`), `gpt-5.6-terra` (`medium`), `gpt-5.6-luna` (`medium`), `gpt-5.5` (`medium`), `gpt-5.4-mini` (`medium`), `gpt-5.3-codex-spark` (`high`). Hidden entries: `gpt-reserve`, `codex-auto-review`. Local `config.toml` selects `gpt-6-astra` with `medium`; re-read it when checking the user's current default. Astra is catalog-confirmed; the historical smoke-tested slugs remain in the quick-reference table.
-- **grok**: `grok-4.6` (default), `grok-4.5`.
-
-Model lists rot faster than this file does, so treat the discovery commands as the authority whenever a slug is rejected: `grok models`, `codex exec --help` together with `~/.codex/models_cache.json`, and `claude --help`.
-
-Versions the table above was verified against: grok 1.0.4, codex-cli 0.144.1, claude 2.1.232.
+- **Codex:** use the current native tool model list when available; for CLI dispatch, inspect `~/.codex/models_cache.json` and its freshness. Use visible, available models and their supported reasoning levels. Refresh discovery through the target harness if the cache is stale or the requested family is absent. `codex exec --help` documents flags, not available models. Resolve the exact slug into `CODEX_MODEL` and the effort into `CODEX_EFFORT`; shorthand family names are skill inputs, not assumed CLI aliases.
+- **Grok:** run `grok models`, choose the newest available general-purpose version, and set `GROK_MODEL` to that exact slug. A model marked default is not necessarily the newest.
+- Compare numeric version components (for example, 4.10 is newer than 4.9), not lexicographic order. Do not silently switch a requested family, select hidden/review/special-purpose models, or invent a `latest` slug. If discovery cannot establish the latest available model, report that limitation instead of presenting an old snapshot as current.
+- Pass the selected model and effort explicitly, including through native subagent tools. Explicit user effort overrides the skill default. If the selected model does not support that effort, report the mismatch instead of silently changing it.
+- Keep discovery provider-specific: personal Codex availability does not establish Fabu availability.
 
 ## Verified cross-calls
 
@@ -125,7 +124,7 @@ Versions the table above was verified against: grok 1.0.4, codex-cli 0.144.1, cl
 
 ## Re-verifying on another machine
 
-`scripts/smoke.sh [harness...]` runs one cheap echo-back call per harness and prints PASS or FAIL per row, exiting non-zero if any row fails. With no arguments it checks all three; name a subset to check only those. Run it after a CLI upgrade, on a new machine, or when a call that used to work starts failing — it separates "the flag changed" from "the network or login is down".
+`scripts/smoke.sh [harness...]` runs one cheap echo-back call per harness and prints PASS or FAIL per row, exiting non-zero if any row fails. Before running, resolve and export `CODEX_MODEL` and `GROK_MODEL` as above (only the variables for the selected harnesses are required). The script uses low effort for the Codex echo check to keep verification cheap. With no arguments it checks all three; name a subset to check only those. Run it after a CLI upgrade, on a new machine, or when a call that used to work starts failing — it separates "the flag changed" from "the network or login is down".
 
 ## See also
 
