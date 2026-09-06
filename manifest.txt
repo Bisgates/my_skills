@@ -26,3 +26,4 @@ ios-device-build
 fabu-agent-team
 tldraw-offline
 diagram-design
+design-claude
