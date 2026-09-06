@@ -1,6 +1,6 @@
 ---
 name: cross-agent-call
-description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke sol/terra/luna (codex), grok (grok CLI), or cursor-grok (cursor); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→sol/terra/luna use codex's Agent tool; grok→grok-4.6/grok-4.5 use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
+description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke astra/sol/terra/luna (codex), grok (grok CLI), or cursor-grok (cursor); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→astra/sol/terra/luna use codex's Agent tool; grok→grok-4.6/grok-4.5 use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
 ---
 
 # Cross-agent call
@@ -14,7 +14,7 @@ This skill records the entrypoints that were run and confirmed working, plus the
 Route each model by ownership, not by its name:
 - **Own harness:** a model the current harness serves natively goes through that harness's own subagent mechanism (Agent tool in Claude Code, Agent tool in codex, grok's native agent in grok). This keeps shared context and permissions.
   - Claude Code: use the `Agent` tool for opus, sonnet, fable
-  - codex: use the `Agent` tool for sol, terra, luna
+  - codex: use the `Agent` tool for astra, sol, terra, luna
   - grok: use grok's native agent for grok-4.6, grok-4.5
 - **Other harness:** shell out through *this skill only for models that live in another harness* — codex models from Claude Code, claude models from codex, etc.
 
@@ -39,11 +39,12 @@ Binaries, for shells whose PATH is thinner than an interactive one: `~/.local/bi
 
 ### Default effort
 
-When the request names no effort, use these (all verified); go lower only when the user asks for speed or cheapness:
+These are this skill's invocation defaults, not necessarily the harness or model-catalog defaults. When the request names no effort, use these; go lower only when the user asks for speed or cheapness:
 
 | Callee | Default |
 | --- | --- |
 | claude (any model) | `--effort high` |
+| codex `gpt-6-astra` | `-c model_reasoning_effort=medium` |
 | codex `gpt-5.6-sol` / `gpt-5.6-terra` | `-c model_reasoning_effort=xhigh` |
 | codex `gpt-5.6-luna` | `-c model_reasoning_effort=max` |
 | grok `grok-4.6` | `--reasoning-effort high` |
@@ -75,11 +76,11 @@ grok -p 'Review this diff for logic errors' -m grok-4.6 --output-format plain
 ## codex
 
 ```bash
-codex exec -m gpt-5.6-sol -c model_reasoning_effort=low 'Explain what this script does'
+codex exec -m gpt-6-astra -c model_reasoning_effort=medium 'Explain what this script does'
 ```
 
 - `codex exec` is the headless mode. Pass `-` as the prompt argument to read it from stdin.
-- Effort comes in as a config override: `-c model_reasoning_effort=low|medium|high|xhigh|max`. An unquoted value is fine — anything that fails TOML parsing is taken as a literal string.
+- Effort comes in as a config override: `-c model_reasoning_effort=low|medium|high|xhigh|max|ultra`. Check the selected model's supported levels in the model catalog; not every model supports `max` or `ultra`. An unquoted value is fine — anything that fails TOML parsing is taken as a literal string.
 - Sandbox: `-s read-only | workspace-write | danger-full-access`, or `--dangerously-bypass-approvals-and-sandbox` to drop both approvals and the sandbox. See the gotcha below before letting a sandboxed codex call another harness.
 - `--skip-git-repo-check` is required outside a git repo. `-C <dir>` sets the working root. `--ephemeral` skips writing session files.
 - Clean output: plain stdout wraps the answer in a banner and token-usage lines, so use `-o` / `--output-last-message <file>` to get just the final message, or `--json` for JSONL events.
@@ -111,6 +112,7 @@ The user's shorthand maps to slugs like this:
 
 | Said | Slug |
 | --- | --- |
+| astra | `gpt-6-astra` (codex) |
 | sol | `gpt-5.6-sol` (codex) |
 | terra, terral | `gpt-5.6-terra` (codex) |
 | luna, tuna | `gpt-5.6-luna` (codex) |
@@ -119,7 +121,7 @@ The user's shorthand maps to slugs like this:
 
 Snapshot of what each harness exposed at verification time:
 
-- **codex** (`~/.codex/models_cache.json`): `gpt-5.6-sol` (the user's default, effort `xhigh` in `config.toml`), `gpt-5.6-sol-wm`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex-spark`, `codex-auto-review`.
+- **codex** (`~/.codex/models_cache.json`, visible entries; parentheses show catalog defaults): `gpt-6-astra` (`medium`), `gpt-5.6-sol` (`low`), `gpt-5.6-terra` (`medium`), `gpt-5.6-luna` (`medium`), `gpt-5.5` (`medium`), `gpt-5.4-mini` (`medium`), `gpt-5.3-codex-spark` (`high`). Hidden entries: `gpt-reserve`, `codex-auto-review`. Local `config.toml` selects `gpt-6-astra` with `medium`; re-read it when checking the user's current default. Astra is catalog-confirmed; the historical smoke-tested slugs remain in the quick-reference table.
 - **grok**: `grok-4.6` (default), `grok-4.5`.
 - **cursor-agent**: `cursor-grok-4.6-*`, `gpt-5.6-sol-{high,xhigh}[-fast]`, `gpt-5.6-luna-high`, `claude-opus-5-*`, `claude-sonnet-5-*`, `claude-fable-5-*`, `gpt-5.3-codex-*`, `composer-2.5`, `gemini-3.7-flash-high`, `auto`.
 
