@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Smoke-test headless calls to each agent harness CLI with a cheap echo-back prompt.
-# Usage: smoke.sh [harness...]   harness in {cursor, grok, codex, claude}; no args = all four.
+# Usage: smoke.sh [harness...]   harness in {grok, codex, claude}; no args = all three.
 set -u
 
 TIMEOUT=60
-ALL_HARNESSES=(cursor grok codex claude)
+ALL_HARNESSES=(grok codex claude)
 requested=("$@")
 [ ${#requested[@]} -eq 0 ] && requested=("${ALL_HARNESSES[@]}")
 
@@ -28,10 +28,6 @@ run_with_timeout() {
 overall=0
 for h in "${requested[@]}"; do
   case "$h" in
-    cursor)
-      token="CROSSCALL-CURSOR-OK"
-      cmd=(cursor-agent -p "Reply with exactly this token and nothing else: $token" --model cursor-grok-4.6-low --output-format text)
-      ;;
     grok)
       token="CROSSCALL-GROK-OK"
       cmd=(grok -p "Reply with exactly this token and nothing else: $token" -m grok-4.6 --output-format plain)

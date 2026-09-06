@@ -1,11 +1,11 @@
 ---
 name: cross-agent-call
-description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke astra/sol/terra/luna (codex), grok (grok CLI), or cursor-grok (cursor); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→astra/sol/terra/luna use codex's Agent tool; grok→grok-4.6/grok-4.5 use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
+description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke astra/sol/terra/luna (codex) or grok (grok CLI); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→astra/sol/terra/luna use codex's Agent tool; grok→grok-4.6/grok-4.5 use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
 ---
 
 # Cross-agent call
 
-Four agent harnesses are installed here, and every one of them has a headless single-shot mode. So any harness can use any other as a sub-agent: pick a model from a different vendor, shell out to its CLI, read the answer off stdout.
+This skill covers three agent harnesses, and every one of them has a headless single-shot mode. So any harness can use any other as a sub-agent: pick a model from a different vendor, shell out to its CLI, read the answer off stdout.
 
 This skill records the entrypoints that were run and confirmed working, plus the flags that keep a headless sub-agent from stalling on a permission prompt.
 
@@ -28,14 +28,13 @@ Requests usually name only models ("派 luna 去实现, grok 和 sol 并行测�
 
 | Harness | Minimal verified command | Model slugs tested |
 | --- | --- | --- |
-| cursor-agent | `cursor-agent -p '<prompt>' --model cursor-grok-4.6-high --output-format text` | `cursor-grok-4.6-{low,medium,high}` |
 | grok | `grok -p '<prompt>' -m grok-4.6 --reasoning-effort high --output-format plain` | `grok-4.6`, `grok-4.5` |
 | codex | `codex exec -m gpt-5.6-sol -c model_reasoning_effort=xhigh '<prompt>'` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` |
 | claude | `claude -p '<prompt>' --effort high` | harness default; `--model <m>` to override |
 
 Fabu-hosted `k3`, `qwen3.8-max`, `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` are reached with `fabux exec -m <slug>`; from the Mac, plain `codex` uses the personal quota.
 
-Binaries, for shells whose PATH is thinner than an interactive one: `~/.local/bin/cursor-agent`, `~/.grok/bin/grok`, `codex` (on PATH), `~/.local/bin/claude`.
+Binaries, for shells whose PATH is thinner than an interactive one: `~/.grok/bin/grok`, `codex` (on PATH), `~/.local/bin/claude`.
 
 ### Default effort
 
@@ -48,19 +47,6 @@ These are this skill's invocation defaults, not necessarily the harness or model
 | codex `gpt-5.6-sol` / `gpt-5.6-terra` | `-c model_reasoning_effort=xhigh` |
 | codex `gpt-5.6-luna` | `-c model_reasoning_effort=max` |
 | grok `grok-4.6` | `--reasoning-effort high` |
-| cursor-agent Grok 4.6 | `cursor-grok-4.6-high` slug |
-
-## cursor-agent
-
-```bash
-cursor-agent -p 'Summarize the tradeoffs in src/router.ts' \
-  --model cursor-grok-4.6-medium --output-format text
-```
-
-- `-p` / `--print` is the headless mode. `--output-format text | json | stream-json`.
-- Reasoning effort rides in the slug: `cursor-grok-4.6-{low,medium,high,xhigh}`, each with a `-fast` variant.
-- Tool use: the default mode already carries every tool including shell and write, but headless runs stall on approval prompts, so add `-f` / `--force` to auto-approve. With `--force` it successfully ran a nested `claude -p`. Use `--mode ask` for read-only Q&A or `--mode plan` when the sub-agent should not touch the tree.
-- Working dir defaults to cwd; `--workspace <path>` moves it, `-w` / `--worktree` runs in an isolated git worktree.
 
 ## grok
 
@@ -91,7 +77,7 @@ codex exec -m gpt-6-astra -c model_reasoning_effort=medium 'Explain what this sc
 claude -p 'Give a second opinion on this design'
 ```
 
-- `-p` / `--print` is headless and was confirmed callable both from inside another Claude Code session and from inside cursor-agent.
+- `-p` / `--print` is headless and was confirmed callable from inside another Claude Code session.
 - `--effort <level>` sets reasoning effort.
 - `--model <m>`, `--allowedTools`, `--output-format`, `--append-system-prompt`, `--agents <json>`, and `--max-turns` are all available; `claude --help` is the full list.
 - Long prompts go in on stdin.
@@ -102,9 +88,9 @@ claude -p 'Give a second opinion on this design'
 
 **Shell aliases do not exist in the shells scripts run in.** The user's interactive zsh defines `codex='command codex --dangerously-bypass-approvals-and-sandbox'`; a non-interactive shell gets the bare binary with default sandboxing. Spell every flag out in scripts and in commands you hand to another agent.
 
-**Network needs the proxy.** This machine is on a mainland-China network and all four CLIs go through clash. Shells inherit `http_proxy` / `https_proxy` = `127.0.0.1:7899` once clash is on; `clashon` (a zsh function) turns it on. A hang or a TLS/connection error on any of these commands is the first thing to check.
+**Network needs the proxy.** This machine is on a mainland-China network and all three CLIs go through clash. Shells inherit `http_proxy` / `https_proxy` = `127.0.0.1:7899` once clash is on; `clashon` (a zsh function) turns it on. A hang or a TLS/connection error on any of these commands is the first thing to check.
 
-**Quoting nests badly.** Single-quote the outer prompt so the callee's own quotes and `$` survive. Once the prompt contains quotes of both kinds, or runs past a line or two, stop fighting the shell: `codex exec -` and `claude -p` read stdin, `grok` takes `--prompt-file`, and `cursor-agent -p "$(cat prompt.txt)"` works for the rest.
+**Quoting nests badly.** Single-quote the outer prompt so the callee's own quotes and `$` survive. Once the prompt contains quotes of both kinds, or runs past a line or two, stop fighting the shell: `codex exec -` and `claude -p` read stdin, and `grok` takes `--prompt-file`.
 
 ## Model names and discovery
 
@@ -116,32 +102,30 @@ The user's shorthand maps to slugs like this:
 | sol | `gpt-5.6-sol` (codex) |
 | terra, terral | `gpt-5.6-terra` (codex) |
 | luna, tuna | `gpt-5.6-luna` (codex) |
-| grok 4.6 | `grok-4.6` (grok CLI) or `cursor-grok-4.6-high` (cursor) |
+| grok 4.6 | `grok-4.6` (grok CLI) |
 | opus, sonnet, fable | `claude -p --model opus\|sonnet\|fable` (aliases; opus and fable verified) |
 
 Snapshot of what each harness exposed at verification time:
 
 - **codex** (`~/.codex/models_cache.json`, visible entries; parentheses show catalog defaults): `gpt-6-astra` (`medium`), `gpt-5.6-sol` (`low`), `gpt-5.6-terra` (`medium`), `gpt-5.6-luna` (`medium`), `gpt-5.5` (`medium`), `gpt-5.4-mini` (`medium`), `gpt-5.3-codex-spark` (`high`). Hidden entries: `gpt-reserve`, `codex-auto-review`. Local `config.toml` selects `gpt-6-astra` with `medium`; re-read it when checking the user's current default. Astra is catalog-confirmed; the historical smoke-tested slugs remain in the quick-reference table.
 - **grok**: `grok-4.6` (default), `grok-4.5`.
-- **cursor-agent**: `cursor-grok-4.6-*`, `gpt-5.6-sol-{high,xhigh}[-fast]`, `gpt-5.6-luna-high`, `claude-opus-5-*`, `claude-sonnet-5-*`, `claude-fable-5-*`, `gpt-5.3-codex-*`, `composer-2.5`, `gemini-3.7-flash-high`, `auto`.
 
-Model lists rot faster than this file does, so treat the discovery commands as the authority whenever a slug is rejected: `cursor-agent --list-models`, `grok models`, `codex exec --help` together with `~/.codex/models_cache.json`, and `claude --help`.
+Model lists rot faster than this file does, so treat the discovery commands as the authority whenever a slug is rejected: `grok models`, `codex exec --help` together with `~/.codex/models_cache.json`, and `claude --help`.
 
-Versions the table above was verified against: cursor-agent 2026.08.11-e8db854, grok 1.0.4, codex-cli 0.144.1, claude 2.1.232.
+Versions the table above was verified against: grok 1.0.4, codex-cli 0.144.1, claude 2.1.232.
 
 ## Verified cross-calls
 
 | Caller | Callee | Result |
 | --- | --- | --- |
-| claude (Bash tool) | cursor-agent, grok, codex | works |
-| cursor-agent `-p --force` | `claude -p` | works |
+| claude (Bash tool) | grok, codex | works |
 | grok `--permission-mode bypassPermissions` | `codex exec` | works |
 | codex `--dangerously-bypass-approvals-and-sandbox` | grok CLI | works |
 | codex `-s read-only` | grok CLI | fails, `FS_PERMISSION_DENIED` |
 
 ## Re-verifying on another machine
 
-`scripts/smoke.sh [harness...]` runs one cheap echo-back call per harness and prints PASS or FAIL per row, exiting non-zero if any row fails. With no arguments it checks all four; name a subset to check only those. Run it after a CLI upgrade, on a new machine, or when a call that used to work starts failing — it separates "the flag changed" from "the network or login is down".
+`scripts/smoke.sh [harness...]` runs one cheap echo-back call per harness and prints PASS or FAIL per row, exiting non-zero if any row fails. With no arguments it checks all three; name a subset to check only those. Run it after a CLI upgrade, on a new machine, or when a call that used to work starts failing — it separates "the flag changed" from "the network or login is down".
 
 ## See also
 
