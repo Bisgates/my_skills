@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # Use the fabu Codex profile on either a workstation or a remote Linux host.
+#
+# The fabu profile (~/.codex/fabu.config.toml) defines two gateways that serve disjoint models:
+#   crs  http://crs.fabu.ai/openai  qwen3.8-max / deepseek-v4.1-flash / qwen3.8-flash / glm-5.2 (default)
+#   cpa  http://cpa.fabu.ai/v1      gpt-6-astra / gpt-6-sol / gpt-6-luna
+# A codex profile has one model_provider, so fabux looks the requested model up in the catalog
+# (each entry carries a "provider" field) and adds `-c model_provider=<name>`.
 set -u
 
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 CONFIG_FILE="$CODEX_HOME/fabu.config.toml"
-DEFAULT_HOST="crs.fabu.ai"
+DEFAULT_PROVIDER="crs"
 CODEX_BIN=""
 
 find_codex() {
@@ -28,16 +34,81 @@ catalog_path() {
   printf '%s\n' "$path"
 }
 
-auth_env_name() {
+# Top-level model_provider of the profile (the provider used when no model is given).
+profile_provider() {
+  local p=""
   if [ -r "$CONFIG_FILE" ]; then
-    sed -n 's/^[[:space:]]*env_key[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$CONFIG_FILE" | head -1
+    p="$(awk '/^[[:space:]]*\[/ { exit } /^[[:space:]]*model_provider[[:space:]]*=/ {
+           sub(/^[^=]*=[[:space:]]*"/, ""); sub(/".*/, ""); print; exit }' "$CONFIG_FILE")"
   fi
+  printf '%s\n' "${p:-$DEFAULT_PROVIDER}"
 }
 
+# Every [model_providers.<name>] table in the profile, one name per line.
+provider_names() {
+  [ -r "$CONFIG_FILE" ] || return 0
+  sed -n 's/^[[:space:]]*\[model_providers\.\([A-Za-z0-9_-]*\)\][[:space:]]*$/\1/p' "$CONFIG_FILE"
+}
+
+# provider_field <provider> <key> → value of <key> inside [model_providers.<provider>].
+provider_field() {
+  [ -r "$CONFIG_FILE" ] || return 0
+  awk -v want="[model_providers.$1]" -v key="$2" '
+    /^[[:space:]]*\[/ { line = $0; gsub(/[[:space:]]/, "", line); inside = (line == want); next }
+    inside {
+      line = $0
+      if (line ~ "^[[:space:]]*" key "[[:space:]]*=") {
+        sub(/^[^=]*=[[:space:]]*"/, "", line); sub(/".*/, "", line); print line; exit
+      }
+    }' "$CONFIG_FILE"
+}
+
+auth_env_name() {
+  provider_field "${1:-$(profile_provider)}" env_key
+}
+
+# provider_for_model <slug> → the catalog's provider for <slug>; empty when unknown.
+provider_for_model() {
+  local catalog
+  catalog="$(catalog_path)"
+  [ -r "$catalog" ] || return 0
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$catalog" "$1" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    data = json.load(stream)
+models = data if isinstance(data, list) else data.get("models", [])
+for model in models:
+    if model.get("slug") == sys.argv[2]:
+        print(model.get("provider") or "")
+        break
+PY
+    return 0
+  fi
+  # No python: slug prefix rule (GPT lives on cpa).
+  case "$1" in
+    gpt-*) echo cpa ;;
+  esac
+}
+
+# gateway_url <provider> → base_url of that provider table.
+gateway_url() {
+  provider_field "$1" base_url
+}
+
+url_host() {
+  local rest="${1#*://}"
+  rest="${rest%%/*}"
+  printf '%s\n' "${rest%%:*}"
+}
+
+# reachable <url> → 0 when the gateway answers within 3s (direct, no proxy).
 reachable() {
-  local host url
-  host="${FABUX_PREFLIGHT_HOST:-$DEFAULT_HOST}"
-  url="${FABUX_PREFLIGHT_URL:-http://$host/openai}"
+  local url host
+  url="$1"
+  host="$(url_host "$url")"
   if command -v curl >/dev/null 2>&1; then
     curl --noproxy "$host" --connect-timeout 3 --max-time 3 -sS -o /dev/null "$url" >/dev/null 2>&1
     return $?
@@ -50,11 +121,21 @@ reachable() {
 }
 
 preflight() {
+  local provider url
   [ "${FABUX_SKIP_PREFLIGHT:-0}" = "1" ] && return 0
-  if reachable; then
+  provider="$1"
+  if [ -n "${FABUX_PREFLIGHT_URL:-}" ]; then
+    url="$FABUX_PREFLIGHT_URL"
+  elif [ -n "${FABUX_PREFLIGHT_HOST:-}" ]; then
+    url="http://$FABUX_PREFLIGHT_HOST/"
+  else
+    url="$(gateway_url "$provider")"
+    [ -n "$url" ] || url="http://crs.fabu.ai/openai"
+  fi
+  if reachable "$url"; then
     return 0
   fi
-  echo "fabux: ${FABUX_PREFLIGHT_HOST:-$DEFAULT_HOST} unreachable — connect to the fabu network (VPN/office). Off-site use plain codex (personal quota)." >&2
+  echo "fabux: $(url_host "$url") ($provider) unreachable — connect to the fabu network (VPN/office). Off-site use plain codex (personal quota)." >&2
   return 3
 }
 
@@ -65,9 +146,9 @@ print_models() {
     echo "fabux: catalog missing: $catalog" >&2
     return 1
   fi
-  printf 'slug\tdisplay name\tdefault effort\n'
+  printf 'slug\tprovider\tdisplay name\tdefault effort\tefforts\n'
   if command -v python3 >/dev/null 2>&1; then
-    python3 - "$catalog" <<'PY'
+    python3 - "$catalog" "$(profile_provider)" <<'PY'
 import json
 import sys
 
@@ -77,10 +158,14 @@ models = data if isinstance(data, list) else data.get("models", [])
 for model in models:
     slug = model.get("slug", "")
     if slug:
-        print("{}\t{}\t{}".format(
+        efforts = [level.get("effort", "") for level in model.get("supported_reasoning_levels", [])
+                   if isinstance(level, dict)]
+        print("{}\t{}\t{}\t{}\t{}".format(
             slug,
+            model.get("provider") or sys.argv[2],
             model.get("display_name", "-"),
             model.get("default_reasoning_level", "-"),
+            ",".join(e for e in efforts if e) or "-",
         ))
 PY
     return $?
@@ -93,23 +178,22 @@ PY
     }
     /"slug"[[:space:]]*:/ { slug = value($0) }
     /"display_name"[[:space:]]*:/ { name = value($0) }
-    /"default_reasoning_level"[[:space:]]*:/ {
-      effort = value($0)
-      if (slug != "") {
-        print slug "\t" name "\t" effort
-        slug = name = effort = ""
-      }
+    /"provider"[[:space:]]*:/ { provider = value($0) }
+    /"default_reasoning_level"[[:space:]]*:/ { effort = value($0) }
+    /^    }/ {
+      if (slug != "") print slug "\t" (provider == "" ? "-" : provider) "\t" name "\t" effort "\t-"
+      slug = name = effort = provider = ""
     }
   ' "$catalog"
 }
 
 doctor() {
-  local failures version key catalog host
+  local failures version key catalog provider url providers
   failures=0
   find_codex
 
   if [ -n "$CODEX_BIN" ]; then
-    version="$("$CODEX_BIN" --version 2>&1 | head -1)"
+    version="$("$CODEX_BIN" --version 2>/dev/null | head -1)"
     if [ -n "$version" ]; then
       echo "PASS codex binary/version: $CODEX_BIN ($version)"
     else
@@ -128,21 +212,6 @@ doctor() {
     failures=1
   fi
 
-  key="$(auth_env_name)"
-  if [ -n "$key" ]; then
-    if [ -n "$(printenv "$key" 2>/dev/null)" ]; then
-      echo "PASS auth: $key is set"
-    else
-      echo "FAIL auth: $key is unset or empty — export the gateway key before running fabux"
-      failures=1
-    fi
-  elif [ -r "$CODEX_HOME/auth.json" ]; then
-    echo "PASS auth: $CODEX_HOME/auth.json"
-  else
-    echo "FAIL auth: $CODEX_HOME/auth.json missing — log in or restore auth.json"
-    failures=1
-  fi
-
   catalog="$(catalog_path)"
   if [ -r "$catalog" ]; then
     echo "PASS catalog: $catalog"
@@ -151,13 +220,33 @@ doctor() {
     failures=1
   fi
 
-  host="${FABUX_PREFLIGHT_HOST:-$DEFAULT_HOST}"
-  if reachable; then
-    echo "PASS $host: reachable within 3s (direct/no-proxy preflight)"
-  else
-    echo "FAIL $host: unreachable — connect to the fabu network (VPN/office)"
+  providers="$(provider_names)"
+  if [ -z "$providers" ] && [ -r "$CONFIG_FILE" ]; then
+    echo "FAIL gateways: no [model_providers.*] table in $CONFIG_FILE"
     failures=1
   fi
+  for provider in $providers; do
+    key="$(auth_env_name "$provider")"
+    if [ -z "$key" ]; then
+      echo "FAIL auth $provider: [model_providers.$provider] has no env_key"
+      failures=1
+    elif [ -n "$(printenv "$key" 2>/dev/null)" ]; then
+      echo "PASS auth $provider: $key is set"
+    else
+      echo "FAIL auth $provider: $key is unset or empty — export the gateway key before running fabux"
+      failures=1
+    fi
+    url="$(gateway_url "$provider")"
+    if [ -z "$url" ]; then
+      echo "FAIL gateway $provider: [model_providers.$provider] has no base_url"
+      failures=1
+    elif reachable "$url"; then
+      echo "PASS gateway $provider $(url_host "$url"): reachable within 3s (direct/no-proxy preflight)"
+    else
+      echo "FAIL gateway $provider $(url_host "$url"): unreachable — connect to the fabu network (VPN/office)"
+      failures=1
+    fi
+  done
   return "$failures"
 }
 
@@ -176,6 +265,62 @@ case "${1:-}" in
     ;;
 esac
 
-preflight || exit $?
+# Find the requested model, an explicit provider override, and the subcommand (if any).
+# `exec` / `review` rebuild their config after the profile overlay, so a provider override
+# must follow the subcommand there; the TUI and `resume` honour a top-level override.
+model=""
+explicit_provider=0
+subcmd_index=-1
+args=("$@")
+i=0
+n=${#args[@]}
+while [ "$i" -lt "$n" ]; do
+  arg="${args[$i]}"
+  next=""
+  [ $((i + 1)) -lt "$n" ] && next="${args[$((i + 1))]}"
+  case "$arg" in
+    --) break ;;
+    -m|--model) model="$next"; i=$((i + 2)); continue ;;
+    --model=*) model="${arg#--model=}" ;;
+    -m?*) model="${arg#-m}" ;;
+    -c|--config)
+      case "$next" in
+        model=*) model="${next#model=}" ;;
+        model_provider=*) explicit_provider=1 ;;
+      esac
+      i=$((i + 2)); continue ;;
+    --config=model=*) model="${arg#--config=model=}" ;;
+    --config=model_provider=*) explicit_provider=1 ;;
+    -p|--profile|-s|--sandbox|-a|--ask-for-approval|-C|--cd|-i|--image|--add-dir|--enable|--disable|\
+    --local-provider|--remote|--remote-auth-token-env|-o|--output-last-message|--output-schema|--color)
+      i=$((i + 2)); continue ;;
+    exec|e|review)
+      [ "$subcmd_index" -lt 0 ] && subcmd_index=$i ;;
+    -*) ;;
+    *) [ "$subcmd_index" -lt 0 ] && subcmd_index=-2 ;;   # first positional is not exec/review
+  esac
+  i=$((i + 1))
+done
+model="${model#\"}"; model="${model%\"}"
+
+provider="$(profile_provider)"
+override=()
+if [ "$explicit_provider" -eq 0 ] && [ -n "$model" ]; then
+  found="$(provider_for_model "$model")"
+  if [ -n "$found" ]; then
+    provider="$found"
+    override=(-c "model_provider=$found")
+  fi
+fi
+
+preflight "$provider" || exit $?
 [ -n "$CODEX_BIN" ] || { echo "fabux: codex not found — install Codex or add it to PATH" >&2; exit 127; }
-exec "$CODEX_BIN" --profile fabu "$@"
+
+if [ "${#override[@]}" -eq 0 ]; then
+  exec "$CODEX_BIN" --profile fabu "$@"
+fi
+if [ "$subcmd_index" -ge 0 ]; then
+  exec "$CODEX_BIN" --profile fabu "${override[@]}" "${args[@]:0:$((subcmd_index + 1))}" \
+    "${override[@]}" "${args[@]:$((subcmd_index + 1))}"
+fi
+exec "$CODEX_BIN" --profile fabu "${override[@]}" "$@"

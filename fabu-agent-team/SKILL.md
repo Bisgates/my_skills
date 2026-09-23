@@ -17,7 +17,7 @@ cp ~/.claude/skills/fabu-agent-team/templates/common_rules.md $ARC/_tmp/   # edi
 cat > $ARC/_tmp/r1.prompt.md <<'P'
 # 任务 R1：...（目标 / 输入路径 / 产出文件 / 规则 / 时间盒）
 P
-nohup bash $ARC/scripts/run_codex.sh r1 gpt-5.6-sol 5400 $ARC/_tmp/r1.prompt.md >/dev/null 2>&1 &
+nohup bash $ARC/scripts/run_codex.sh r1 gpt-6-sol 5400 $ARC/_tmp/r1.prompt.md >/dev/null 2>&1 &
 # results: $ARC/_tmp/agents/r1.{final.md,rc,log,out}
 ```
 
@@ -25,14 +25,16 @@ Then set the hourly patrol (`CronCreate` with `templates/patrol_prompt.md`) and 
 
 ## Using fabux
 
-`fabux` is the one entrypoint for the fabu gateway on Mac and gpu7. It runs `codex --profile fabu` after a 3-second reachability check of the gateway; `doctor` and `models` are the only words it handles itself, everything else is passed to codex unchanged.
+`fabux` is the one entrypoint for the fabu gateways on Mac and gpu7. It runs `codex --profile fabu` after a 3-second reachability check of the gateway the chosen model lives on; `doctor` and `models` are the only words it handles itself, everything else is passed to codex unchanged.
 
-- `fabux` — open the interactive TUI; `fabux -m k3` selects a model at launch.
-- `fabux exec -m qwen3.8-max '...'` — run a headless worker; `fabux exec` also accepts every normal Codex flag.
-- `fabux doctor` — check binary, profile, auth, gateway reachability, and catalog.
-- `fabux models` — print catalog slugs, display names, and default effort.
+The fabu profile has two gateways with one key: `cpa` (`cpa.fabu.ai/v1`) serves the GPT-6 family `gpt-6-astra` / `gpt-6-sol` / `gpt-6-luna`; `crs` (`crs.fabu.ai/openai`, the default) serves `qwen3.8-max` / `deepseek-v4.1-flash` / `qwen3.8-flash` / `glm-5.2`. fabux reads the model's `provider` from the catalog and adds `-c model_provider=<name>`, so always pick the model through fabux; plain `codex --profile fabu -m gpt-6-sol` hits crs and 404s.
 
-If the wrapper returns rc=3, the machine is off the fabu network; switch workers to plain `codex exec -m qwen3.8-max` (or `k3` if available) until the manager is back on VPN/office network. The TUI's `/model` picker reads the configured fabu catalog.
+- `fabux` — open the interactive TUI on the default crs model; `fabux -m gpt-6-sol` selects a model (and its gateway) at launch.
+- `fabux exec -m qwen3.8-max '...'` — run a headless worker; `fabux exec` also accepts every normal Codex flag (`-m`, `--model`, `-c model=...` are all recognised).
+- `fabux doctor` — check binary, profile, catalog, and key + reachability of both gateways (one PASS/FAIL line each).
+- `fabux models` — print catalog slugs with provider, display name, default effort and supported efforts. GPT-6 Astra / Sol take low..ultra, Luna low..max, the crs models low..max.
+
+If the wrapper returns rc=3, the machine is off the fabu network; switch workers to plain `codex exec -m qwen3.8-max` until the manager is back on VPN/office network. The TUI's `/model` picker reads the configured fabu catalog, but switching between a GPT-6 and a crs model inside one TUI keeps the launch gateway, so choose the model at launch.
 
 ## Roles
 
@@ -40,7 +42,7 @@ If the wrapper returns rc=3, the machine is off the fabu network; switch workers
 
 **Workers (fabux by default, codex on request)** — `fabux exec` processes run against the company's fabu account by default. Each worker gets the common rules + one task prompt, writes files into the arc (or the arc's scratch root on /ssd), and returns a ≤15-line summary. Workers never call the `arc` CLI, never write `3_state.md`/`0_meta.md`, never touch the main project. The roster of worker types that proved useful, with the model that suited each, is in `references/worker_roster.md`.
 
-**Model choice (fabux default with degradation):** Use `fabux exec -m <slug>` by default. Fabux's `sol` / `terra` / `luna` models are the priority choice for quality, but they are prone to transient 503 errors and timeouts. If a sol/terra/luna worker exits with rc≠0 and no `final.md`, re-dispatch the same prompt on `fabux exec -m k3`, then `fabux exec -m qwen3.8-max` if k3 also fails. Qwen has run 11 such recovery tasks with zero crashes and obeys file-scope rules reliably.
+**Model choice (fabux default with degradation):** Use `fabux exec -m <slug>` by default. Fabux's GPT-6 family (`gpt-6-astra` / `gpt-6-sol` / `gpt-6-luna`, the successors of the old sol / terra / luna) is the priority choice for quality, but it is prone to transient 503 errors and timeouts. If a GPT-6 worker exits with rc≠0 and no `final.md`, re-dispatch the same prompt on `fabux exec -m qwen3.8-max`, then `fabux exec -m glm-5.2` if qwen also fails. Qwen has run 11 such recovery tasks with zero crashes and obeys file-scope rules reliably.
 
 **User's codex account (sol/terra/luna) — opt-in only:** Do **not** use `codex exec` by default. The user's personal codex account has access to `sol` / `terra` / `luna` models. Use it **only if the user explicitly requests their codex account** in the campaign design (e.g. "用我的 codex 账号" or "codex 的 sol"). When the user names sol/terra/luna and explicitly says to use their codex account, switch that worker to `codex exec -m gpt-5.6-sol` (or terra/luna) instead of fabux. Otherwise, stick to fabux.
 

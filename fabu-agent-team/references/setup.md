@@ -3,10 +3,23 @@
 `fabux` is a thin profile wrapper. Both machines use the same call path:
 
 ```text
-fabux -> codex --profile fabu -> crs.fabu.ai
+fabux -m <slug> -> codex --profile fabu -c model_provider=<crs|cpa> -> crs.fabu.ai / cpa.fabu.ai
 ```
 
-The gateway is reachable only on the fabu network (VPN/office). Off-site, use
+The fabu profile holds two gateways that serve disjoint models, with one key:
+
+| provider | base_url | models |
+|---|---|---|
+| `crs` (default) | `http://crs.fabu.ai/openai` | `qwen3.8-max`, `deepseek-v4.1-flash`, `qwen3.8-flash`, `glm-5.2` |
+| `cpa` | `http://cpa.fabu.ai/v1` | `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` |
+
+A codex profile has one `model_provider`, so fabux reads the model's `provider`
+field from `fabu.models.json` and adds `-c model_provider=<name>` (after the
+subcommand for `exec` / `review`, where a top-level override loses to the
+profile). A catalog entry without `provider` uses the profile default. Plain
+`codex --profile fabu -m gpt-6-sol` goes to crs and returns 404.
+
+The gateways are reachable only on the fabu network (VPN/office). Off-site, use
 plain `codex` with the personal ChatGPT quota.
 
 ## Profile file
@@ -23,19 +36,27 @@ Mac / environment-key auth:
 
 ```toml
 model_provider = "crs"
-model = "gpt-5.6-sol"
+model = "qwen3.8-max"
 model_reasoning_effort = "xhigh"
 model_catalog_json = "/ABSOLUTE/PATH/.codex/fabu.models.json"
 disable_response_storage = true
 approvals_reviewer = "user"
-service_tier = "fast"
 
 [model_providers.crs]
 name = "crs"
 base_url = "http://crs.fabu.ai/openai"
 wire_api = "responses"
 env_key = "FABU_CRS_KEY"
+
+[model_providers.cpa]
+name = "cpa"
+base_url = "http://cpa.fabu.ai/v1"
+wire_api = "responses"
+env_key = "FABU_CRS_KEY"
 ```
+
+Each entry of `fabu.models.json` carries `"provider": "crs"` or `"provider": "cpa"`;
+`fabux models` prints that column.
 
 Export `FABU_CRS_KEY` from the shell startup file. Do not put the key in the
 profile file.
@@ -61,7 +82,8 @@ requires_openai_auth = true
 ```
 
 The Linux profile reuses `~/.codex/auth.json`; do not copy the Mac environment
-key into it. Keep `fabu.models.json` at the path named by the profile.
+key into it. A catalog entry whose `provider` names a table this profile lacks
+makes codex fail; add a matching `[model_providers.cpa]` table or drop the field. Keep `fabu.models.json` at the path named by the profile.
 
 ## Install the command
 
