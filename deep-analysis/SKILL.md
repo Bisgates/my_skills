@@ -1,6 +1,7 @@
 ---
 name: deep-analysis
 description: Produce a deep, data-dense analysis report on any topic — an event, a company, an industry, a policy — as one self-contained Chinese HTML file, built from live web research with strict source citation and a quality-rubric self-check. Use when the user runs /deep-analysis, asks for a 深度分析 / 分析报告 / 事件分析 / 公司分析 / 调研报告, or wants a data-heavy research report with cited sources. Do NOT trigger for technical paper/concept explainers (grok, distill), experiment write-ups (3dgs_exp_report), or UI work (frontend-design).
+disable-model-invocation: true
 ---
 
 # deep-analysis — data-dense analysis reports

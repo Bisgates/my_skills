@@ -1,6 +1,7 @@
 ---
 name: manus
 description: Produce a Manus-grade report as ONE interactive HTML file (Chinese artifact, English research): agent-gathered real data, per-item sub-agent fan-out for uniform breadth, computed (never invented) chart data, sortable matrices, cited sources, and a provenance appendix. Handles both teaching explainers and arbitrary research reports. Use ONLY when the user explicitly invokes /manus or names the style — "manus 风格 / manus 质量 / 像 manus 那样" 出报告 / 讲解 / 调研. Do NOT trigger for questions about the Manus product itself, plain 调研报告 / 深度分析 with no manus framing (deep-analysis), paper/folder explainers in learn_with_agent (grok), interactive concept explainers (distill / distill_v2), or runnable notebooks (spell-out).
+disable-model-invocation: true
 ---
 
 # manus — Manus-grade interactive HTML reports

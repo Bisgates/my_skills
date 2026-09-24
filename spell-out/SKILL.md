@@ -2,6 +2,7 @@
 name: spell-out
 description: Turn a technical concept / paper / project into ONE runnable LearnHub notebook page teaching its single core point by re-creating it from scratch at toy scale on the LOCAL Mac (MPS) — Karpathy spell-out + Feynman "what I cannot create, I do not understand". A real notebook: editable Python cells run live against a local Jupyter kernel, plus genuinely-computed distill-style client labs and KaTeX term-by-term equation cards, in Chinese. Pipeline: distill to ≤3 core points → design toy data + minimal experiment → a critic agent challenges the design before any code → build + verify. Research/spec English; artifact Chinese. Use when the user runs /spell-out <topic>, asks to "讲透 / spell out / 从零跑通 X" as a runnable notebook in learn_with_agent, or wants a laptop-runnable from-scratch explainer with live cells. Distinct from grok and distill_v2 (static/offline single-file HTML) — spell-out's soul is a REAL running kernel, blackboard+chalk.
 dependencies: []
+disable-model-invocation: true
 ---
 
 # spell-out

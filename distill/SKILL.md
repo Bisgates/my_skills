@@ -1,6 +1,7 @@
 ---
 name: distill
 description: Turn a technical or research topic — a paper, lecture, concept, algorithm, math derivation, or system — into ONE single-file interactive HTML report whose interactions are genuinely computed (real numerical solvers, real 3D via three.js, real in-browser training) rather than pre-rendered animations. High interactive-visualization density on a clean modern theme, KaTeX math, worked examples, self-test quizzes. Use when the user asks for an "interactive report / 交互式报告 / 讲解网页 / explainer / deep-dive" on a technical topic, runs /distill, points at a lecture PDF or arXiv paper to "详解 / 讲透", or wants a report that out-teaches a static write-up. Distinct from grok (warm-paper, zero-CDN, dual-tab bird/frog learning cards) — distill is a single CDN-allowed explainer whose soul is interactive density. Not for UI/design work (see the design skills) or non-technical/business reports.
+disable-model-invocation: true
 ---
 
 # distill

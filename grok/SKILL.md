@@ -1,6 +1,7 @@
 ---
 name: grok
 description: Convert a target folder — paper PDF, book chapter, concept note, codebase entry-point — into a single-file interactive learning HTML (Chinese artifact). Default = two-tab page; bird (top-down, Feynman-style) + frog (bottom-up, Karpathy / Ng-style) on the same source. Single-tab via `--style bird` / `--style frog`; add a third guest tab via `with guest <name>`; visual variants via `--visual simple|magazine|notebook`. Use when the user runs `/grok <folder>`, asks to "学习/讲解/拆解/搞懂 X 文件夹里的 paper / 书 / 概念 / 代码" inside `learn_with_agent`, or asks for a bird / frog / Hamming / Karpathy / Ng / SICP / notebook / magazine / simple / guest explainer.
+disable-model-invocation: true
 ---
 
 # grok
