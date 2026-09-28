@@ -113,8 +113,13 @@ for candidate in "$claude_path" "$codex_path" "$antigravity_path" "$grok_path"; 
     continue
   fi
   if is_real_dir "$candidate"; then
-    bak="${candidate}.adopted-bak-$(date +%Y%m%d_%H%M%S)"
-    echo "adopt: other location $candidate is still a real dir; renaming to $bak" >&2
+    # Keep backups outside every runtime's skill dir: a dir left there is
+    # still discovered and loaded as a live skill.
+    runtime="$(basename "$(dirname "$(dirname "$candidate")")")"
+    bak_dir="$HOME/.skill-mgmt-backups/${runtime#.}"
+    mkdir -p "$bak_dir"
+    bak="$bak_dir/$name.adopted-bak-$(date +%Y%m%d_%H%M%S)"
+    echo "adopt: other location $candidate is still a real dir; moving to $bak" >&2
     mv "$candidate" "$bak"
   fi
 done

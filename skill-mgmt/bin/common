@@ -308,7 +308,7 @@ skill_mgmt_auto_commit_push() {
 
   if skill_mgmt_autopush_enabled; then
     echo "auto-push: rebasing then pushing"
-    git -C "$REPO" pull --rebase
+    git -C "$REPO" pull --rebase --autostash
     git -C "$REPO" push
   else
     echo "auto-push: disabled by SKILL_MGMT_AUTOPUSH"

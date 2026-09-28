@@ -1,13 +1,13 @@
 ---
 name: skill-mgmt
-description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills, ~/.codex/skills, ~/.gemini/antigravity/skills, and ~/.grok/skills). Use ONLY when the user explicitly says install/sync/adopt/new/create a skill, sync skills across machines, asks how to set up the skills repo on a new machine, or reports that a machine is running a stale or missing skill. Do not trigger for general questions about what a particular skill does.
+description: Manage user-authored agent skills in the my_skills repo (single-source-of-truth + symlinks to ~/.claude/skills, ~/.codex/skills, ~/.gemini/antigravity/skills, and ~/.grok/skills). Use when the user says install/sync/adopt/new/create a skill, edit or change an existing skill ("改一下 skill X", "/skill-mgmt"), move a global skill into one project ("改成项目级 skill", "localize"), sync skills across machines, asks how to set up the skills repo on a new machine, or reports that a machine is running a stale or missing skill. Do not trigger for general questions about what a particular skill does.
 dependencies:
   - write-a-skill
 ---
 
 # skill-mgmt — Self-managing skill operations
 
-This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git repo (`~/project/agent/skills/` on Mac, `~/my_skills/` on the company server). It manages skills via four idempotent shell scripts under `bin/`.
+This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git repo (`~/project/agent/skills/` on Mac, `~/my_skills/` on the company server). It manages skills via five shell scripts under `bin/` (`install`, `sync`, `adopt`, `new`, `localize`).
 
 ## Architecture (read this first)
 
@@ -18,7 +18,7 @@ This skill lives at `<repo>/skill-mgmt/` where `<repo>` is the my_skills git rep
 - Editing a `SKILL.md` in the repo is picked up by every linked agent runtime on the next session — no copy step.
 - Cross-machine sync = standard `git push` / `git pull --rebase` against `github.com/Bisgates/my_skills`. A machine holding the current commit can still be missing skills: `git pull` writes files, it does not create symlinks. `bin/install` is what closes that gap, so `bin/sync` runs it and `install` also plants git hooks that re-run it after any pull.
 - `<repo>/skill-mgmt/hosts.txt` lists the other machines with a checkout, so `bin/sync --all` can push an update outward instead of waiting for someone to log into each one.
-- **Project-local skills** under `<project>/.claude/skills/<name>/` are a separate category: Claude Code picks them up project-scoped (no symlinks), they do not belong in `manifest.txt`, and the `install / sync / adopt / new` ops do not apply. Only the **Edit** path (Op 5) applies, and commits land in the project's own git repo. See [Repo-local skills](#repo-local-skills).
+- **Project-local skills** under `<project>/.claude/skills/<name>/` are a separate category: Claude Code picks them up project-scoped (no symlinks), they do not belong in `manifest.txt`, and the `install / sync / adopt / new` ops do not apply. Only the **Edit** path (Op 5) applies, `localize` (Op 6) is the one way in from the repo,, and commits land in the project's own git repo. See [Repo-local skills](#repo-local-skills).
 
 ## Conventions
 
@@ -33,6 +33,8 @@ Trigger this skill when the user says any of:
 - "把 ~/.claude/skills/X 收编 / 纳入 / adopt"  /  "adopt skill X"
 - "在这台机器装 / 安装 my skills"  /  "install my skills here"  /  "bootstrap skills on this machine"
 - "安装 skill X" / "install skill X" / "rebuild links for X"
+- "把 skill X 改成 <project> 的项目级 skill" / "X 只在 <project> 用" / "localize skill X"
+- "改一下 / 修改 skill X" / "edit skill X" (→ Op 5)
 - "gpu7 上的 X 不是最新的" / "服务器上没有 skill X" / "this machine is running an old version of skill X"
 
 Do NOT trigger this skill's lifecycle ops for:
@@ -130,6 +132,18 @@ The escalation looks like: "I started to make change X, but the skill has drifte
 
 **Repo-local skills:** if the target lives under `<project>/.claude/skills/<name>/` instead of in this `my_skills` repo, the authoring rules above are unchanged, but the commit target shifts to the project's own git repo. See [Repo-local skills](#repo-local-skills).
 
+### Op 6 — Localize (demote a global skill to one project)
+
+```bash
+<repo>/skill-mgmt/bin/localize <name> <project-dir> [--push]
+```
+
+Use when a skill only makes sense inside one project: every session in every other project pays for its description in the skill listing and can mis-trigger on it. The script copies `<repo>/<name>/` to `<project>/.claude/skills/<name>/`, verifies the copy, deletes the repo copy, drops the manifest line, runs `install` (which prunes the four dead runtime links), auto-commits `my_skills`, then commits only `.claude/skills/<name>` in the project repo. The project commit is pushed only with `--push`, because that remote belongs to the project.
+
+Refuses when another manifest skill lists `<name>` as a dependency, when `<repo>/<name>` has uncommitted changes, or when the target already exists. Other machines keep dangling links until their next pruning install (the pull hooks run with `--no-prune`), so follow with `bin/sync --all`.
+
+A localized skill may still read files from global skills (e.g. a template under `~/.claude/skills/grok/`); its `dependencies:` frontmatter is then documentation only, since `install` never sees project-local skills.
+
 ## Repo-local skills
 
 Some skills are scoped to a single project and live at `<project>/.claude/skills/<name>/SKILL.md` rather than in the `my_skills` repo. Claude Code discovers them automatically when the agent is invoked inside that project — no symlinks, no manifest entry, no cross-runtime mirroring.
@@ -139,6 +153,7 @@ Treat them as out of scope for `install / sync / adopt / new` (those are `my_ski
 - Detection: when the user asks to edit a skill, first check `<my_skills_repo>/<name>/SKILL.md`. If absent, check `<cwd>` (and its parents up to a git root) for `.claude/skills/<name>/SKILL.md`. The path determines which repo owns the skill.
 - Authoring rules (description writing, anti-overfitting, refactor escalation, etc. — see `<my_skills_repo>/write-a-skill/SKILL.md`) apply identically. Project locality changes the commit target, not the writing standard.
 - Commit target: changes land in the project repo (e.g. `git -C <project> add … && git commit …`) — never in `my_skills`. Do not append the skill to `<my_skills_repo>/manifest.txt`.
+- Moving a skill from `my_skills` into a project uses Op 6 `localize`, never a hand `mv` (that leaves dead links and a stale manifest line).
 - Do not silently migrate a project-local skill into `my_skills`. If a project-local skill turns out to be broadly useful, surface that to the user; the user decides whether to promote it.
 
 ## Dependency format
@@ -190,8 +205,8 @@ After successful modifying operations (`new`, `adopt`, and any direct skill edit
 - **Do not hardcode paths**: all scripts resolve `<repo>` via `$(cd "$(dirname "$0")/../.." && pwd)`. Mac repo lives at `~/project/agent/skills/`, server at `~/my_skills/` — both work.
 - **Antigravity + symlinks**: some Antigravity builds have been reported not to traverse symlinked skill folders during discovery ([discussion](https://github.com/vercel-labs/skills/issues/633)). If listed skills never appear after `install`, check the app version/docs or keep a copy under project `.agents/skills/` until symlink support is reliable.
 - **Editor atomic-write**: vim/cursor with `write-temp + rename` save mode can replace a symlink with a real file. If `~/.claude/skills/<name>` (or Codex/Antigravity/Grok paths) becomes a real dir unexpectedly, an editor wrote through the symlink incorrectly. Recover: `bin/install` will warn; manually `rm` the bad path and re-run install. Set `vim: :set backupcopy=yes` to avoid.
-- **Conflict on adopt**: if multiple agent dirs contain diverged copies, adopt refuses until you pick `bin/adopt <name> --from claude|codex|antigravity`.
-- **codex description ≤ 1024 chars**: codex 0.128+ silently drops any skill whose frontmatter `description:` (after joining folded continuation lines) exceeds 1024 characters — the error appears in stderr as `failed to load skill .../SKILL.md: invalid description: exceeds maximum length of 1024 characters` but the rest of the session continues without it, so the loss is easy to miss. Claude and Antigravity have no comparable hard limit. `bin/install` checks each manifest skill and reports any over the cap in its end-of-run problem list. Pruning fix: move visual / formatting / mechanical detail into the body — `description:` is read by the model only for "should this skill trigger?", not for the skill's mechanics.
+- **Conflict on adopt**: if multiple agent dirs contain diverged copies, adopt refuses until you pick `bin/adopt <name> --from claude|codex|antigravity|grok`. The losing copies are moved to `~/.skill-mgmt-backups/<runtime>/`, outside every runtime's skill dir, because a backup left inside a skill dir is still discovered and loaded as a live skill.
+- **codex description ≤ 1024 chars**: codex 0.128+ silently drops any skill whose frontmatter `description:` (after joining folded continuation lines) exceeds 1024 characters — the error appears in stderr as `failed to load skill .../SKILL.md: invalid description: exceeds maximum length of 1024 characters` but the rest of the session continues without it, so the loss is easy to miss. Claude Code has no hard drop, but it truncates each listing entry at 1,536 characters and trims descriptions when the whole listing exceeds its budget (1% of the context window), so front-load the trigger phrases. `bin/install` checks each manifest skill and reports any over the cap in its end-of-run problem list. Pruning fix: move visual / formatting / mechanical detail into the body — `description:` is read by the model only for "should this skill trigger?", not for the skill's mechanics.
 - **arcs/ is not synced**: `arcs/` (arc task tracking) is in `.gitignore`. Per-machine task state, not shared.
 - **A current repo is not a synced machine**: `git pull` alone leaves every newly added skill unlinked, and the machine looks fine — right commit, missing skills. The git hooks planted by `install` cover pulls from now on, but a clone that has never run `install` still has no hooks. When diagnosing a machine, compare `manifest.txt` against the actual links, not just `git log`.
 

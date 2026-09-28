@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# localize <name> <project-dir> [--push] — demote a global my_skills skill to a
+# project-local skill at <project-dir>/.claude/skills/<name>/.
+#
+# Steps: copy the skill into the project, verify the copy, remove it from
+# <repo>/ and manifest.txt, run install (prunes the now-dead runtime links),
+# auto-commit my_skills (path-scoped), then commit the new skill dir in the
+# project repo (path-scoped). The project commit is pushed only with --push:
+# the project repo belongs to that project, and its remote may be shared.
+#
+# Refuses when another manifest skill depends on <name>, when <repo>/<name>
+# has uncommitted changes, or when the target already exists.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+MANIFEST="$REPO/manifest.txt"
+# shellcheck source=/dev/null
+source "$REPO/skill-mgmt/bin/common"
+skill_mgmt_capture_git_state
+
+usage() {
+  echo "usage: localize <name> <project-dir> [--push]" >&2
+  exit 2
+}
+
+[[ $# -ge 2 ]] || usage
+name="$1"
+project_arg="$2"
+shift 2
+push_project=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --push) push_project=1; shift ;;
+    *) usage ;;
+  esac
+done
+
+skill_mgmt_valid_name "$name" || { echo "localize: invalid skill name '$name'" >&2; exit 1; }
+[[ "$name" != "skill-mgmt" ]] || { echo "localize: skill-mgmt must stay global" >&2; exit 1; }
+[[ -d "$REPO/$name" ]] || { echo "localize: $REPO/$name does not exist" >&2; exit 1; }
+[[ -d "$project_arg" ]] || { echo "localize: $project_arg is not a directory" >&2; exit 1; }
+
+project="$(git -C "$project_arg" rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "localize: $project_arg is not inside a git repo" >&2
+  exit 1
+}
+target="$project/.claude/skills/$name"
+[[ ! -e "$target" ]] || { echo "localize: $target already exists" >&2; exit 1; }
+
+# A global skill that another global skill depends on cannot leave the repo.
+dependents=()
+while IFS= read -r other; do
+  [[ "$other" == "$name" ]] && continue
+  if skill_mgmt_skill_dependencies "$other" | grep -qxF "$name"; then
+    dependents+=("$other")
+  fi
+done < <(skill_mgmt_manifest_skills "$MANIFEST")
+if [[ "${#dependents[@]}" -gt 0 ]]; then
+  echo "localize: $name is a dependency of: ${dependents[*]} — remove that dependency first" >&2
+  exit 1
+fi
+
+if [[ -n "$(git -C "$REPO" status --porcelain -- "$name")" ]]; then
+  echo "localize: $REPO/$name has uncommitted changes — commit or discard them first" >&2
+  git -C "$REPO" status --short -- "$name" >&2
+  exit 1
+fi
+
+echo "localize: copying $REPO/$name -> $target"
+mkdir -p "$project/.claude/skills"
+rsync -a --exclude .DS_Store "$REPO/$name/" "$target/"
+if ! diff -rq -x .DS_Store "$REPO/$name" "$target" > /dev/null; then
+  echo "localize: copy verification failed; leaving $REPO/$name in place" >&2
+  exit 1
+fi
+
+rm -rf "${REPO:?}/$name"
+tmp="$(mktemp)"
+grep -vxF "$name" "$MANIFEST" > "$tmp" || true
+cat "$tmp" > "$MANIFEST"
+rm -f "$tmp"
+echo "localize: removed '$name' from $MANIFEST"
+
+SKILL_MGMT_AUTOCOMMIT=0 "$REPO/skill-mgmt/bin/install"
+skill_mgmt_auto_commit_push "localize $name -> $project" "$name" "manifest.txt"
+
+if skill_mgmt_autocommit_enabled; then
+  rel=".claude/skills/$name"
+  git -C "$project" add -- "$rel"
+  git -C "$project" commit -q -m "skills: add project-local $name (moved from my_skills)" -- "$rel"
+  echo "localize: committed $rel in $project"
+  if [[ "$push_project" -eq 1 ]]; then
+    git -C "$project" push
+  else
+    echo "localize: project commit not pushed (pass --push to push)"
+  fi
+fi
+
+cat <<EOF
+
+✓ localized: $name -> $target
+
+Other machines still hold links to the removed skill until they run install
+with pruning — run: $REPO/skill-mgmt/bin/sync --all
+EOF
