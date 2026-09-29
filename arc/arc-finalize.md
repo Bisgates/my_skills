@@ -1,6 +1,6 @@
 ---
 name: arc-finalize
-description: Wrap up an arc — review the promotion candidates in 3_state.md, print the 落盘 suggestions in chat, write 9_handoff.md, and flip the arc to done. The agent never edits the main project; the user promotes whatever they want. Use when the user says "/arc-finalize" or "/arc-finalize 260430c", or when /arc-execute chains in.
+description: Wrap up an arc — review the promotion candidates in 3_state.md, print the 落盘 suggestions in chat, write 9_handoff.md and any verified output/hub.json summary, then flip the arc to done. The agent never edits the main project; the user promotes whatever they want. Use when the user says "/arc-finalize" or "/arc-finalize 260430c", or when /arc-execute chains in.
 ---
 
 # /arc-finalize — Hand back what's worth keeping
@@ -29,7 +29,28 @@ There is no approval gate and no handoff-draft file. Because the agent makes no 
 
 4. **Write `9_handoff.md`** using `~/.claude/skills/arc/templates/9_handoff.md` as the skeleton — three sections: 结论 / 落盘清单 / 未尽事项. The 落盘清单 is the same table you just printed. **Do not re-tell the process** — that lives in `0_meta.md ## log`, and duplicating it there means two versions to trust.
 
-5. **Close the arc.** `arc log "[handoff] 9_handoff.md written"`, then `arc status <id> done` (the gate now passes). Tell the user one line with the path. Do not open the file.
+5. **Write `output/hub.json` when there is a verified result worth showing.** The task hub reads this small file for its key-result column and up to four metric cards; it does not parse Markdown for numbers. Create `output/` if needed. An arc without a reliable result may omit the file entirely; omit any unknown field rather than filling it with a guess or placeholder. If an interim version already exists, update it to match the final handoff. Use this schema (field names are fixed):
+
+   ```json
+   {
+     "key_result": "AA 0.991 · 10 scene 导出",
+     "metrics": [
+       {
+         "name": "held-out AA",
+         "value": 0.991,
+         "unit": "",
+         "better": "higher",
+         "baseline": {"label": "oracle", "value": 0.9995},
+         "source": "doc/results.md"
+       }
+     ],
+     "updated": "2026-09-29T17:48+08:00"
+   }
+   ```
+
+   Choose at most four metrics that explain the arc's conclusion. Every number, including a baseline or one in `key_result`, must come from an actual measurement; use each metric's `source` path (relative to the arc) to identify the existing evidence file, and cite evidence for any number in `key_result` in `9_handoff.md`. With no measured numbers, omit `metrics`. `better` may be omitted; when present, use only `higher` or `lower`. Set `updated` to the write time in ISO 8601 with timezone. Check that the JSON parses and each `source` file exists.
+
+6. **Close the arc.** `arc log "[handoff] 9_handoff.md written"`, then `arc status <id> done` (the gate now passes). Tell the user one line with the path. Do not open the file.
 
 ## Don't
 

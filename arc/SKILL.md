@@ -50,6 +50,7 @@ arcs/<id>_<slug>/
   doc/             freeform notes worth keeping
   utils/           code that might deserve promotion
   scripts/         one-shot code, not promoted
+  output/hub.json  optional machine-readable result summary for task hubs
   output/<YYMMDD_HHMM>_<name>/   experiment outputs (created by `arc output`)
   _tmp/            agent-internal scratch; never promoted
 ```
@@ -59,6 +60,8 @@ arcs/<id>_<slug>/
 **No loose `.py / .json / .ply / .html` at the arc root.** Routing: reusable code → `utils/`; one-shot → `scripts/`; experiment output → `output/` (via `arc output <name>`); user-readable notes → `doc/`; anything the agent writes for *itself* → `_tmp/`.
 
 **Subdirs are created lazily** — `arc new` writes only `0_meta.md` and `3_state.md`; `mkdir -p` the rest as you write.
+
+`output/hub.json` is written at `/arc-finalize` when the arc has a verified result worth displaying; reliable interim results may be recorded earlier. It is optional and is never a promotion candidate. See `arc-finalize.md` for its schema and evidence rules.
 
 ## Phase commands
 
