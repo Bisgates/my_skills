@@ -22,3 +22,4 @@ fabu-agent-team
 tldraw-offline
 diagram-design
 design-claude
+parallel-drafts
