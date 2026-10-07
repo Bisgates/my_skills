@@ -1,0 +1,650 @@
+#!/usr/bin/env python3
+"""xagent: run another harness's headless CLI and register the child session.
+
+Usage:  xagent <claude|codex|grok> <the CLI's own args...>
+
+    xagent claude -p --effort high 'prompt'
+    xagent codex exec -m "$CODEX_MODEL" -c model_reasoning_effort=high 'prompt'
+    xagent grok -p 'prompt' -m "$GROK_MODEL" --output-format plain
+
+The CLI runs exactly as it would without the wrapper (same stdin, stderr,
+stdout text and exit code). On top of that the wrapper:
+
+  * prints one stderr line `[xagent] run=<run_id> harness=<h> session=<id>`,
+    so the caller can resume the child or read its transcript later;
+  * appends start / child / bind / end lines to $VANTAGE_XAGENT_LOG when
+    that variable is set (Vantage's registry, contract v1:
+    docs/design_doc/agent_design/2.3_xagent_registry.md in the Vantage repo).
+
+Per harness:
+  claude, grok  inject a fresh `--session-id <uuid>` into new sessions and
+                into forks; a plain resume keeps the resumed id; --continue
+                (or a non-UUID resume) leaves the id unknown.
+  codex exec    cannot pre-assign an id, so the wrapper adds `--json`, reads
+                `thread_id` from the `thread.started` event and appends a
+                bind line. Unless the caller asked for --json, stdout carries
+                only this run's final message, taken from the events. A
+                relative -o/--output-last-message path is made absolute
+                against the codex working dir (-C/--cd, else cwd).
+
+Privacy flags (claude --no-session-persistence, codex exec --ephemeral) pass
+through unchanged: the run is still registered, with no session id.
+Detached launches (claude --bg/--background, codex cloud exec) return while
+the work goes on elsewhere, so they are run unchanged and not registered.
+
+Registration is best effort: a missing variable or an unwritable file skips
+it (at most one stderr line) and never changes how the CLI runs.
+Standard library only; runs on macOS system python3 (3.9).
+"""
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+import uuid
+
+ENV_LOG = "VANTAGE_XAGENT_LOG"
+ENV_PARENT = "XAGENT_PARENT_RUN_ID"
+HARNESSES = ("claude", "codex", "grok")
+FORWARDED_SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+MAX_LINE = 4000
+READER_GRACE = 5.0         # after codex exits: give up draining stdout once it has been idle this long
+READER_CAP = 60.0          # ...or this long after exit in total (a grandchild may keep writing)
+
+RUN_ID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+SESSION_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+
+# Option arity per CLI: 0 = flag, 1 = takes a value, "?" = optional value
+# (taken only when the next token does not start with "-"). Only options the
+# wrapper reads, plus common value options whose values must be skipped.
+CLAUDE_OPTS = {
+    "-p": 0, "--print": 0, "-c": 0, "--continue": 0, "-r": "?", "--resume": "?",
+    "--fork-session": 0, "--from-pr": "?", "--session-id": 1,
+    "--model": 1, "--effort": 1, "--no-session-persistence": 0,
+    "--append-system-prompt": 1, "--system-prompt": 1, "--output-format": 1,
+    "--input-format": 1, "--permission-mode": 1, "--max-turns": 1, "--agents": 1,
+    "--agent": 1, "--settings": 1, "--mcp-config": 1, "--fallback-model": 1,
+    "--json-schema": 1, "--max-budget-usd": 1, "--setting-sources": 1,
+    "--bg": 0, "--background": 0,
+}
+GROK_OPTS = {
+    "-p": 1, "--single": 1, "--prompt-file": 1, "--prompt-json": 1,
+    "-c": 0, "--continue": 0, "-r": "?", "--resume": "?", "--fork-session": 0,
+    "-s": 1, "--session-id": 1, "-m": 1, "--model": 1,
+    "--reasoning-effort": 1, "--effort": 1, "--cwd": 1,
+    "--output-format": 1, "--permission-mode": 1, "--allow": 1, "--allowedTools": 1,
+    "--deny": 1, "--disallowedTools": 1, "--tools": 1, "--disallowed-tools": 1,
+    "--max-turns": 1, "--rules": 1, "--agent": 1, "--agents": 1,
+    "--system-prompt-override": 1, "--system-prompt": 1, "--sandbox": 1,
+    "--json-schema": 1, "-w": "?", "--worktree": "?", "--worktree-ref": 1,
+    "--ref": 1, "--leader-socket": 1, "--debug-file": 1,
+}
+CODEX_OPTS = {
+    "-c": 1, "--config": 1, "--enable": 1, "--disable": 1, "-i": 1, "--image": 1,
+    "-m": 1, "--model": 1, "--local-provider": 1, "-p": 1, "--profile": 1,
+    "-s": 1, "--sandbox": 1, "-a": 1, "--ask-for-approval": 1, "-C": 1, "--cd": 1,
+    "--add-dir": 1, "--thread-source": 1, "--output-schema": 1, "--color": 1,
+    "--remote": 1, "-o": 1, "--output-last-message": 1, "--json": 0, "--ephemeral": 0,
+}
+HEADLESS = {"claude": ("-p", "--print"), "grok": ("-p", "--single", "--prompt-file", "--prompt-json")}
+FALLBACK_BIN = {"claude": "~/.local/bin/claude", "grok": "~/.grok/bin/grok"}
+
+
+# ---------------------------------------------------------------- arg scanning
+
+class Opt(object):
+    __slots__ = ("name", "value", "start", "end")
+
+    def __init__(self, name, value, start, end):
+        self.name, self.value, self.start, self.end = name, value, start, end
+
+
+def scan(args, spec, start=0):
+    """Known options in ``args[start:]`` (up to ``--``) as ``Opt`` records.
+
+    Handles ``--name value``, ``--name=value``, ``-x value`` and ``-xvalue``.
+    Unknown tokens are skipped one at a time.
+    """
+    found = []
+    i = start
+    while i < len(args):
+        tok = args[i]
+        if tok == "--":
+            break
+        if tok.startswith("--") and "=" in tok:
+            name, value = tok.split("=", 1)
+            if name in spec:
+                found.append(Opt(name, value, i, i + 1))
+            i += 1
+            continue
+        arity = spec.get(tok)
+        if arity is None:
+            if len(tok) > 2 and tok[0] == "-" and tok[1] != "-" and spec.get(tok[:2]) == 1:
+                value = tok[3:] if tok[2] == "=" else tok[2:]   # -xVALUE or -x=VALUE
+                found.append(Opt(tok[:2], value, i, i + 1))
+            i += 1
+            continue
+        nxt = args[i + 1] if i + 1 < len(args) else None
+        if arity == 0 or (arity == "?" and (nxt is None or nxt == "--" or nxt.startswith("-"))):
+            found.append(Opt(tok, None, i, i + 1))
+            i += 1
+        else:
+            found.append(Opt(tok, nxt, i, min(i + 2, len(args))))
+            i += 2
+    return found
+
+
+def idle_stdin(wait=0.2):
+    """True when stdin is a non-tty that has neither data nor EOF within `wait` seconds."""
+    import select
+    try:
+        if os.isatty(0):
+            return False
+        ready, _, _ = select.select([0], [], [], wait)
+    except (OSError, ValueError):
+        return False
+    return not ready
+
+
+def first_positional(args, spec):
+    """Index of the first token that is neither an option nor an option value."""
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        if tok == "--":
+            return i + 1 if i + 1 < len(args) else None
+        if not tok.startswith("-") or tok == "-":
+            return i
+        if "=" not in tok and spec.get(tok) == 1:
+            i += 2
+        else:
+            i += 1
+    return None
+
+
+def has(opts, *names):
+    return any(o.name in names for o in opts)
+
+
+def last_value(opts, *names):
+    value = None
+    for o in opts:
+        if o.name in names and o.value:
+            value = o.value
+    return value
+
+
+def config_value(opts, key):
+    """Last ``-c key=value`` override for codex, TOML quotes stripped."""
+    value = None
+    for o in opts:
+        if o.name in ("-c", "--config") and o.value and "=" in o.value:
+            k, v = o.value.split("=", 1)
+            if k.strip() == key:
+                v = v.strip()
+                if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+                    v = v[1:-1]
+                value = v or None
+    return value
+
+
+def abs_dir(path):
+    if not path:
+        return None
+    return os.path.abspath(os.path.expanduser(path))
+
+
+# ---------------------------------------------------------------- planning
+
+class Plan(object):
+    def __init__(self, harness, args):
+        self.harness = harness
+        self.args = list(args)          # final argv for the CLI (without binary)
+        self.session_id = None          # known at start
+        self.pending = False            # codex exec: id arrives via thread.started
+        self.model = None
+        self.effort = None
+        self.cwd = None
+        self.notes = []                 # one-line stderr notes printed before the run
+        self.detached = False           # returns at once while the work goes on: not registered
+        self.no_transcript = False      # privacy flag: registered with session_id null
+        # codex exec only
+        self.codex_exec = False
+        self.argv_prompt = False        # prompt given on argv (not "-"): stdin is only optional context
+        self.json_passthrough = False
+        self.final_message = None       # last agent_message of this run's current turn
+        self.last_read = 0.0            # monotonic time of the last stdout line (reader thread)
+
+
+def plan_claude_or_grok(harness, args):
+    plan = Plan(harness, args)
+    spec = CLAUDE_OPTS if harness == "claude" else GROK_OPTS
+    opts = scan(args, spec)
+    sid_names = ("--session-id",) if harness == "claude" else ("-s", "--session-id")
+    plan.model = last_value(opts, "--model") if harness == "claude" else last_value(opts, "-m", "--model")
+    plan.effort = last_value(opts, "--effort") if harness == "claude" else \
+        last_value(opts, "--reasoning-effort", "--effort")
+    if harness == "grok":
+        plan.cwd = abs_dir(last_value(opts, "--cwd"))
+
+    bg = [o.name for o in opts if o.name in ("--bg", "--background")] if harness == "claude" else []
+    if bg:
+        plan.detached = True
+        plan.notes.append("%s: the background session is not tracked (not registered)" % bg[0])
+        return plan
+    if harness == "claude" and has(opts, "--no-session-persistence"):
+        # Nothing is written to disk, so there is no transcript to point at.
+        plan.no_transcript = True
+        plan.notes.append("--no-session-persistence: run is tracked without a transcript (no session id)")
+        return plan
+
+    caller_sid = last_value(opts, *sid_names)
+    resume_opts = [o for o in opts if o.name in ("-r", "--resume")]
+    resuming = bool(resume_opts) or has(opts, "-c", "--continue", "--from-pr")
+    fork = has(opts, "--fork-session")
+    headless = has(opts, *HEADLESS[harness])
+
+    if caller_sid:
+        plan.session_id = caller_sid
+    elif resuming and not fork:
+        # Same session continues; the id is known only for an explicit UUID resume.
+        value = resume_opts[-1].value if resume_opts else None
+        if value and UUID_RE.match(value):
+            plan.session_id = value
+    elif resuming or headless:
+        # New session, or a fork (both CLIs accept --session-id with --fork-session).
+        plan.session_id = str(uuid.uuid4())
+        plan.args = ["--session-id", plan.session_id] + plan.args
+    return plan
+
+
+def plan_codex(args):
+    plan = Plan("codex", args)
+    opts = scan(args, CODEX_OPTS)
+    plan.model = last_value(opts, "-m", "--model") or config_value(opts, "model")
+    plan.effort = config_value(opts, "model_reasoning_effort")
+    plan.cwd = abs_dir(last_value(opts, "-C", "--cd"))
+    idx = first_positional(args, CODEX_OPTS)
+    if idx is not None and args[idx] == "cloud":
+        sub = first_positional(args[idx + 1:], CODEX_OPTS)
+        if sub is not None and args[idx + 1 + sub] == "exec":
+            # Submits a Codex Cloud task and returns; the task runs remotely.
+            plan.detached = True
+            plan.notes.append("cloud exec: the cloud task is not tracked (not registered)")
+        return plan
+    if idx is None or args[idx] not in ("exec", "e"):
+        return plan
+
+    plan.codex_exec = True
+    rest = args[idx + 1:]
+    plan.argv_prompt = first_positional(rest, CODEX_OPTS) is not None and "-" not in rest
+    after = [o for o in opts if o.start > idx]
+    if has(after, "--ephemeral"):
+        # No rollout file will exist: skip the bind, keep the run.
+        plan.no_transcript = True
+        plan.notes.append("--ephemeral: run is tracked without a transcript (no session id)")
+    else:
+        plan.pending = True
+
+    # A relative -o is resolved against codex's working dir and passed on as an
+    # absolute path, so the file codex writes is the one the caller expects.
+    args = list(args)
+    workdir = plan.cwd
+    if workdir is None:
+        try:
+            workdir = os.getcwd()
+        except OSError:
+            workdir = None
+    for o in after:
+        if o.name not in ("-o", "--output-last-message") or not o.value:
+            continue
+        path = os.path.expanduser(o.value)          # a quoted "~/x" reaches us unexpanded
+        if not os.path.isabs(path):
+            if workdir is None:
+                continue
+            path = os.path.join(workdir, path)
+        if path == o.value:
+            continue
+        if o.end - o.start == 2:
+            args[o.start + 1] = path
+        elif o.name.startswith("--"):
+            args[o.start] = "%s=%s" % (o.name, path)
+        else:
+            args[o.start] = o.name + path
+
+    plan.json_passthrough = has(after, "--json")
+    inject = [] if plan.json_passthrough else ["--json"]
+    plan.args = args[:idx + 1] + inject + args[idx + 1:]
+    return plan
+
+
+# ---------------------------------------------------------------- registry
+
+class Registry(object):
+    """Appends contract-v1 lines to $VANTAGE_XAGENT_LOG; never raises."""
+
+    def __init__(self, path):
+        self.path = path or None
+
+    def write(self, event):
+        if not self.path:
+            return
+        line = {"v": 1}
+        line.update(event)
+        line["at"] = round(time.time(), 3)
+        event = line
+        try:
+            data = (json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+            if len(data) > MAX_LINE and event.get("type") == "start":
+                event["model"] = event["effort"] = None
+                data = (json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+            # O_CREAT never makes directories: a missing parent fails with ENOENT.
+            fd = os.open(self.path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, "O_CLOEXEC", 0), 0o600)
+            try:
+                os.write(fd, data)
+            finally:
+                os.close(fd)
+        except Exception as exc:  # registration must never break the call
+            self.path = None
+            say("registration skipped (%s)" % (getattr(exc, "strerror", None) or exc))
+
+
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def pane_log_path():
+    """No $VANTAGE_XAGENT_LOG: a Vantage session started before registration existed.
+
+    Vantage stamps the log key on the window as ``@vantage_xagent_key``; use it. Windows
+    created before that option existed only carry ``@vantage_sid``, and their records have no
+    ``xagent_key`` either, so the ledger keys their log by that same identity. (After a resume
+    ``@vantage_sid`` rotates while the key does not, hence the key option wins.)
+    Only options set on the window itself count: ``show-options -w`` without ``-A`` does not
+    return a value inherited from the global table, which any non-Vantage window would share.
+    Read-only tmux queries; anything unexpected means "not a Vantage pane" and no registration.
+    """
+    pane = os.environ.get("TMUX_PANE")
+    if not pane or not os.environ.get("TMUX"):
+        return None
+    sid = None
+    for option in ("@vantage_xagent_key", "@vantage_sid"):
+        try:
+            out = subprocess.run(["tmux", "show-options", "-wqv", "-t", pane, option],
+                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                 stdin=subprocess.DEVNULL, timeout=2).stdout
+        except Exception:
+            return None
+        value = out.decode("utf-8", "replace").strip()
+        if value:
+            sid = value
+            break
+    if not sid or not _UUID_RE.match(sid):
+        return None
+    state = os.path.join(os.path.expanduser("~"), ".vantage")
+    if not os.path.isdir(state):
+        return None
+    directory = os.path.join(state, "agent_xagent")
+    try:
+        os.mkdir(directory, 0o700)
+    except FileExistsError:
+        pass
+    except OSError:
+        return None
+    return os.path.join(directory, sid + ".jsonl")
+
+
+def say(msg):
+    try:
+        sys.stderr.write("[xagent] %s\n" % msg)
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
+def resolve_binary(harness):
+    found = shutil.which(harness)
+    if found:
+        return found
+    fallback = FALLBACK_BIN.get(harness)
+    if fallback:
+        path = os.path.expanduser(fallback)
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
+def signal_name(signum):
+    try:
+        return signal.Signals(signum).name
+    except ValueError:
+        return "SIG%d" % signum
+
+
+# ---------------------------------------------------------------- codex stdout
+
+def codex_error_text(event):
+    kind = event.get("type")
+    if kind == "error":
+        return event.get("message")
+    if kind == "turn.failed":
+        err = event.get("error")
+        return err.get("message") if isinstance(err, dict) else None
+    item = event.get("item")
+    if kind == "item.completed" and isinstance(item, dict) and item.get("type") == "error":
+        return item.get("message")
+    return None
+
+
+def pump_codex(proc, plan, registry, run_id):
+    """Read codex --json stdout: bind on thread.started, pass through or hide."""
+    out = getattr(sys.stdout, "buffer", sys.stdout)
+    out_ok = True
+    bound = False
+    last_error = None
+    for raw in iter(proc.stdout.readline, b""):
+        plan.last_read = time.monotonic()
+        if plan.json_passthrough:
+            if out_ok:
+                try:
+                    out.write(raw)
+                    out.flush()
+                except (BrokenPipeError, OSError):
+                    out_ok = False
+        try:
+            event = json.loads(raw.decode("utf-8", "replace"))
+        except ValueError:
+            event = None
+        if not isinstance(event, dict):
+            if not plan.json_passthrough and raw.strip():
+                try:
+                    sys.stderr.write(raw.decode("utf-8", "replace"))
+                    sys.stderr.flush()
+                except Exception:
+                    pass
+            continue
+        kind = event.get("type")
+        if not bound and plan.pending and kind == "thread.started":
+            thread_id = event.get("thread_id")
+            if isinstance(thread_id, str) and SESSION_ID_RE.match(thread_id):
+                bound = True
+                plan.session_id = thread_id
+                registry.write({"type": "bind", "run_id": run_id, "session_id": thread_id})
+                say("session=%s" % thread_id)
+        if kind == "turn.started":
+            plan.final_message = None       # anything earlier is not this turn's answer
+        elif kind == "item.completed":
+            item = event.get("item")
+            if isinstance(item, dict) and item.get("type") == "agent_message" \
+                    and isinstance(item.get("text"), str):
+                plan.final_message = item["text"]
+        if not plan.json_passthrough:
+            text = codex_error_text(event)
+            if text and text != last_error:
+                last_error = text
+                try:
+                    sys.stderr.write("ERROR: %s\n" % text)
+                    sys.stderr.flush()
+                except Exception:
+                    pass
+
+
+def emit_codex_last_message(plan):
+    """Print this run's final agent message (from its own events); nothing if there is none."""
+    if plan.json_passthrough or not plan.final_message:
+        return
+    data = plan.final_message.encode("utf-8", "replace")
+    if not data.endswith(b"\n"):
+        data += b"\n"
+    out = getattr(sys.stdout, "buffer", sys.stdout)
+    try:
+        out.write(data)
+        out.flush()
+    except (BrokenPipeError, OSError):
+        pass
+
+
+# ---------------------------------------------------------------- main
+
+USAGE = "usage: xagent <claude|codex|grok> <the CLI's own args...>\n"
+
+
+def main(argv):
+    if not argv:
+        sys.stderr.write(USAGE)
+        return 2
+    if argv[0] in ("-h", "--help"):
+        sys.stdout.write(__doc__)
+        return 0
+    harness, cli_args = argv[0], argv[1:]
+    if harness not in HARNESSES:
+        sys.stderr.write(USAGE)
+        return 2
+    binary = resolve_binary(harness)
+    if not binary:
+        say("%s: command not found" % harness)
+        return 127
+
+    plan = plan_codex(cli_args) if harness == "codex" else plan_claude_or_grok(harness, cli_args)
+    for note in plan.notes:
+        say(note)
+
+    if plan.detached:
+        # The CLI returns while the work continues elsewhere: an end line would
+        # claim it finished. Hand the process over unchanged, register nothing.
+        try:
+            os.execv(binary, [binary] + list(cli_args))
+        except OSError as exc:
+            say("cannot run %s: %s" % (binary, exc.strerror or exc))
+            return 127
+
+    run_id = str(uuid.uuid4())
+    parent = os.environ.get(ENV_PARENT, "")
+    parent = parent if RUN_ID_RE.match(parent) else None
+    try:
+        cwd = plan.cwd or os.getcwd()
+    except OSError:
+        cwd = os.environ.get("PWD") or "/"
+    if not cwd.startswith("/"):
+        cwd = "/"
+
+    pending = []              # signals that arrived before the child existed
+    state = {"child": None, "late_signal": None}
+
+    def on_signal(signum, _frame):
+        child = state["child"]
+        if child is None:
+            pending.append(signum)
+        elif child.returncode is not None:
+            state["late_signal"] = signum     # child gone, still draining stdout: stop now
+        elif child.returncode is None:
+            try:
+                os.kill(child.pid, signum)
+            except OSError:
+                pass
+
+    for sig in FORWARDED_SIGNALS:
+        # An inherited ignore (nohup's SIGHUP, SIGINT for `&` jobs) must stay:
+        # left as SIG_IGN it survives exec into the child. A handler would not.
+        if signal.getsignal(sig) != signal.SIG_IGN:
+            signal.signal(sig, on_signal)
+
+    registry = Registry(os.environ.get(ENV_LOG) or pane_log_path())
+    session_id = plan.session_id if plan.session_id and SESSION_ID_RE.match(plan.session_id) else None
+    if plan.no_transcript:
+        session_id = None
+    registry.write({"type": "start", "run_id": run_id, "harness": harness,
+                    "session_id": session_id, "model": plan.model, "effort": plan.effort,
+                    "cwd": cwd, "pid": os.getpid(), "parent_run_id": parent})
+    shown = session_id or ("none" if plan.no_transcript else "pending" if plan.pending else "unknown")
+    say("run=%s harness=%s session=%s" % (run_id, harness, shown))
+
+    def finish(exit_code, sig_name):
+        registry.write({"type": "end", "run_id": run_id, "exit_code": exit_code, "signal": sig_name})
+
+    if pending:  # signalled before the child existed: do not start it
+        signum = pending[0]
+        finish(None, signal_name(signum))
+        return 128 + signum
+
+    env = dict(os.environ)
+    env[ENV_PARENT] = run_id
+    stdin = None
+    if plan.argv_prompt and idle_stdin():
+        # codex exec also reads piped stdin as extra input; an inherited pipe that
+        # nobody writes or closes (background shells) would block it forever.
+        stdin = subprocess.DEVNULL
+        say("stdin is an idle pipe and the prompt is on argv: running with stdin=/dev/null")
+    try:
+        proc = subprocess.Popen([binary] + plan.args, env=env, stdin=stdin,
+                                stdout=subprocess.PIPE if plan.codex_exec else None)
+    except OSError as exc:
+        say("cannot run %s: %s" % (binary, exc.strerror or exc))
+        finish(127, None)
+        return 127
+    state["child"] = proc
+    # If the wrapper is SIGKILLed, the child runs on as an orphan; this pid lets
+    # the ledger keep the run alive until the child itself is gone.
+    registry.write({"type": "child", "run_id": run_id, "pid": proc.pid})
+    for signum in list(pending):   # arrived between the check above and Popen
+        try:
+            os.kill(proc.pid, signum)
+        except OSError:
+            pass
+
+    reader = None
+    if plan.codex_exec:
+        # A thread drains stdout so the main thread can wait on the child and
+        # handle signals; a grandchild that inherited the pipe cannot hang us.
+        reader = threading.Thread(target=pump_codex, args=(proc, plan, registry, run_id))
+        reader.daemon = True
+        reader.start()
+    rc = proc.wait()
+    if reader is not None:
+        # Normally EOF arrives right after exit. The pipe stays open only if a grandchild
+        # inherited it, so wait while lines keep arriving and stop after READER_GRACE of
+        # silence: a backlog under heavy load is still drained in full.
+        exited_at = time.monotonic()
+        plan.last_read = max(plan.last_read, exited_at)
+        while reader.is_alive():
+            reader.join(0.2)
+            now = time.monotonic()
+            if state["late_signal"] is not None or now - plan.last_read > READER_GRACE \
+                    or now - exited_at > READER_CAP:
+                say("codex stdout still open after exit; final answer may be incomplete")
+                break
+        emit_codex_last_message(plan)
+
+    if rc < 0:
+        finish(None, signal_name(-rc))
+        return 128 + (-rc)
+    finish(rc, None)
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
