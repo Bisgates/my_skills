@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设计稿</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --ink: #1d1d1f;
+  --bg: #ffffff;
+  --side: #f6f6f4;
+  --accent: #2563eb;
+  --ok: #1a7f37;
+  --t90: color-mix(in srgb, var(--ink) 90%, var(--bg));
+  --t70: color-mix(in srgb, var(--ink) 68%, var(--bg));
+  --t45: color-mix(in srgb, var(--ink) 45%, var(--bg));
+  --t38: color-mix(in srgb, var(--ink) 38%, var(--bg));
+  --line: color-mix(in srgb, var(--ink) 9%, var(--bg));
+  --wash: color-mix(in srgb, var(--ink) 4%, transparent);
+  --wash2: color-mix(in srgb, var(--ink) 7%, transparent);
+  --cols: minmax(0, 1fr) 260px 64px 84px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--t90);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; }
+svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+svg.i.s14 { width: 14px; height: 14px; stroke-width: 2; }
+
+.app { display: grid; grid-template-columns: 232px minmax(0, 1fr); height: 100%; }
+
+/* sidebar */
+.side { background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.brand { padding: 22px 20px 18px; font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: .01em; }
+.brand small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--t45); letter-spacing: 0; }
+.nav { flex: 1; overflow: auto; padding: 0 10px 12px; }
+.nav-label { padding: 14px 10px 6px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--t45); }
+.nav a { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 7px; color: var(--t90); }
+.nav a:hover { background: var(--wash); }
+.nav a.on { background: var(--wash2); color: var(--ink); }
+.nav a .n { margin-left: auto; font-size: 11px; color: var(--t38); font-variant-numeric: tabular-nums; }
+.nav a .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.foot { padding: 12px 20px 16px; font-size: 12px; color: var(--t45); border-top: 1px solid var(--line); line-height: 1.6; }
+.foot .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); margin-right: 6px; vertical-align: 1px; }
+
+/* main */
+.main { overflow: auto; min-height: 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 40px 80px; }
+.bar { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.bar .wrap { display: flex; align-items: center; gap: 12px; padding-top: 18px; padding-bottom: 14px; }
+.search { flex: 1; max-width: 520px; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 9px; background: var(--wash); color: var(--t45); border: 1px solid transparent; }
+.search:focus-within { background: var(--bg); border-color: color-mix(in srgb, var(--accent) 45%, var(--bg)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search input::placeholder { color: var(--t38); }
+.search kbd { font: 11px/18px inherit; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--t38); }
+.iconbtn { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--t70); cursor: pointer; font-size: 13px; }
+.iconbtn:hover { background: var(--wash); color: var(--ink); }
+.bar .meta { margin-left: auto; font-size: 12px; color: var(--t38); }
+
+/* recent */
+.sec-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--t45); margin: 18px 0 10px; }
+.recent { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 8px; }
+.card { display: block; padding: 14px 16px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); transition: border-color .15s, box-shadow .15s; }
+.card:hover { border-color: color-mix(in srgb, var(--ink) 18%, var(--bg)); box-shadow: 0 2px 10px color-mix(in srgb, var(--ink) 6%, transparent); }
+.card .p { font-size: 12px; color: var(--t45); }
+.card .t { margin: 3px 0 8px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .m { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--t45); }
+.card .m .tag { margin: 0; }
+
+/* project */
+.proj { margin-top: 30px; }
+.proj-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; }
+.proj-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+.proj-head span { font-size: 12px; color: var(--t45); }
+.cols, .row { display: grid; grid-template-columns: var(--cols); column-gap: 20px; align-items: start; }
+.cols { padding: 0 12px 6px; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--t38); }
+.cols > :nth-child(n+3), .row > .c3, .row > .c4 { text-align: right; }
+.row { padding: 11px 12px; border-bottom: 1px solid var(--line); border-radius: 0; }
+.row:hover { background: var(--wash); }
+.c1 { min-width: 0; }
+.title-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.title-line a.main-link { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.title-line a.main-link:hover { color: var(--accent); }
+.file { font-size: 12px; color: var(--t38); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.tag { flex: none; display: inline-flex; align-items: center; height: 19px; padding: 0 6px; border-radius: 5px; font-size: 11px; font-weight: 500; color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg)); font-variant-numeric: tabular-nums; }
+a.tag.peer { color: var(--t70); background: var(--wash2); }
+a.tag.peer:hover { color: var(--ink); }
+.c2 { font-size: 12px; color: var(--t45); line-height: 20px; }
+.c2 .cnt { color: var(--t70); margin-right: 6px; font-variant-numeric: tabular-nums; }
+.c2 .cnt.one { color: var(--t38); }
+.c2 a.v { display: inline-block; height: 20px; padding: 0 6px; margin: 0 4px 4px 0; border-radius: 5px; background: var(--wash); color: var(--t70); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.c2 a.v:hover { background: color-mix(in srgb, var(--accent) 9%, var(--bg)); color: var(--accent); }
+.c2 a.v.picked::after { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--ok); margin-left: 3px; vertical-align: 2px; }
+.c2 a.att { display: inline-flex; align-items: center; gap: 3px; vertical-align: top; }
+.c3, .c4 { font-size: 12px; color: var(--t45); line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.c4 { color: var(--t70); }
+.c4.fresh { color: var(--accent); }
+
+.pick { display: flex; gap: 8px; align-items: baseline; margin-top: 7px; padding: 6px 10px; border-radius: 7px; background: color-mix(in srgb, var(--ok) 6%, var(--bg)); font-size: 12px; line-height: 1.55; min-width: 0; }
+.pick .ok { flex: none; font-weight: 600; color: var(--ok); }
+.pick .body { min-width: 0; color: var(--t70); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pick .body b { font-weight: 500; color: var(--ink); }
+.pick .note { color: var(--t45); }
+
+details.refs { margin-top: 10px; }
+details.refs summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t45); padding: 4px 12px; border-radius: 6px; }
+details.refs summary::-webkit-details-marker { display: none; }
+details.refs summary:hover { color: var(--ink); background: var(--wash); }
+details.refs summary .chev { transition: transform .15s; }
+details.refs[open] summary .chev { transform: rotate(90deg); }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; padding: 10px 12px 4px; }
+.thumbs a { display: block; font-size: 11px; color: var(--t45); }
+.thumbs a:hover { color: var(--ink); }
+.thumbs img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: top; border-radius: 7px; border: 1px solid var(--line); background: var(--side); margin-bottom: 5px; }
+.thumbs span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.empty { padding: 80px 0; text-align: center; color: var(--t45); }
+.err { margin-top: 40px; padding: 14px 16px; border-radius: 9px; background: color-mix(in srgb, #d1242f 7%, var(--bg)); color: #a40e26; font-size: 13px; }
+
+@media (max-width: 1360px) { .recent { grid-template-columns: repeat(3, minmax(0, 1fr)); } .recent .card:nth-child(4) { display: none; } }
+@media (max-width: 1100px) { :root { --cols: minmax(0, 1fr) 200px 56px 76px; } .wrap { padding-left: 24px; padding-right: 24px; } }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .recent { grid-template-columns: 1fr; }
+  :root { --cols: minmax(0, 1fr) 76px; }
+  .cols > :nth-child(2), .cols > :nth-child(3), .row > .c2, .row > .c3 { display: none; }
+  .wrap { padding-left: 16px; padding-right: 16px; }
+  .bar .meta, .search kbd { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">设计稿<small id="sum">读取中…</small></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot" id="foot"></div>
+  </aside>
+  <main class="main" id="main">
+    <div class="bar">
+      <div class="wrap">
+        <label class="search">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="搜索标题或文件名" autocomplete="off" spellcheck="false">
+          <kbd>/</kbd>
+        </label>
+        <button class="iconbtn" id="reload" title="重新读取">
+          <svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>刷新
+        </button>
+        <span class="meta" id="meta"></span>
+      </div>
+    </div>
+    <div class="wrap" id="list"></div>
+  </main>
+</div>
+
+<script>
+(function () {
+  var data = null, query = "";
+  var $ = function (id) { return document.getElementById(id); };
+  var ICON_IMG = '<svg class="i s14" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>';
+  var ICON_CHEV = '<svg class="i s14 chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>';
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function href(path) { return "/" + path.split("/").map(encodeURIComponent).join("/"); }
+  function ago(t) {
+    var s = Date.now() / 1000 - t;
+    if (s < 60) return "刚刚";
+    if (s < 3600) return Math.floor(s / 60) + " 分钟前";
+    if (s < 86400) return Math.floor(s / 3600) + " 小时前";
+    var d = new Date(t * 1000), now = new Date();
+    var days = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 86400000);
+    if (days === 1) return "昨天";
+    if (days < 7) return days + " 天前";
+    return pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  function full(t) {
+    var d = new Date(t * 1000);
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function fdate(yymmdd) {
+    if (!yymmdd) return "";
+    var y = "20" + yymmdd.slice(0, 2), md = yymmdd.slice(2, 4) + "-" + yymmdd.slice(4, 6);
+    return y == new Date().getFullYear() ? md : y.slice(2) + "-" + md;
+  }
+  function vlabel(v) {
+    var parts = [];
+    if (v.rev) parts.push(v.rev);
+    if (v.model) parts.push(v.model);
+    return parts.length ? parts.join(" ") : "初版";
+  }
+  function vtitle(v) {
+    return v.file + "\n修改于 " + full(v.mtime) + (v.choices ? "\n已选" : "");
+  }
+  // drop trailing version / model tokens the tags already show: "Bot 眼神 · Opus" -> "Bot 眼神"
+  function gtitle(g) {
+    var v = g.versions[0], t = v.title || v.key.replace(/[-_]+/g, " ");
+    [v.model, v.rev, v.model].forEach(function (tok) {
+      if (!tok) return;
+      var cut = t.replace(new RegExp("[\\s·/_-]+" + tok + "$", "i"), "");
+      if (cut) t = cut;
+    });
+    return t;
+  }
+
+  // a version is a peer of the main entry when it differs from it only by model
+  function split(g) {
+    var main = g.versions[0], peers = [], older = [];
+    g.versions.slice(1).forEach(function (v) {
+      if (main.model && v.model && v.date === main.date && v.rev === main.rev) peers.push(v);
+      else older.push(v);
+    });
+    return { main: main, peers: peers, older: older };
+  }
+
+  function matches(p, g) {
+    if (!query) return true;
+    var hay = [p.name, g.key].concat(g.versions.map(function (v) { return v.title + " " + v.file; })).join(" ").toLowerCase();
+    return query.split(/\s+/).every(function (w) { return hay.indexOf(w) >= 0; });
+  }
+
+  function current() {
+    var h = decodeURIComponent(location.hash.slice(1));
+    return data && data.projects.some(function (p) { return p.name === h; }) ? h : "";
+  }
+
+  function pickBlock(g) {
+    var hit = null;
+    g.versions.some(function (v) { if (v.choices) { hit = v; return true; } return false; });
+    if (!hit) return "";
+    var c = hit.choices;
+    var items = c.items.map(function (it) {
+      return esc(it.title) + " <b>" + esc(it.picked || "未选") + "</b>";
+    }).join("　");
+    var note = c.note ? '<span class="note">　' + esc(c.note) + "</span>" : "";
+    var who = hit === g.versions[0] ? "" : "（" + esc(vlabel(hit)) + "）";
+    var tip = c.items.map(function (it) { return it.title + "：" + (it.picked || "未选"); }).join("\n") +
+      (c.note ? "\n备注：" + c.note : "") + (c.at ? "\n提交于 " + c.at : "");
+    return '<div class="pick" title="' + esc(tip) + '"><span class="ok">已选' + who + '</span><span class="body">' +
+      (items || "（无选项）") + note + "</span></div>";
+  }
+
+  function rowHTML(g) {
+    var s = split(g), m = s.main;
+    var tags = (m.rev || m.model ? '<span class="tag">' + esc(vlabel(m)) + "</span>" : "") +
+      s.peers.map(function (v) {
+        return '<a class="tag peer" target="_blank" rel="noopener" href="' + href(v.path) + '" title="' + esc(vtitle(v)) + '">' + esc(vlabel(v)) + "</a>";
+      }).join("");
+    var older = s.older.map(function (v) {
+      return '<a class="v' + (v.choices ? " picked" : "") + '" target="_blank" rel="noopener" href="' + href(v.path) +
+        '" title="' + esc(vtitle(v)) + '">' + esc(vlabel(v)) + "</a>";
+    }).join("");
+    var att = g.attachments.map(function (a) {
+      return '<a class="v att" target="_blank" rel="noopener" href="' + href(a.path) + '" title="' + esc(a.file) + '">' + ICON_IMG + "附图</a>";
+    }).join("");
+    var fresh = Date.now() / 1000 - g.updated < 6 * 3600;
+    return '<div class="row">' +
+      '<div class="c1"><div class="title-line"><a class="main-link" target="_blank" rel="noopener" href="' + href(m.path) +
+      '" title="' + esc(vtitle(m)) + '">' + esc(gtitle(g)) + "</a>" + tags + "</div>" +
+      '<div class="file">' + esc(m.file) + "</div>" + pickBlock(g) + "</div>" +
+      '<div class="c2"><span class="cnt' + (g.versions.length === 1 ? " one" : "") + '">' + g.versions.length + " 版</span>" + older + att + "</div>" +
+      '<div class="c3">' + esc(fdate(m.date)) + "</div>" +
+      '<div class="c4' + (fresh ? " fresh" : "") + '" title="' + esc(full(g.updated)) + '">' + ago(g.updated) + "</div>" +
+      "</div>";
+  }
+
+  function refsHTML(p) {
+    if (!p.refs.length || query) return "";
+    return '<details class="refs"><summary>' + ICON_CHEV + "参考图 " + p.refs.length + '</summary><div class="thumbs">' +
+      p.refs.map(function (r) {
+        return '<a target="_blank" rel="noopener" href="' + href(r.path) + '" title="' + esc(r.file) + '"><img loading="lazy" alt="" src="' +
+          href(r.path) + '"><span>' + esc(r.file) + "</span></a>";
+      }).join("") + "</div></details>";
+  }
+
+  function recentHTML() {
+    var all = [];
+    data.projects.forEach(function (p) { p.groups.forEach(function (g) { all.push({ p: p, g: g }); }); });
+    all.sort(function (a, b) { return b.g.updated - a.g.updated; });
+    var cards = all.slice(0, 4).map(function (x) {
+      var m = x.g.versions[0];
+      return '<a class="card" target="_blank" rel="noopener" href="' + href(m.path) + '" title="' + esc(vtitle(m)) + '">' +
+        '<div class="p">' + esc(x.p.name) + '</div><div class="t">' + esc(gtitle(x.g)) + "</div>" +
+        '<div class="m">' + (m.rev || m.model ? '<span class="tag">' + esc(vlabel(m)) + "</span>" : "") +
+        "<span>" + ago(x.g.updated) + "</span>" + (x.g.versions.length > 1 ? "<span>" + x.g.versions.length + " 版</span>" : "") +
+        "</div></a>";
+    }).join("");
+    return '<div class="sec-label">最近更新</div><div class="recent">' + cards + "</div>";
+  }
+
+  function renderNav() {
+    var sel = current(), total = 0;
+    data.projects.forEach(function (p) { total += p.groups.length; });
+    var html = '<a href="#" class="' + (sel ? "" : "on") + '"><span class="name">全部</span><span class="n">' + total + "</span></a>" +
+      '<div class="nav-label">项目</div>' +
+      data.projects.map(function (p) {
+        return '<a href="#' + encodeURIComponent(p.name) + '" class="' + (sel === p.name ? "on" : "") + '" title="更新于 ' + esc(full(p.updated)) +
+          '"><span class="name">' + esc(p.name) + '</span><span class="n">' + p.groups.length + "</span></a>";
+      }).join("");
+    $("nav").innerHTML = html;
+    var files = 0;
+    data.projects.forEach(function (p) { p.groups.forEach(function (g) { files += g.versions.length; }); });
+    $("sum").textContent = data.projects.length + " 个项目 · " + total + " 组 · " + files + " 个文件";
+  }
+
+  function render() {
+    if (!data) return;
+    renderNav();
+    var sel = current(), shown = 0, out = "";
+    if (!sel && !query) out += recentHTML();
+    data.projects.forEach(function (p) {
+      if (sel && p.name !== sel) return;
+      var gs = p.groups.filter(function (g) { return matches(p, g); });
+      if (!gs.length && (query || !p.refs.length)) return;
+      shown += gs.length;
+      out += '<section class="proj"><div class="proj-head"><h2>' + esc(p.name) + "</h2><span>" + gs.length + " 组 · " + ago(p.updated) + "更新</span></div>" +
+        (gs.length ? '<div class="cols"><span>设计</span><span>历史版本</span><span>日期</span><span>修改</span></div>' : "") +
+        gs.map(rowHTML).join("") + refsHTML(p) + "</section>";
+    });
+    if (!shown && query) out += '<div class="empty">没有找到「' + esc(query) + "」</div>";
+    $("list").innerHTML = out;
+    $("meta").textContent = "读取于 " + full(data.generated_at).slice(11);
+  }
+
+  function load() {
+    return fetch("/api/designs").then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (d) { data = d; render(); })
+      .catch(function (e) { $("list").innerHTML = '<div class="err">读取失败：' + esc(e.message) + "</div>"; });
+  }
+
+  function ping() {
+    fetch("/ping").then(function (r) { return r.json(); }).then(function (j) {
+      $("foot").innerHTML = '<span class="dot"></span>服务运行中<br>' +
+        (j.idle_min ? "无访问 " + j.idle_min + " 分钟后自动关闭" : "不会自动关闭");
+    }).catch(function () { $("foot").textContent = "服务未连接"; });
+  }
+
+  $("q").addEventListener("input", function () { query = this.value.trim().toLowerCase(); render(); });
+  $("q").addEventListener("keydown", function (e) { if (e.key === "Escape") { this.value = ""; query = ""; render(); this.blur(); } });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "/" && document.activeElement !== $("q")) { e.preventDefault(); $("q").focus(); }
+  });
+  $("reload").addEventListener("click", function () { load(); ping(); });
+  window.addEventListener("hashchange", function () { render(); $("main").scrollTop = 0; });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
+  load();
+  ping();
+})();
+</script>
+</body>
+</html>

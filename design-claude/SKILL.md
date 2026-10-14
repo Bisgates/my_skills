@@ -41,6 +41,15 @@ Everything about *how to design* — context matching, `.dc.html` format, craft 
 6. **Open it**: `open "<output path>"`. Then stop — the user views and judges; do not screenshot or drive the browser.
 7. **Handover**: the path, plus one or two plain sentences on what was drafted and assumed. The local file is the view-and-export canvas (browse artboards, export PNG/PDF); in-page Save is not wired, so edits made in the browser are not kept — say this only if the user asks about editing.
 
+## Letting the user pick options
+
+Whenever a page shows alternatives the user has to choose between (versions A/B/C, variants, per-element options), make them pickable and submittable so the choice comes back as data instead of a chat message.
+
+1. Mark each decision with `data-choice-group="<id>" data-choice-title="<中文名>"` (add `data-choice-multi` when several may be picked), and each option inside it with `data-choice="<value>"` (optional `data-choice-label`).
+2. Inline `scripts/choice-kit.js` (next to this file) in a `<script>` at the end of `<body>`, so the page stays one file. It adds click-to-pick, a floating "你的选择" panel with a note box and a 提交 button, and reloads the last submission.
+3. Open the page through the choice server instead of `file://`: `open "http://127.0.0.1:47321/<project>/<file>.html"`. The server (`scripts/choice_server.py`, launchd `com.han.design-choice-server`, port 47321) serves the design folder and writes each submission to `<file>.choices.json` next to the html (`latest` + `history`). It is off by default (the plist has no RunAtLoad / KeepAlive) and exits on its own after 120 idle minutes (`DESIGN_CHOICE_IDLE_MIN`), so the user is not running a server they are not using. Start it only when there is a page to show: if `curl -s 127.0.0.1:47321/ping` fails, run `launchctl kickstart -k gui/$(id -u)/com.han.design-choice-server`. Its home page `http://127.0.0.1:47321/` lists every design by project with older versions one click away; point the user there when they ask for past designs.
+4. When the user says they submitted, read `latest` from that `.choices.json` and act on it; the note field carries their free-text comments.
+
 ## Iterating
 
 - **Same session**: edit the working `.dc.html` files in the scratchpad, re-seed to the same output path (the helper always seeds a fresh copy of the template — never edit the seeded file by hand), re-run `--check`, `open` again.
