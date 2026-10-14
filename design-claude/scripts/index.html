@@ -367,7 +367,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   }
 
   function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-  function tint(name) { return TINT[name] || PALETTE[hash(name) % PALETTE.length]; }
+  function tint(name) { return (Object.prototype.hasOwnProperty.call(TINT, name) && TINT[name]) || PALETTE[hash(name) % PALETTE.length]; }
 
   /* ---- titles & versions ---- */
   // drop the rev / model suffixes that the tags already show: "Bot 总览 r8 · Opus" -> "Bot 总览"
@@ -380,7 +380,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   }
   // ?v= id per version: rev ("r1" when null); file when the rev repeats in the group
   function versionIds(vs) {
-    var cnt = {};
+    var cnt = Object.create(null);
     vs.forEach(function (v) { var r = v.rev || "r1"; cnt[r] = (cnt[r] || 0) + 1; });
     return vs.map(function (v) {
       var r = v.rev || "r1", dup = cnt[r] > 1;
@@ -393,7 +393,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     for (i = 0; i < ids.length; i++) if (ids[i].id === v) return i;
     for (i = 0; i < o.vs.length; i++) if (o.vs[i].file === v) return i;
     for (i = 0; i < ids.length; i++) if (ids[i].rev === v) return i;
-    return 0;
+    return -1;
   }
 
   function statusOf(g, now, days) {
@@ -407,7 +407,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
 
   function normalize(data) {
     var now = data.generated_at || Date.now() / 1000, days = data.pending_days || 3;
-    var G = [], BY = {}, nv = 0;
+    var G = [], BY = Object.create(null), nv = 0;
     (data.projects || []).forEach(function (p) {
       p.groups.forEach(function (g) {
         if (!g.versions || !g.versions.length) return;
@@ -415,7 +415,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
         var latest = g.versions[0];
         var o = { proj: p.name, key: g.key, id: p.name + "/" + g.key, g: g, vs: g.versions, latest: latest,
           t: g.updated || latest.mtime, date: normIso(g.date) || latest.date, name: cleanTitle(latest),
-          st: statusOf(g, now, days), n: g.versions.length, tint: tint(p.name), ids: versionIds(g.versions),
+          st: /^(pending|submitted|delivered|idle)$/.test(g.status || "") ? g.status : statusOf({ versions: g.versions, delivery: g.delivery }, now, days), n: g.versions.length, tint: tint(p.name), ids: versionIds(g.versions),
           delivery: g.delivery || null };
         G.push(o); BY[o.id] = o; nv += o.n;
       });
@@ -438,7 +438,8 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   function routeHref(project, key, v, cmp) {
     return "/d/" + enc(project) + "/" + enc(key) + (v || cmp ? "?v=" + enc(v || "") : "") + (cmp ? "&cmp=" + enc(cmp) : "");
   }
-  function vHref(o, i) { return routeHref(o.proj, o.key, i ? o.ids[i].id : ""); }
+  function vHref(o, i) { return routeHref(o.proj, o.key, o.ids[i].id); }
+  function gHref(o) { return routeHref(o.proj, o.key); }
 
   /* ---- list filtering & grouping ---- */
   function matches(o, q) {
@@ -448,7 +449,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   }
   function counts(G) {
     var c = { all: G.length, pending: 0, submitted: 0, delivered: 0, idle: 0 };
-    G.forEach(function (o) { c[o.st]++; });
+    G.forEach(function (o) { if (c.hasOwnProperty(o.st) && o.st !== "all") c[o.st]++; });
     return c;
   }
   // sections for the left list: [{id, label, items, lim}]
@@ -469,7 +470,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
         if (items.length) out.push({ id: "s:" + s, label: LABEL[s], dot: s, items: items, lim: s === "idle" ? 6 : 12 });
       });
     } else {
-      var order = [], by = {};
+      var order = [], by = Object.create(null);
       G.forEach(function (o) { if (!by[o.proj]) { by[o.proj] = []; order.push(o.proj); } by[o.proj].push(o); });
       order.forEach(function (p) {
         by[p].sort(function (a, b) { return b.t - a.t; });
@@ -487,7 +488,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     var open = opt.open[o.id] != null ? opt.open[o.id] : on;
     var two = opt.mode === "time";
     var sub = two ? '<span class="t2">' + esc(o.proj + " · " + o.ids[0].label) + "</span>" : "";
-    var h = '<div class="gi"><a class="it' + (on ? " on" : "") + (two ? " two" : "") + '" href="' + esc(vHref(o, 0)) + '" data-nav title="' + esc(o.name + "\n" + o.proj + "/" + o.latest.file) + '">' +
+    var h = '<div class="gi"><a class="it' + (on ? " on" : "") + (two ? " two" : "") + '" href="' + esc(gHref(o)) + '" data-nav title="' + esc(o.name + "\n" + o.proj + "/" + o.latest.file) + '">' +
       '<i class="dot ' + o.st + '"></i><span class="tt ell">' + esc(o.name) + sub + "</span>" +
       '<span class="r"><span class="vn' + (open ? " open" : "") + '" data-tog="' + esc(o.id) + '" title="' + (open ? "收起版本" : "展开版本") + '">' + o.n + " 版" + ic("chev") + "</span>" +
       dtag(o.date, opt.now) + "</span></a>";
@@ -564,12 +565,12 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     var dlv = G.filter(function (o) { return o.delivery; }).sort(function (a, b) {
       return (b.delivery.at_ts || b.t) - (a.delivery.at_ts || a.t);
     });
-    var projs = [], pg = {};
+    var projs = [], pg = Object.create(null);
     G.forEach(function (o) { if (!pg[o.proj]) { pg[o.proj] = []; projs.push(o.proj); } pg[o.proj].push(o); });
     var maxT = G.reduce(function (m, o) { return Math.max(m, o.t); }, 0);
 
     var cards = pend.slice(0, 8).map(function (o) {
-      return '<a class="a-card" href="' + esc(vHref(o, 0)) + '" data-nav title="' + esc(o.proj + "/" + o.latest.file) + '">' + th(o) +
+      return '<a class="a-card" href="' + esc(gHref(o)) + '" data-nav title="' + esc(o.proj + "/" + o.latest.file) + '">' + th(o) +
         '<div class="t ell">' + esc(o.name) + '</div><div class="m"><span class="ell">' + esc(o.proj) + "</span>·<span>" + esc(o.ids[0].label) +
         "</span>·<span class=\"num\">" + esc(ft(o.t, now)) + "</span></div></a>";
     }).join("");
@@ -626,9 +627,9 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       if (dl !== day) { h += (day ? "</div>" : "") + '<div class="dayl">' + esc(dl) + '</div><div class="feed">'; day = dl; }
       var e = it.e, o = M.BY[it.id];
       var name = o ? o.name : cleanTitle({ title: e.title, key: e.key });
-      var vi = o ? Math.max(0, o.vs.map(function (v) { return v.file; }).indexOf(e.file)) : 0;
-      var rl = o ? o.ids[vi].label : (e.rev || "r1");
-      var link = o ? vHref(o, vi) : routeHref(e.project, e.key);
+      var vi = o ? o.vs.map(function (v) { return v.file; }).indexOf(e.file) : -1;
+      var rl = vi >= 0 ? o.ids[vi].label : (e.rev || "r1");
+      var link = vi >= 0 ? vHref(o, vi) : routeHref(e.project, e.key, e.file);
       var nd = "", body = "";
       var A = function (inner) { return '<a href="' + esc(link) + '" data-nav>' + inner + "</a>"; };
       if (it.kind === "choices") {
@@ -740,7 +741,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   root.DCH = {
     LABEL: LABEL, esc: esc, href: href, ic: ic, fmtDay: fmtDay, fmtDT: fmtDT, ft: ft, hm: hm, isoOf: isoOf, parseAt: parseAt, dayLabel: dayLabel,
     cleanTitle: cleanTitle, versionIds: versionIds, findVersion: findVersion, statusOf: statusOf, normalize: normalize,
-    parseRoute: parseRoute, routeHref: routeHref, vHref: vHref, matches: matches, counts: counts, sections: sections,
+    parseRoute: parseRoute, routeHref: routeHref, vHref: vHref, gHref: gHref, matches: matches, counts: counts, sections: sections,
     sidebarHTML: sidebarHTML, homeHTML: homeHTML, feedHTML: feedHTML, detailBarHTML: detailBarHTML, detailTitleHTML: detailTitleHTML,
     tabsHTML: tabsHTML, framesHTML: framesHTML, inspectorHTML: inspectorHTML, stChip: stChip
   };
@@ -754,7 +755,8 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   var $ = function (id) { return document.getElementById(id); };
   var S = {
     data: null, M: null, events: null, err: "", route: H.parseRoute(location.pathname, location.search),
-    mode: "project", q: "", st: "all", open: {}, projOpen: {}, shut: {}, mounted: "", frame: -1, lastLoad: 0
+    mode: "project", q: "", st: "all", open: Object.create(null), projOpen: Object.create(null), shut: Object.create(null),
+    mounted: "", frame: -1, lastLoad: 0, seq: 0, sigD: "", sigE: ""
   };
   try { var saved = localStorage.getItem("dc-hub-group"); if (saved === "project" || saved === "time" || saved === "status") S.mode = saved; } catch (e) {}
 
@@ -763,7 +765,20 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     var r = S.route;
     if (r.view === "home" || !S.M) return null;
     var o = S.M.BY[r.project + "/" + r.key];
-    return o ? { o: o, vi: H.findVersion(o, r.v), ci: r.cmp ? H.findVersion(o, r.cmp) : -1 } : null;
+    if (!o) return null;
+    var vi = H.findVersion(o, r.v), ci = r.cmp ? H.findVersion(o, r.cmp) : -2;
+    return { o: o, vi: vi, ci: ci, missing: vi < 0 || ci === -1 };
+  }
+  function vkey(v) { return v.path + "@" + v.mtime; }
+  function vsrc(v) { return H.href(v.path) + "?t=" + encodeURIComponent(v.mtime); }
+  // a detail route without ?v= is pinned to the version shown now, so refreshes keep it
+  function pinVersion() {
+    var r = S.route;
+    if (r.view !== "detail" || r.v || !S.M) return;
+    var o = S.M.BY[r.project + "/" + r.key];
+    if (!o) return;
+    history.replaceState(null, "", H.vHref(o, 0) + location.hash);
+    S.route = H.parseRoute(location.pathname, location.search);
   }
 
   /* ---- left ---- */
@@ -811,6 +826,16 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       return;
     }
     document.title = c.o.name + " · UI-hub";
+    if (c.missing) {
+      setLayout("detail"); S.mounted = "";
+      var miss = c.vi < 0 ? r.v : r.cmp;
+      mid.innerHTML = '<div class="a-bar">' + H.detailBarHTML(c.o, 0, S.M.root) + '</div><div class="a-title">' + H.detailTitleHTML(c.o, now()) + "</div>" +
+        '<div class="vtabs">' + H.tabsHTML(c.o, -1, now()) + "</div>" +
+        '<div class="err">版本「' + esc(miss) + '」不存在。<a href="' + esc(H.vHref(c.o, 0)) + '" data-nav style="color:inherit;text-decoration:underline">打开最新版 ' + esc(c.o.ids[0].label) + " →</a></div>";
+      right.className = "insp";
+      right.innerHTML = '<div class="a-bar"><div class="crumb"><b>这组设计</b></div></div><div class="insp-sec"><p class="none">先在左边选一版。</p></div>';
+      return;
+    }
     if (r.view === "compare") return renderCompare(c);
     setLayout("detail");
     if (S.mounted !== "detail") {
@@ -819,9 +844,10 @@ details.refs[open] summary .i { transform: rotate(90deg); }
         '<div class="frames" id="d-frames"></div>';
       S.mounted = "detail";
     }
-    var o = c.o, v = o.vs[c.vi], src = H.href(v.path);
+    var o = c.o, v = o.vs[c.vi], src = vsrc(v);
     var fr = $("d-frame");
-    if (fr.getAttribute("data-src") !== src) { fr.setAttribute("data-src", src); fr.src = src; S.frame = -1; }
+    // reload only when the file (path) or its content (mtime) changed
+    if (fr.getAttribute("data-key") !== vkey(v)) { fr.setAttribute("data-key", vkey(v)); fr.setAttribute("data-src", src); fr.src = src; S.frame = -1; }
     $("d-bar").innerHTML = H.detailBarHTML(o, c.vi, S.M.root);
     $("d-title").innerHTML = H.detailTitleHTML(o, now());
     $("d-tabs").innerHTML = H.tabsHTML(o, c.vi, now());
@@ -832,21 +858,26 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   }
   function renderCompare(c) {
     setLayout("compare");
-    var o = c.o, a = c.vi, b = c.ci < 0 ? a : c.ci;
-    var key = "cmp:" + o.id + ":" + a + ":" + b;
+    var o = c.o, a = c.vi, b = c.ci;
+    // keep the two iframes while both files (path + mtime) stay the same
+    var key = "cmp:" + vkey(o.vs[a]) + "|" + vkey(o.vs[b]);
+    var lab = function (i) {
+      return esc(o.ids[i].label) + (i === 0 ? " · 最新" : "") + "<small>" + esc(H.fmtDT(o.vs[i].mtime, now())) + " · " + esc(o.vs[i].file) + "</small>";
+    };
     var pane = function (i, n) {
       var v = o.vs[i];
-      return '<div><div class="lab">' + esc(o.ids[i].label) + (i === 0 ? " · 最新" : "") + "<small>" + esc(H.fmtDT(v.mtime, now())) + " · " + esc(v.file) +
-        '</small></div><div class="embed"><div class="artbox" data-box="' + n + '"><iframe title="' + esc(o.ids[i].label) + '" src="' + esc(H.href(v.path)) + '"></iframe></div>' +
+      return '<div><div class="lab" data-lab="' + n + '"></div><div class="embed"><div class="artbox" data-box="' + n + '"><iframe title="' + esc(o.ids[i].label) + '" src="' + esc(vsrc(v)) + '"></iframe></div>' +
         '<div class="embed-cap"><code>' + esc(o.proj + "/" + v.file) + '</code><span data-pct="' + n + '"></span></div></div></div>';
     };
     if (S.mounted !== key) {
-      $("mid").innerHTML = '<div class="a-bar"><div class="crumb ell"><a href="/" data-nav>总览</a>' + H.ic("chev") + "<span>" + esc(o.proj) + "</span>" + H.ic("chev") +
-        '<a href="' + esc(H.vHref(o, a)) + '" data-nav>' + esc(o.name) + "</a>" + H.ic("chev") + "<b>对比 " + esc(o.ids[a].label + " ↔ " + o.ids[b].label) + "</b></div>" +
-        '<span class="sp"></span><a class="btn ghost" href="' + esc(H.vHref(o, a)) + '" data-nav>' + H.ic("back", "s14") + "回详情</a></div>" +
-        '<div class="cmp">' + pane(a, 0) + pane(b, 1) + "</div>";
+      $("mid").innerHTML = '<div class="a-bar" id="c-bar"></div><div class="cmp">' + pane(a, 0) + pane(b, 1) + "</div>";
       S.mounted = key;
     }
+    $("c-bar").innerHTML = '<div class="crumb ell"><a href="/" data-nav>总览</a>' + H.ic("chev") + "<span>" + esc(o.proj) + "</span>" + H.ic("chev") +
+      '<a href="' + esc(H.vHref(o, a)) + '" data-nav>' + esc(o.name) + "</a>" + H.ic("chev") + "<b>对比 " + esc(o.ids[a].label + " ↔ " + o.ids[b].label) + "</b></div>" +
+      '<span class="sp"></span><a class="btn ghost" href="' + esc(H.vHref(o, a)) + '" data-nav>' + H.ic("back", "s14") + "回详情</a>";
+    document.querySelector('[data-lab="0"]').innerHTML = lab(a);
+    document.querySelector('[data-lab="1"]').innerHTML = lab(b);
     fit();
   }
   function fit() {
@@ -861,7 +892,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       var pct = Math.round(s * 100) + "%";
       if (bx.id === "d-box") {
         var c = cur();
-        if (c) $("d-cap").innerHTML = "<code>iframe · " + esc(c.o.proj + "/" + c.o.vs[c.vi].file) + "</code><span>· 1280×820 · " + pct + "</span>";
+        if (c && c.vi >= 0) $("d-cap").innerHTML = "<code>iframe · " + esc(c.o.proj + "/" + c.o.vs[c.vi].file) + "</code><span>· 1280×820 · " + pct + "</span>";
       } else {
         var sp = document.querySelector('[data-pct="' + bx.getAttribute("data-box") + '"]');
         if (sp) sp.textContent = "· 1280×820 · " + pct;
@@ -870,6 +901,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   }
 
   function render(routeChanged) {
+    pinVersion();
     renderSide();
     renderMain();
     if (routeChanged) { scrollSideToCurrent(); $("mid").scrollTop = 0; }
@@ -882,17 +914,40 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       return r.json();
     });
   }
-  function load(silent) {
-    S.lastLoad = Date.now();
-    var ev = getJSON("/api/events?limit=300").then(function (j) { S.events = j.events || []; }, function () { if (S.events == null || !silent) S.events = false; });
-    return getJSON("/api/designs").then(function (d) {
-      S.data = d; S.M = H.normalize(d); S.err = "";
-    }, function (e) { if (!S.M) S.err = e.message; })
-      .then(function () { return ev; })
-      .then(function () { render(!silent); });
+  // signature of a payload without its generated_at stamp, to tell real changes apart
+  function sig(obj) {
+    var copy = {}, k;
+    for (k in obj) if (k !== "generated_at") copy[k] = obj[k];
+    return JSON.stringify(copy);
   }
-  function ping() {
-    fetch("/ping", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+  // poll: timer-driven refresh; the server does not count ?poll=1 requests as activity
+  function load(silent, poll) {
+    var my = ++S.seq;
+    S.lastLoad = Date.now();
+    var d = null, ev = null, evFail = false, err = "";
+    return Promise.all([
+      getJSON("/api/designs" + (poll ? "?poll=1" : "")).then(function (j) { d = j; }, function (e) { err = e.message; }),
+      getJSON("/api/events?limit=300" + (poll ? "&poll=1" : "")).then(function (j) { ev = j.events || []; }, function () { evFail = true; })
+    ]).then(function () {
+      if (my !== S.seq) return; // a newer load started; drop this response
+      var dChanged = false, eChanged = false;
+      if (d) {
+        var sd = sig(d);
+        if (sd !== S.sigD) { S.sigD = sd; S.data = d; S.M = H.normalize(d); dChanged = true; }
+        S.data.generated_at = d.generated_at;
+        S.err = "";
+      } else if (!S.M) { S.err = err; dChanged = true; }
+      if (ev) {
+        var se = JSON.stringify(ev);
+        if (se !== S.sigE) { S.sigE = se; S.events = ev; eChanged = true; }
+      } else if (evFail && (S.events == null || !silent)) { if (S.events !== false) eChanged = true; S.events = false; S.sigE = ""; }
+      if (!silent) return render(true);
+      if (dChanged) { renderSide(); renderMain(); }
+      else if (eChanged && S.route.view === "home" && S.M) $("right").innerHTML = H.feedHTML(S.events, S.M, now());
+    });
+  }
+  function ping(poll) {
+    fetch("/ping" + (poll ? "?poll=1" : ""), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       var scan = S.data ? H.hm(S.data.generated_at) + " 扫描" : "";
       $("foot").innerHTML = '<span class="live"></span>' + esc(location.host) + (scan ? " · " + esc(scan) : "") +
         "<br>" + (j.idle_min ? "无访问 " + esc(j.idle_min) + " 分钟后自动关闭" : "不会自动关闭");
@@ -956,7 +1011,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     if ((el = t.closest("[data-proj]"))) {
       var p = el.getAttribute("data-proj");
       if (S.mode !== "project") { S.mode = "project"; try { localStorage.setItem("dc-hub-group", S.mode); } catch (err) {} }
-      S.shut["p:" + p] = false; S.projOpen["p:" + p] = true; S.st = "all";
+      S.shut["p:" + p] = false; S.projOpen["p:" + p] = true; S.st = "all"; S.q = ""; $("q").value = "";
       renderSide();
       var lab = $("sbl").querySelector('[data-shut="' + (window.CSS && CSS.escape ? CSS.escape("p:" + p) : "p:" + p) + '"]');
       if (lab) lab.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -987,14 +1042,19 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     var k = e.key === "/" && !/^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName || "");
     if (k || ((e.metaKey || e.ctrlKey) && String(e.key || "").toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); }
   });
+  var msgTimer = 0;
   window.addEventListener("message", function (e) {
-    if (e.data && e.data.type === "dc-choices-submitted") load(true);
+    if (e.origin !== location.origin || !e.data || e.data.type !== "dc-choices-submitted") return;
+    var ours = [].some.call(document.querySelectorAll("#mid iframe"), function (f) { return f.contentWindow === e.source; });
+    if (!ours) return;
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(function () { load(true); }, 300);
   });
   var rt;
   window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(fit, 60); });
   window.addEventListener("focus", refresh);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh(); });
-  setInterval(function () { load(true); ping(); }, 60000);
+  setInterval(function () { if (document.hidden) return; load(true, true); ping(true); }, 60000);
 
   render(false);
   load(false).then(ping);
