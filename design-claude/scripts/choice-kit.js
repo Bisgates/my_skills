@@ -102,6 +102,9 @@
       .then(function (j) {
         if (!j.ok) throw new Error(j.error);
         msg.textContent = "已提交 ✓ " + new Date().toTimeString().slice(0, 5);
+        if (window.parent !== window) {
+          try { window.parent.postMessage({ type: "dc-choices-submitted", page: page }, "*"); } catch (e) {}
+        }
       })
       .catch(function () {
         (navigator.clipboard ? navigator.clipboard.writeText(body) : Promise.reject())
