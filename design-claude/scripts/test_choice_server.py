@@ -1,17 +1,35 @@
 #!/usr/bin/env python3
 """Isolated HTTP contract tests; no real Chrome or running design service is used."""
-import builtins, contextlib, io, json, os, socket, subprocess, sys, tempfile, time, unittest
+import builtins, contextlib, io, json, os, signal, socket, subprocess, sys, tempfile, time, unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
-from unittest.mock import Mock, patch
+from urllib.error import HTTPError
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 import make_thumbs
 import choice_server
 
 SCRIPTS = Path(__file__).resolve().parent
+PNG = b"\x89PNG\r\n\x1a\n" + b"test payload" + b"\x00\x00\x00\x00IEND\xaeB`\x82"
+
+
+def fake_chrome(root, body):
+    path = Path(root) / "fake-chrome"
+    path.write_text("#!" + sys.executable + "\nimport os, signal, subprocess, sys, time\nfrom pathlib import Path\n" +
+                    "shot = next(a.split('=', 1)[1] for a in sys.argv if a.startswith('--screenshot='))\n" + body)
+    path.chmod(0o755)
+    return str(path)
+
+
+def group_exists(pid):
+    try:
+        os.killpg(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
 
 
 class ServerTests(unittest.TestCase):
@@ -34,6 +52,7 @@ class ServerTests(unittest.TestCase):
         env = dict(os.environ, DESIGN_CHOICE_ROOT=str(self.root), DESIGN_CHOICE_PORT=str(port),
                    DESIGN_HUB_THUMBS="0", DESIGN_CHOICE_IDLE_MIN="0", PYTHONDONTWRITEBYTECODE="1")
         env.pop("DESIGN_HUB_PENDING_DAYS", None)
+        env.pop("DESIGN_HUB_CHROME", None)
         env.update(overrides)
         self.proc = subprocess.Popen([sys.executable, str(SCRIPTS / "choice_server.py")],
                                      env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -109,7 +128,7 @@ class ServerTests(unittest.TestCase):
         self.html("261014_empty-meta.html", head="<meta name='dc-why' content=''>")
         self.html("261014_frames.html", body=" " * 2000000 +
                   "<div id='outer'><section id='inner'><p class='small cap'>One <b>&amp; two</b></p></section></div>"
-                  "<div class='frame'><a id='preceding'></a><div><p class='cap'>Before</p></div></div>"
+                  "<div class='frame'><p class='cap'>Before</p><div class='frame-row'><div id='following' data-frame></div></div></div>"
                   "<div class='frame'><p class='cap'>No anchor</p></div>")
         self.html("261014_cap-limit.html", body="".join("<div id='f%s'><p class='cap'>%s</p></div>" % (i, i) for i in range(65)))
         (self.project / "261014_named-r2-opus.thumb.png").write_bytes(b"thumbnail")
@@ -175,7 +194,7 @@ class ServerTests(unittest.TestCase):
     def test_frames_full_file_scope_and_limit(self):
         groups = self.groups()
         self.assertEqual(groups["frames"]["versions"][0]["frames"],
-                         [{"cap": "One & two", "id": "inner"}, {"cap": "Before", "id": "preceding"},
+                         [{"cap": "One & two", "id": "inner"}, {"cap": "Before", "id": "following"},
                           {"cap": "No anchor", "id": None}])
         frames = groups["cap-limit"]["versions"][0]["frames"]
         self.assertEqual(len(frames), 60)
@@ -275,8 +294,137 @@ class ServerTests(unittest.TestCase):
         self.assertIsNotNone(ping["idle_left_min"])
         self.assertEqual(self.proc.wait(timeout=4), 0)
 
+    def test_poll_does_not_extend_idle(self):
+        self.stop()
+        self.start_server(DESIGN_CHOICE_IDLE_MIN="0.02")
+        started, count = time.monotonic(), 0
+        while self.proc.poll() is None and time.monotonic() - started < 3:
+            try:
+                self.get("/api/designs?poll=1" if count % 2 else "/api/events?poll=1")
+                count += 1
+            except OSError:
+                break
+            time.sleep(.1)
+        self.assertGreater(count, 3)
+        self.assertEqual(self.proc.wait(timeout=1), 0)
+        self.assertLess(time.monotonic() - started, 2.5)
+
+    def test_bad_html_and_missing_meta_name(self):
+        self.html("261014_bad-head.html", head="<![bogus[")
+        self.html("261014_bad-body.html", body="<![bogus[")
+        self.html("261014_meta-name.html", head="<meta name content='ignored'><meta name='dc-change' content='safe'>")
+        for _ in range(2):
+            groups = self.groups()
+            self.assertIsInstance(groups["bad-head"]["versions"][0]["title"], str)
+            self.assertEqual(groups["bad-body"]["versions"][0]["frames"], [])
+            self.assertEqual(groups["meta-name"]["versions"][0]["change"]["what"], "safe")
+            self.assertTrue(self.get("/api/events")["events"])
+
+    def test_latest_only_choices_and_timestamp_fallback(self):
+        latest = {"choices": {"layout": "A"}, "note": "latest only", "source": "hub",
+                  "submitted_at": "2026-10-14T11:40:52"}
+        cpath = self.sidecar("261014_submitted.html", ".choices.json", {"latest": latest}, self.now - 123)
+        for stamp in ("2026-10-14T11:40:52", "", "broken"):
+            latest["submitted_at"] = stamp
+            cpath.write_text(json.dumps({"latest": latest}))
+            os.utime(cpath, (self.now - 123, self.now - 123))
+            self.assertEqual(self.groups()["submitted"]["versions"][0]["choices"]["n_history"], 1)
+            events = [e for e in self.get("/api/events")["events"] if e["kind"] == "choices" and e["key"] == "submitted"]
+            self.assertEqual(len(events), 1)
+            expected = datetime.fromisoformat(stamp).timestamp() if "T" in stamp else self.now - 123
+            self.assertEqual(events[0]["t"], expected)
+            self.assertEqual(events[0]["note"], "latest only")
+
+    def test_note_skips_same_rev_siblings(self):
+        self.html("261014_pending-r4-astra.html", mtime=self.now)
+        self.choices("261014_pending-r4.html", note="same revision")
+        newest = self.groups()["pending"]["versions"][0]
+        self.assertEqual(newest["model"], "astra")
+        self.assertEqual(newest["change"]["why"], "r3 feedback")
+
+    def test_parts_are_not_projects(self):
+        pdir = self.root / "extra_parts"
+        pdir.mkdir()
+        (pdir / "ignored.html").write_text("ignored")
+        self.assertEqual([p["name"] for p in self.get("/api/designs")["projects"]], ["demo"])
+        self.assertTrue(all(Path(p).parent.name == "demo" for p, _ in make_thumbs.find_candidates(self.root)))
+
+    def test_post_invalid_body_missing_history_and_bad_choices(self):
+        for body in ([], None, "text", 7):
+            request = Request(self.base + "/submit", data=json.dumps(body).encode())
+            with self.assertRaises(HTTPError) as caught:
+                urlopen(request)
+            self.assertEqual(caught.exception.code, 400)
+            caught.exception.close()
+        name = "261014_named-r2-opus.html"
+        cpath = self.sidecar(name, ".choices.json", {"latest": {"choices": {"layout": "old"}}})
+        request = Request(self.base + "/submit", data=json.dumps({"page": "demo/" + name, "choices": {"layout": "new"}}).encode())
+        with urlopen(request) as response:
+            self.assertTrue(json.load(response)["ok"])
+        doc = json.loads(cpath.read_text())
+        self.assertEqual([e["choices"]["layout"] for e in doc["history"]], ["old", "new"])
+        cpath.write_text("bad JSON")
+        self.assertEqual(self.get("/choices?page=demo/" + name), {})
+
+    def test_service_exit_cleans_active_screenshot_group(self):
+        for mode in ("idle", "term", "interrupt"):
+            with self.subTest(mode=mode):
+                self.stop()
+                pidfile = self.root / (mode + "-pids.json")
+                chrome = fake_chrome(self.root,
+                    "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(999)'])\n"
+                    "def stop(*args):\n    child.terminate()\n    child.wait()\n    sys.exit(0)\n"
+                    "signal.signal(signal.SIGTERM, stop)\n"
+                    "profile = next(a.split('=', 1)[1] for a in sys.argv if a.startswith('--user-data-dir='))\n"
+                    "Path(%r).write_text(str(os.getpid()) + '\\n' + profile)\ntime.sleep(999)\n" % str(pidfile))
+                self.start_server(DESIGN_HUB_THUMBS="1", DESIGN_HUB_CHROME=chrome,
+                                  DESIGN_CHOICE_IDLE_MIN="0.02" if mode == "idle" else "0")
+                deadline = time.monotonic() + 3
+                while not pidfile.exists() and time.monotonic() < deadline:
+                    time.sleep(.02)
+                self.assertTrue(pidfile.exists())
+                pid, profile = pidfile.read_text().splitlines()
+                pid = int(pid)
+                self.assertTrue(group_exists(pid))
+                if mode != "idle":
+                    self.proc.send_signal(signal.SIGTERM if mode == "term" else signal.SIGINT)
+                self.assertEqual(self.proc.wait(timeout=6), 0)
+                self.assertFalse(group_exists(pid))
+                self.assertFalse(Path(profile).exists())
+                self.assertEqual(list(self.project.glob(".thumb-*.png")), [])
+
 
 class ParserTests(unittest.TestCase):
+    def test_frame_future_anchor_priority_unclosed_caps_and_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "frames.html"
+            path.write_text("<div id='outer'><p class='cap'>Outer</p><div id='inner'></div></div>"
+                            "<div class='frame'><a id='before'></a><p class='cap'>After</p><div id='first'></div><div id='second'></div></div>"
+                            "<div class='frame'><p class='cap'>None</p></div><div id='outside'></div>"
+                            "<div class='frame'><p class='cap'>Unclosed<p class='cap'>Next</p><div id='next'></div></div>")
+            self.assertEqual(choice_server.page_frames(str(path), 1),
+                             [{"cap": "Outer", "id": "outer"}, {"cap": "After", "id": "first"},
+                              {"cap": "None", "id": None}, {"cap": "Unclosed", "id": "next"},
+                              {"cap": "Next", "id": "next"}])
+            path.write_text("".join("<div><p class='cap'>%s</p><div id='f%s'></div></div>" % (i, i) for i in range(60)) +
+                            "<![bogus[" + " " * 2000000)
+            frames = choice_server.page_frames(str(path), 2)
+            self.assertEqual(len(frames), 60)
+            self.assertEqual(frames[-1]["id"], "f59")
+
+    def test_bad_html_defaults_are_cached(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad.html"
+            path.write_text("<head><title>Partial</title><![bogus[")
+            # Python 3.14 tolerates this declaration; older parsers raise AssertionError.
+            with patch.object(choice_server.HeadParser, "feed", side_effect=AssertionError("bad declaration")), \
+                 patch.object(choice_server.FrameParser, "feed", side_effect=AssertionError("bad declaration")):
+                self.assertEqual(choice_server.page_metadata(str(path), 1), {"title": "", "change": None})
+                self.assertEqual(choice_server.page_frames(str(path), 1), [])
+            with patch("builtins.open", side_effect=AssertionError("cache should avoid open")):
+                self.assertEqual(choice_server.page_metadata(str(path), 1), {"title": "", "change": None})
+                self.assertEqual(choice_server.page_frames(str(path), 1), [])
+
     def test_head_bounded_read_and_mtime_caches(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "large.html"
@@ -369,43 +517,92 @@ class ThumbTests(unittest.TestCase):
                     self.assertEqual(make_thumbs.main(), 2)
                 self.assertIn("Chrome not found", output.getvalue())
 
-    def test_capture_timeout_pid_cleanup_and_atomic_publish(self):
+    def test_fake_chrome_stable_png_and_group_cleanup(self):
         with tempfile.TemporaryDirectory() as tmp:
             html = Path(tmp) / "design.html"
             html.write_text("design")
             thumb = Path(make_thumbs.thumb_path(html))
             thumb.write_bytes(b"old thumbnail")
-            proc = Mock()
-            proc.returncode = -9
-            proc.wait.side_effect = [subprocess.TimeoutExpired("Chrome", 40), -9]
-            captured = {}
-            png = b"\x89PNG\r\n\x1a\n" + b"test payload" + b"\x00\x00\x00\x00IEND\xaeB`\x82"
+            pidfile = Path(tmp) / "pid"
+            chrome = fake_chrome(tmp,
+                "Path(%r).write_text(str(os.getpid()))\n" % str(pidfile) +
+                "Path(shot).write_bytes(%r)\ntime.sleep(999)\n" % PNG)
+            started = time.monotonic()
+            ok, message = make_thumbs.capture(str(html), str(thumb), chrome)
+            self.assertTrue(ok, message)
+            self.assertLess(time.monotonic() - started, 1.5)
+            self.assertEqual(thumb.read_bytes(), PNG)
+            self.assertFalse(group_exists(int(pidfile.read_text())))
+            self.assertEqual(list(Path(tmp).glob(".thumb-*.png")), [])
+            self.assertEqual(make_thumbs._active, set())
 
-            def popen(cmd, **kwargs):
-                captured["tmp"] = next(arg.split("=", 1)[1] for arg in cmd if arg.startswith("--screenshot="))
-                captured["profile"] = next(arg.split("=", 1)[1] for arg in cmd if arg.startswith("--user-data-dir="))
-                self.assertTrue(Path(captured["profile"]).is_dir())
-                self.assertEqual(thumb.read_bytes(), b"old thumbnail")
-                Path(captured["tmp"]).write_bytes(png)
-                return proc
+    def test_nonzero_exit_png_success_and_failure_log(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            html = Path(tmp) / "design.html"
+            html.write_text("design")
+            thumb = make_thumbs.thumb_path(html)
+            chrome = fake_chrome(tmp, "Path(shot).write_bytes(%r)\nsys.exit(7)\n" % PNG)
+            self.assertTrue(make_thumbs.capture(str(html), thumb, chrome)[0])
+            chrome = fake_chrome(tmp, "print('render failed marker', file=sys.stderr)\nsys.exit(7)\n")
+            ok, message = make_thumbs.capture(str(html), thumb, chrome)
+            self.assertFalse(ok)
+            self.assertIn("render failed marker", message)
+            self.assertEqual(Path(thumb).read_bytes(), PNG)
+            self.assertEqual(list(Path(tmp).glob(".thumb-*.png")), [])
 
-            with patch.object(make_thumbs.subprocess, "Popen", side_effect=popen):
-                ok, message = make_thumbs.capture(str(html), str(thumb), "fake-chrome")
-            self.assertTrue(ok)
-            self.assertIn("40s", message)
-            proc.kill.assert_called_once_with()
-            self.assertEqual(proc.wait.call_args_list[0].kwargs, {"timeout": 40})
-            self.assertEqual(thumb.read_bytes(), png)
-            self.assertFalse(Path(captured["tmp"]).exists())
-            self.assertFalse(Path(captured["profile"]).exists())
+    def test_failure_skip_newest_first_mtime_retry_and_temp_cleanup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "one"
+            project.mkdir()
+            old, new = project / "old.html", project / "new.html"
+            for path, stamp in ((old, 100), (new, 200)):
+                path.write_text("design")
+                os.utime(path, (stamp, stamp))
+            stale, recent = project / ".thumb-old.png", project / ".thumb-recent.png"
+            stale.write_bytes(b"old")
+            os.utime(stale, (time.time() - 601, time.time() - 601))
+            recent.write_bytes(b"current")
+            self.assertEqual(make_thumbs.find_candidates(tmp)[0][0], str(new))
+            with patch.object(make_thumbs, "capture", side_effect=[(False, "bad"), (True, "saved")]) as capture, \
+                 contextlib.redirect_stdout(io.StringIO()):
+                make_thumbs.make_thumbs(tmp, limit=1, chrome="fake")
+                make_thumbs.make_thumbs(tmp, limit=1, chrome="fake")
+                self.assertEqual([call.args[0] for call in capture.call_args_list], [str(new), str(old)])
+            self.assertEqual(make_thumbs.failed[str(new)], 200)
+            self.assertFalse(stale.exists())
+            self.assertTrue(recent.exists())
+            os.utime(new, (300, 300))
+            self.assertEqual(make_thumbs.find_candidates(tmp)[0][0], str(new))
 
-            failed = Mock()
-            failed.wait.side_effect = [subprocess.TimeoutExpired("Chrome", 40), -9]
-            failed.returncode = -9
-            with patch.object(make_thumbs.subprocess, "Popen", return_value=failed):
-                self.assertFalse(make_thumbs.capture(str(html), str(thumb), "fake-chrome")[0])
-            self.assertEqual(thumb.read_bytes(), png)
-            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["design.html", "design.thumb.png"])
+    def test_timeout_and_sigkill_escalation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            html = Path(tmp) / "design.html"
+            html.write_text("design")
+            pidfile = Path(tmp) / "pid"
+            chrome = fake_chrome(tmp,
+                "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n" +
+                "Path(%r).write_text(str(os.getpid()))\n" % str(pidfile) +
+                "print('timeout marker', file=sys.stderr, flush=True)\ntime.sleep(999)\n")
+            real_clock = time.monotonic
+            started = real_clock()
+            ready_at = []
+
+            def fast_clock():
+                now = real_clock()
+                if pidfile.exists() and not ready_at:
+                    ready_at.append(now)
+                return now if not ready_at else ready_at[0] + (now - ready_at[0]) * 200
+
+            with patch.object(make_thumbs.time, "monotonic", side_effect=fast_clock):
+                ok, message = make_thumbs.capture(str(html), make_thumbs.thumb_path(html), chrome)
+            self.assertFalse(ok)
+            self.assertIn("timeout (40s)", message)
+            self.assertIn("timeout marker", message)
+            self.assertFalse(group_exists(int(pidfile.read_text())))
+
+    def test_chrome_env_override(self):
+        with patch.dict(os.environ, {"DESIGN_HUB_CHROME": "/fake/chrome"}):
+            self.assertEqual(make_thumbs.find_chrome(), "/fake/chrome")
 
 
 if __name__ == "__main__":

@@ -13,9 +13,9 @@ POST /submit  {"page": "<project>/<file>.html", "choices": {...}, "note": "..."}
      -> writes <file>.choices.json next to the page (latest + history)
 
 Idle exit: the server exits with code 0 after DESIGN_CHOICE_IDLE_MIN minutes
-(default 120) without any request; every request resets the timer, 0 disables it.
+(default 120) without an active request; poll=1 does not reset the timer, 0 disables it.
 """
-import json, os, re, sys, threading, time
+import json, os, re, signal, sys, threading, time
 from datetime import datetime
 from html.parser import HTMLParser
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -30,6 +30,7 @@ INDEX = os.path.join(os.path.dirname(os.path.realpath(__file__)), "index.html")
 
 _last_request = [time.monotonic()]
 _thumb_signal = threading.Event()
+_thumb_stop = threading.Event()
 
 
 def idle_left_min():
@@ -106,7 +107,7 @@ class HeadParser(HTMLParser):
             self.done = True
         elif tag == "title":
             self.in_title = True
-        elif tag == "meta" and attrs.get("name", "").lower() in ("dc-change", "dc-why"):
+        elif tag == "meta" and (attrs.get("name") or "").lower() in ("dc-change", "dc-why"):
             self.meta[attrs["name"].lower()] = attrs.get("content") or ""
 
     def handle_endtag(self, tag):
@@ -120,31 +121,56 @@ class HeadParser(HTMLParser):
             self.title.append(data)
 
 
+class FramesDone(Exception):
+    pass
+
+
 class FrameParser(HTMLParser):
     VOID = set("area base br col embed hr img input link meta param source track wbr".split())
+    BLOCK = set("div section article aside header footer main nav figure p h1 h2 h3 ul ol table".split())
 
     def __init__(self):
         super().__init__()
-        self.stack, self.frames = [], []
+        self.stack, self.frames, self.pending = [], [], []
         self.caption = None
+
+    def finish_caption(self):
+        if self.caption is not None:
+            self.caption["item"]["cap"] = " ".join("".join(self.caption["parts"]).split())
+            self.caption = None
+
+    def check_done(self):
+        if len(self.frames) == 60 and self.caption is None and not self.pending:
+            raise FramesDone()
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        is_cap = tag == "p" and "cap" in (attrs.get("class") or "").split()
+        if self.caption is not None and tag in self.BLOCK:
+            pnode = self.caption["node"]
+            self.finish_caption()
+            for i, n in enumerate(self.stack):
+                if n is pnode:
+                    del self.stack[i:]
+                    break
         anchor = attrs.get("id") or None
         if anchor:
-            for node in self.stack:
-                node["last_id"] = anchor
-        node = {"tag": tag, "id": anchor, "last_id": None,
-                "frame": "frame" in (attrs.get("class") or "").split()}
+            for pending in self.pending[:]:
+                if self.caption is not pending and any(n is pending["scope"] for n in self.stack):
+                    pending["item"]["id"] = anchor
+                    self.pending.remove(pending)
+            self.check_done()
+        parent = self.stack[-1] if self.stack else None
+        enclosing = next((n["id"] for n in reversed(self.stack) if n["id"]), None)
+        node = {"tag": tag, "id": anchor}
         if tag not in self.VOID:
             self.stack.append(node)
-        if tag == "p" and "cap" in (attrs.get("class") or "").split() and len(self.frames) < 60:
-            enclosing = next((n["id"] for n in reversed(self.stack) if n["id"]), None)
-            parents = self.stack[:-1]
-            scope = next((n for n in reversed(parents) if n["frame"]),
-                         parents[-1] if parents else None)
-            preceding = scope["last_id"] if scope and scope["tag"] not in ("html", "body") else None
-            self.caption = {"parts": [], "id": enclosing or preceding}
+        if is_cap and len(self.frames) < 60:
+            item = {"cap": "", "id": enclosing}
+            self.frames.append(item)
+            self.caption = {"parts": [], "item": item, "scope": parent, "node": node}
+            if not enclosing and parent is not None:
+                self.pending.append(self.caption)
 
     def handle_startendtag(self, tag, attrs):
         self.handle_starttag(tag, attrs)
@@ -156,14 +182,19 @@ class FrameParser(HTMLParser):
             self.caption["parts"].append(data)
 
     def handle_endtag(self, tag):
-        if tag == "p" and self.caption is not None:
-            self.frames.append({"cap": " ".join("".join(self.caption["parts"]).split()),
-                                "id": self.caption["id"]})
-            self.caption = None
         for i in range(len(self.stack) - 1, -1, -1):
             if self.stack[i]["tag"] == tag:
+                closing = self.stack[i:]
+                if self.caption is not None and any(n is self.caption["node"] for n in closing):
+                    self.finish_caption()
+                self.pending = [p for p in self.pending if not any(n is p["scope"] for n in closing)]
                 del self.stack[i:]
                 break
+        self.check_done()
+
+    def close(self):
+        super().close()
+        self.finish_caption()
 
 
 def page_metadata(path, mtime):
@@ -178,8 +209,10 @@ def page_metadata(path, mtime):
                 if not chunk:
                     break
                 parser.feed(chunk)
-    except OSError:
-        pass
+            if not parser.done:
+                parser.close()
+    except Exception:
+        parser = HeadParser()  # malformed pages still get a cached default
     change = None
     if parser.meta:
         change = {"what": parser.meta.get("dc-change", ""),
@@ -203,8 +236,10 @@ def page_frames(path, mtime):
             for chunk in iter(lambda: f.read(65536), ""):
                 parser.feed(chunk)
         parser.close()
-    except OSError:
+    except FramesDone:
         pass
+    except Exception:
+        parser = FrameParser()
     _frames_cache[path] = (mtime, parser.frames)
     return parser.frames
 
@@ -258,9 +293,15 @@ def choices_summary(html_path):
         if isinstance(picked, list):
             picked = "、".join(str(p) for p in picked)
         items.append({"title": str(title), "picked": "" if picked is None else str(picked)})
-    history = doc.get("history")
     return {"at": latest.get("submitted_at") or "", "items": items, "note": str(latest.get("note") or ""),
-            "source": latest.get("source", ""), "n_history": len(history) if isinstance(history, list) else 0}
+            "source": latest.get("source", ""), "n_history": len(choices_history(doc))}
+
+
+def choices_history(doc):
+    if "history" in doc:
+        return doc["history"] if isinstance(doc["history"], list) else []
+    latest = doc.get("latest")
+    return [latest] if isinstance(latest, dict) and latest else []
 
 
 def version_date(date, mtime):
@@ -282,7 +323,7 @@ def list_designs():
     projects = []
     for name in sorted(os.listdir(ROOT)):
         pdir = os.path.join(ROOT, name)
-        if name.startswith(".") or not os.path.isdir(pdir):
+        if name.startswith(".") or name.endswith("_parts") or not os.path.isdir(pdir):
             continue
         groups, pngs = {}, []
         for fn in os.listdir(pdir):
@@ -314,7 +355,10 @@ def list_designs():
             delivery, delivery_mtime = None, float("-inf")
             for i, v in enumerate(versions):
                 if v["change"] is None and i + 1 < len(versions):
-                    previous = versions[i + 1]["choices"]
+                    older = next((p for p in versions[i + 1:] if
+                                  (int(p["rev"][1:]) if p["rev"] else 0) <
+                                  (int(v["rev"][1:]) if v["rev"] else 0)), None)
+                    previous = older["choices"] if older else None
                     if previous and previous["note"]:
                         v["change"] = {"what": "", "why": previous["note"], "src": "note"}
                 path = os.path.join(ROOT, v["path"])
@@ -363,13 +407,16 @@ def list_events(limit=300):
                         "rev": v["rev"], "title": v["title"]}
                 events.append({**base, "t": v["mtime"], "kind": "version"})
                 path = os.path.join(ROOT, v["path"])
-                history = read_json(choices_path(path)).get("history", [])
-                for entry in history if isinstance(history, list) else []:
+                cpath = choices_path(path)
+                for entry in choices_history(read_json(cpath)):
                     if not isinstance(entry, dict):
                         continue
                     stamp = parse_time(entry.get("submitted_at"))
                     if stamp is None:
-                        continue
+                        try:
+                            stamp = os.path.getmtime(cpath)
+                        except OSError:
+                            continue
                     choices = entry.get("choices") or {}
                     events.append({**base, "t": stamp, "kind": "choices", "note": entry.get("note") or "",
                                    "n_items": len(choices) if isinstance(choices, dict) else 0,
@@ -394,8 +441,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     def parse_request(self):
         self.idle_left_before = idle_left_min()
-        _last_request[0] = time.monotonic()
-        return super().parse_request()
+        ok = super().parse_request()
+        if ok and "1" not in parse_qs(urlparse(self.path).query).get("poll", []):
+            _last_request[0] = time.monotonic()
+        return ok
 
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -455,11 +504,7 @@ class Handler(SimpleHTTPRequestHandler):
             html = resolve_page(parse_qs(url.query).get("page", [""])[0])
             if not html:
                 return self._json(404, {"ok": False, "error": "page not found"})
-            try:
-                with open(choices_path(html), encoding="utf-8") as f:
-                    return self._json(200, json.load(f).get("latest") or {})
-            except FileNotFoundError:
-                return self._json(200, {})
+            return self._json(200, read_json(choices_path(html)).get("latest") or {})
         return super().do_GET()
 
     def do_POST(self):
@@ -469,6 +514,8 @@ class Handler(SimpleHTTPRequestHandler):
             data = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         except ValueError:
             return self._json(400, {"ok": False, "error": "bad json"})
+        if not isinstance(data, dict):
+            return self._json(400, {"ok": False, "error": "body must be an object"})
         html = resolve_page(data.get("page", ""))
         if not html:
             return self._json(400, {"ok": False, "error": "page must be an existing .html under " + ROOT})
@@ -480,11 +527,11 @@ class Handler(SimpleHTTPRequestHandler):
         if "source" in data:
             entry["source"] = data["source"]
         out = choices_path(html)
-        try:
-            with open(out, encoding="utf-8") as f:
-                doc = json.load(f)
-        except (FileNotFoundError, ValueError):
-            doc = {"page": os.path.relpath(html, ROOT), "history": []}
+        doc = read_json(out)
+        doc.setdefault("page", os.path.relpath(html, ROOT))
+        doc.setdefault("history", choices_history(doc))
+        if not isinstance(doc["history"], list):
+            doc["history"] = []
         doc["latest"] = entry
         doc["history"].append(entry)
         tmp = out + ".tmp"
@@ -509,7 +556,7 @@ def watch_thumbs():
     chrome = find_chrome()
     if not chrome:
         return
-    while True:
+    while not _thumb_stop.is_set():
         _thumb_signal.clear()
         try:
             make_thumbs(ROOT, limit=1, chrome=chrome)
@@ -519,14 +566,24 @@ def watch_thumbs():
 
 
 if __name__ == "__main__":
+    from make_thumbs import stop_all
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    if os.environ.get("DESIGN_HUB_THUMBS", "1") != "0":
-        threading.Thread(target=watch_thumbs, daemon=True).start()
-    if IDLE_MIN > 0:
-        threading.Thread(target=watch_idle, args=(server,), daemon=True).start()
+    signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown, daemon=True).start())
+    thumb_thread = None
     try:
+        if os.environ.get("DESIGN_HUB_THUMBS", "1") != "0":
+            thumb_thread = threading.Thread(target=watch_thumbs, daemon=True)
+            thumb_thread.start()
+        if IDLE_MIN > 0:
+            threading.Thread(target=watch_idle, args=(server,), daemon=True).start()
         server.serve_forever()
     except KeyboardInterrupt:
         pass
-    server.server_close()
+    finally:
+        _thumb_stop.set()
+        _thumb_signal.set()
+        stop_all()
+        if thumb_thread is not None:
+            thumb_thread.join(timeout=5)
+        server.server_close()
     sys.exit(0)
