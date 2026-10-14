@@ -149,6 +149,8 @@ def capture(path, thumb, chrome):
                         message = "Chrome exit %s without a complete PNG" % proc.returncode
                         break
                     time.sleep(.25)
+                if _stopping.is_set() and not ready:
+                    message = "stopping"
             finally:
                 if proc is not None:
                     stop_process(proc)
@@ -180,7 +182,7 @@ def make_thumbs(root, project=None, limit=None, force=False, chrome=None):
             break
         stamp = os.path.getmtime(path)
         ok, message = capture(path, thumb, chrome)
-        if not ok:
+        if not ok and message != "stopping":
             failed[path] = stamp
         else:
             failed.pop(path, None)

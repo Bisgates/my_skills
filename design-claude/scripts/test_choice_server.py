@@ -342,6 +342,14 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(newest["model"], "astra")
         self.assertEqual(newest["change"]["why"], "r3 feedback")
 
+    def test_note_fallback_without_revs_uses_older_date(self):
+        self.html("261007_plain.html", mtime=self.now - 5000)
+        self.choices("261007_plain.html", note="make it blue")
+        self.html("261009_plain.html", mtime=self.now - 4000)
+        newest = self.groups()["plain"]["versions"][0]
+        self.assertEqual(newest["file"], "261009_plain.html")
+        self.assertEqual(newest["change"], {"what": "", "why": "make it blue", "src": "note"})
+
     def test_parts_are_not_projects(self):
         pdir = self.root / "extra_parts"
         pdir.mkdir()
@@ -350,7 +358,7 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(all(Path(p).parent.name == "demo" for p, _ in make_thumbs.find_candidates(self.root)))
 
     def test_post_invalid_body_missing_history_and_bad_choices(self):
-        for body in ([], None, "text", 7):
+        for body in ([], None, "text", 7, {"page": 5}, {"page": "demo/261014_pending-r4.html", "note": 5}):
             request = Request(self.base + "/submit", data=json.dumps(body).encode())
             with self.assertRaises(HTTPError) as caught:
                 urlopen(request)
@@ -404,8 +412,11 @@ class ParserTests(unittest.TestCase):
                             "<div class='frame'><p class='cap'>Unclosed<p class='cap'>Next</p><div id='next'></div></div>")
             self.assertEqual(choice_server.page_frames(str(path), 1),
                              [{"cap": "Outer", "id": "outer"}, {"cap": "After", "id": "first"},
-                              {"cap": "None", "id": None}, {"cap": "Unclosed", "id": "next"},
+                              {"cap": "None", "id": None}, {"cap": "Unclosed", "id": None},
                               {"cap": "Next", "id": "next"}])
+            path.write_text("<section><p class='cap'>A</p><div>no id</div><p class='cap'>B</p><div id='b'></div></section>")
+            self.assertEqual(choice_server.page_frames(str(path), 3),
+                             [{"cap": "A", "id": None}, {"cap": "B", "id": "b"}])
             path.write_text("".join("<div><p class='cap'>%s</p><div id='f%s'></div></div>" % (i, i) for i in range(60)) +
                             "<![bogus[" + " " * 2000000)
             frames = choice_server.page_frames(str(path), 2)

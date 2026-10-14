@@ -942,7 +942,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
         if (se !== S.sigE) { S.sigE = se; S.events = ev; eChanged = true; }
       } else if (evFail && (S.events == null || !silent)) { if (S.events !== false) eChanged = true; S.events = false; S.sigE = ""; }
       if (!silent) return render(true);
-      if (dChanged) { renderSide(); renderMain(); }
+      if (dChanged) render(false);
       else if (eChanged && S.route.view === "home" && S.M) $("right").innerHTML = H.feedHTML(S.events, S.M, now());
     });
   }

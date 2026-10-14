@@ -166,6 +166,8 @@ class FrameParser(HTMLParser):
         if tag not in self.VOID:
             self.stack.append(node)
         if is_cap and len(self.frames) < 60:
+            # a new caption in the same scope starts the next frame: earlier captions there stay unanchored
+            self.pending = [p for p in self.pending if p["scope"] is not parent]
             item = {"cap": "", "id": enclosing}
             self.frames.append(item)
             self.caption = {"parts": [], "item": item, "scope": parent, "node": node}
@@ -356,8 +358,7 @@ def list_designs():
             for i, v in enumerate(versions):
                 if v["change"] is None and i + 1 < len(versions):
                     older = next((p for p in versions[i + 1:] if
-                                  (int(p["rev"][1:]) if p["rev"] else 0) <
-                                  (int(v["rev"][1:]) if v["rev"] else 0)), None)
+                                  version_sort_key(p)[:2] < version_sort_key(v)[:2]), None)  # skip same-rev siblings
                     previous = older["choices"] if older else None
                     if previous and previous["note"]:
                         v["change"] = {"what": "", "why": previous["note"], "src": "note"}
@@ -516,6 +517,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(400, {"ok": False, "error": "bad json"})
         if not isinstance(data, dict):
             return self._json(400, {"ok": False, "error": "body must be an object"})
+        if not isinstance(data.get("page", ""), str) or not isinstance(data.get("note") or "", str):
+            return self._json(400, {"ok": False, "error": "page and note must be strings"})
         html = resolve_page(data.get("page", ""))
         if not html:
             return self._json(400, {"ok": False, "error": "page must be an existing .html under " + ROOT})
