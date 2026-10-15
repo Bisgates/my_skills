@@ -26,6 +26,10 @@ Per harness:
                 only this run's final message, taken from the events. A
                 relative -o/--output-last-message path is made absolute
                 against the codex working dir (-C/--cd, else cwd).
+  codex -m      a family name (sol, astra, luna/tuna, terra) becomes the newest
+                gpt-<version>-<family> slug found in Vantage's latest cache or
+                codex's models_cache.json, whichever is higher; a full slug
+                passes through. No match: exit 2 before codex starts.
 
 Privacy flags (claude --no-session-persistence, codex exec --ephemeral) pass
 through unchanged: the run is still registered, with no session id.
@@ -93,6 +97,9 @@ CODEX_OPTS = {
 }
 HEADLESS = {"claude": ("-p", "--print"), "grok": ("-p", "--single", "--prompt-file", "--prompt-json")}
 FALLBACK_BIN = {"claude": "~/.local/bin/claude", "grok": "~/.grok/bin/grok"}
+# codex `-m <family>` is resolved to the newest gpt-<version>-<family> slug.
+CODEX_FAMILIES = {"astra": "astra", "sol": "sol", "luna": "luna", "tuna": "luna", "terra": "terra"}
+VANTAGE_LATEST = "~/.vantage/cache/latest_models.json"
 
 
 # ---------------------------------------------------------------- arg scanning
@@ -199,6 +206,65 @@ def abs_dir(path):
     return os.path.abspath(os.path.expanduser(path))
 
 
+# ---------------------------------------------------------------- codex model aliases
+
+def gpt_version(family, slug):
+    """``gpt-6.1-sol`` -> (6, 1) for family ``sol``; None for other slugs."""
+    m = re.match(r"^gpt-(\d+(?:\.\d+)*)-%s$" % re.escape(family), slug) if isinstance(slug, str) else None
+    return tuple(int(x) for x in m.group(1).split(".")) if m else None
+
+
+def latest_codex_model(family):
+    """Newest ``gpt-<version>-<family>`` known on this machine, as (slug, source).
+
+    Two sources, the higher version wins: Vantage's resolved latest
+    (~/.vantage/cache/latest_models.json) and the codex CLI's catalog cache
+    ($CODEX_HOME/models_cache.json, visible models only). Either can lag behind
+    the account (an old codex client keeps rewriting models_cache.json with its
+    own shorter list), so neither is trusted alone.
+    """
+    candidates = []
+    try:
+        with open(os.path.expanduser(VANTAGE_LATEST)) as fh:
+            candidates.append(((json.load(fh).get("codex") or {}).get(family), "vantage"))
+    except (OSError, ValueError, AttributeError):
+        pass
+    codex_home = os.path.expanduser(os.environ.get("CODEX_HOME") or "~/.codex")
+    try:
+        with open(os.path.join(codex_home, "models_cache.json")) as fh:
+            models = json.load(fh).get("models") or []
+        candidates.extend((m.get("slug"), "models_cache") for m in models
+                          if isinstance(m, dict) and m.get("visibility", "list") == "list")
+    except (OSError, ValueError, AttributeError):
+        pass
+    best = None
+    for slug, source in candidates:
+        version = gpt_version(family, slug)
+        if version and (best is None or version > best[0]):
+            best = (version, slug, source)
+    return (best[1], best[2]) if best else (None, None)
+
+
+def resolve_codex_aliases(args, opts, plan):
+    """Rewrite ``-m sol`` / ``--model=luna`` / ``-mastra`` to the newest slug in place."""
+    for o in opts:
+        family = CODEX_FAMILIES.get((o.value or "").strip().lower()) if o.name in ("-m", "--model") else None
+        if not family:
+            continue
+        slug, source = latest_codex_model(family)
+        if not slug:
+            plan.error = ("-m %s: no gpt-<version>-%s model found in %s or models_cache.json; "
+                          "pass a full model slug" % (o.value, family, VANTAGE_LATEST))
+            return
+        if o.end - o.start == 2:
+            args[o.start + 1] = slug
+        elif o.name.startswith("--"):
+            args[o.start] = "%s=%s" % (o.name, slug)
+        else:
+            args[o.start] = o.name + slug
+        plan.notes.append("model %s -> %s (%s)" % (o.value, slug, source))
+
+
 # ---------------------------------------------------------------- planning
 
 class Plan(object):
@@ -209,6 +275,7 @@ class Plan(object):
         self.pending = False            # codex exec: id arrives via thread.started
         self.model = None
         self.effort = None
+        self.error = None               # set when the call must not start (exit 2)
         self.cwd = None
         self.notes = []                 # one-line stderr notes printed before the run
         self.detached = False           # returns at once while the work goes on: not registered
@@ -265,6 +332,9 @@ def plan_claude_or_grok(harness, args):
 
 def plan_codex(args):
     plan = Plan("codex", args)
+    args = list(args)
+    resolve_codex_aliases(args, scan(args, CODEX_OPTS), plan)
+    plan.args = list(args)
     opts = scan(args, CODEX_OPTS)
     plan.model = last_value(opts, "-m", "--model") or config_value(opts, "model")
     plan.effort = config_value(opts, "model_reasoning_effort")
@@ -532,12 +602,16 @@ def main(argv):
     plan = plan_codex(cli_args) if harness == "codex" else plan_claude_or_grok(harness, cli_args)
     for note in plan.notes:
         say(note)
+    if plan.error:
+        say(plan.error)
+        return 2
 
     if plan.detached:
         # The CLI returns while the work continues elsewhere: an end line would
         # claim it finished. Hand the process over unchanged, register nothing.
+        # (plan.args is the caller's argv, model aliases aside.)
         try:
-            os.execv(binary, [binary] + list(cli_args))
+            os.execv(binary, [binary] + plan.args)
         except OSError as exc:
             say("cannot run %s: %s" % (binary, exc.strerror or exc))
             return 127

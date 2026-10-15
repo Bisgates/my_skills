@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Smoke-test headless calls to each agent harness CLI with a cheap echo-back prompt.
+# Every call goes through the xagent wrapper next to this script, so a PASS also
+# covers the wrapper (set VANTAGE_XAGENT_LOG to see the registry lines).
 # Usage: smoke.sh [harness...]   harness in {grok, codex, claude}; no args = all three.
 set -u
+
+XAGENT="$(cd "$(dirname "$0")" && pwd)/xagent"
 
 TIMEOUT=60
 ALL_HARNESSES=(grok codex claude)
@@ -30,16 +34,16 @@ for h in "${requested[@]}"; do
   case "$h" in
     grok)
       token="CROSSCALL-GROK-OK"
-      cmd=(grok -p "Reply with exactly this token and nothing else: $token" -m "${GROK_MODEL:?Resolve and export GROK_MODEL from grok models first}" --output-format plain)
+      cmd=("$XAGENT" grok -p "Reply with exactly this token and nothing else: $token" -m "${GROK_MODEL:?Resolve and export GROK_MODEL from grok models first}" --output-format plain)
       ;;
     codex)
       token="CROSSCALL-CODEX-OK"
-      # `command codex` so the user's interactive alias (--dangerously-bypass...) can't interfere.
-      cmd=(command codex exec -s read-only -m "${CODEX_MODEL:?Resolve and export CODEX_MODEL from the model catalog first}" -c model_reasoning_effort=low "Reply with exactly this token and nothing else: $token")
+      # xagent resolves the binary on PATH, so the user's interactive alias can't interfere.
+      cmd=("$XAGENT" codex exec --skip-git-repo-check -s read-only -m "${CODEX_MODEL:-sol}" -c model_reasoning_effort=low "Reply with exactly this token and nothing else: $token")
       ;;
     claude)
       token="CROSSCALL-CLAUDE-OK"
-      cmd=(claude -p "Reply with exactly this token and nothing else: $token")
+      cmd=("$XAGENT" claude -p "Reply with exactly this token and nothing else: $token")
       ;;
     *)
       echo "FAIL $h (unknown harness)"

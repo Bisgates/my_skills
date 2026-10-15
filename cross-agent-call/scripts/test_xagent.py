@@ -663,6 +663,53 @@ class CodexTests(XagentTestCase):
         self.assertEqual(self.one_run(expect_bind=True)[2]["exit_code"], 1)
 
 
+class CodexModelAliasTests(XagentTestCase):
+    def catalogs(self, vantage=None, models=()):
+        """Vantage latest cache (family -> slug) and codex models_cache (slug, visibility)."""
+        if vantage is not None:
+            os.makedirs(os.path.join(self.home, ".vantage", "cache"))
+            with open(os.path.join(self.home, ".vantage", "cache", "latest_models.json"), "w") as fh:
+                json.dump({"codex": vantage}, fh)
+        if models:
+            os.makedirs(os.path.join(self.home, ".codex"))
+            with open(os.path.join(self.home, ".codex", "models_cache.json"), "w") as fh:
+                json.dump({"client_version": "0.154.0",
+                           "models": [{"slug": s, "visibility": v} for s, v in models]}, fh)
+
+    def test_family_takes_vantage_latest_over_an_older_codex_cache(self):
+        # an old codex client rewrote models_cache.json without the newest sol
+        self.catalogs({"sol": "gpt-6.1-sol"}, [("gpt-6-sol", "list"), ("gpt-5.6-sol", "list")])
+        r = self.run_xagent("codex", "exec", "-m", "sol", "-c", "model_reasoning_effort=high", "q",
+                            FAKE_LAST="OK", CODEX_HOME=None)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.records()[0]["argv"],
+                         ["exec", "--json", "-m", "gpt-6.1-sol", "-c", "model_reasoning_effort=high", "q"])
+        self.assertEqual(self.one_run(expect_bind=True)[0]["model"], "gpt-6.1-sol")
+        self.assertEqual(len(self.notes(r.stderr, "model sol -> gpt-6.1-sol (vantage)")), 1)
+
+    def test_newer_visible_codex_model_wins_and_versions_compare_numerically(self):
+        self.catalogs({"luna": "gpt-6.9-luna"},
+                      [("gpt-6.10-luna", "list"), ("gpt-7-luna", "hide"), ("gpt-6-sol", "list")])
+        for form, expected in ((["--model=tuna"], "--model=gpt-6.10-luna"), (["-mluna"], "-mgpt-6.10-luna")):
+            self.reset()
+            r = self.run_xagent("codex", "exec", *(form + ["q"]), CODEX_HOME=None)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(self.records()[0]["argv"], ["exec", "--json", expected, "q"])
+
+    def test_full_slug_passes_through(self):
+        self.catalogs({"astra": "gpt-7-astra"})
+        self.run_xagent("codex", "exec", "-m", "gpt-6-astra", "q", CODEX_HOME=None)
+        self.assertEqual(self.records()[0]["argv"], ["exec", "--json", "-m", "gpt-6-astra", "q"])
+
+    def test_unresolvable_family_fails_before_codex_starts(self):
+        self.catalogs({"sol": "gpt-6.1-sol"})
+        r = self.run_xagent("codex", "exec", "-m", "astra", "q", CODEX_HOME=None)
+        self.assertEqual(r.returncode, 2)
+        self.assertEqual(self.records(), [])
+        self.assertEqual(self.events(), [])
+        self.assertEqual(len(self.notes(r.stderr, "pass a full model slug")), 1)
+
+
 class RobustnessTests(XagentTestCase):
     def test_no_env_still_runs(self):
         r = self.run_xagent("claude", "-p", "hi", VANTAGE_XAGENT_LOG=None, FAKE_STDOUT="fine\n", FAKE_EXIT="4")
