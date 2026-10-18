@@ -6,7 +6,9 @@ GET  /  (and /index.html unless ROOT has one)  design index page (scripts/index.
 GET  /api/designs                    every project's designs, grouped by version (JSON)
 GET  /api/events?limit=300           newest version, choice and delivery events (JSON)
 GET  /d/<project>/<key>              design index page (SPA; HEAD also supported)
-GET  /<project>/<file>.html          static file (open designs through this URL)
+GET  /<project>/<file>.html          static file (raw page; show users /d/... instead)
+Optional <project>/_topics.json groups a project's designs into second-level topics.
+POST /direction {"project", "name", "state": active|done|paused} sets a direction's state there.
 GET  /ping                           health check; idle_left_min is measured before this ping
 GET  /choices?page=<project>/<file>  latest submission for that page (or {})
 POST /submit  {"page": "<project>/<file>.html", "choices": {...}, "note": "..."}
@@ -15,7 +17,7 @@ POST /submit  {"page": "<project>/<file>.html", "choices": {...}, "note": "..."}
 Idle exit: the server exits with code 0 after DESIGN_CHOICE_IDLE_MIN minutes
 (default 120) without an active request; poll=1 does not reset the timer, 0 disables it.
 """
-import json, os, re, signal, sys, threading, time
+import fnmatch, json, os, re, signal, sys, threading, time
 from datetime import datetime
 from html.parser import HTMLParser
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -320,6 +322,30 @@ def version_sort_key(v):
     return (v["date"] or "", rev, v["mtime"])
 
 
+DIRECTION_STATES = ("active", "done", "paused")
+
+
+def load_topics(pdir):
+    """<project>/_topics.json: {"topics": [{"name": "模型路由", "keys": ["model-routing*", ...]}]}.
+
+    Second level inside a project: each design group (by key) joins the first topic
+    whose glob matches; unmatched groups stay directly under the project.
+    """
+    doc = read_json(os.path.join(pdir, "_topics.json"))
+    out = []
+    for t in (doc or {}).get("topics") or []:
+        if isinstance(t, dict) and t.get("name") and isinstance(t.get("keys"), list):
+            out.append((str(t["name"]), [str(k) for k in t["keys"]]))
+    return out
+
+
+def topic_of(key, topics):
+    for name, pats in topics:
+        if any(fnmatch.fnmatchcase(key, pat) for pat in pats):
+            return name
+    return None
+
+
 def list_designs():
     now = time.time()
     projects = []
@@ -352,6 +378,7 @@ def list_designs():
             item["thumb_mtime"] = os.path.getmtime(thumb) if item["thumb"] else None
             groups.setdefault(key, []).append(item)
         out_groups = []
+        topics = load_topics(pdir)
         for key, versions in groups.items():
             versions.sort(key=version_sort_key, reverse=True)
             delivery, delivery_mtime = None, float("-inf")
@@ -381,7 +408,7 @@ def list_designs():
                 status = "pending"
             else:
                 status = "idle"
-            out_groups.append({"key": key, "versions": versions, "attachments": [],
+            out_groups.append({"key": key, "topic": topic_of(key, topics), "versions": versions, "attachments": [],
                                "updated": max(v["mtime"] for v in versions),
                                "date": latest["date"], "status": status, "delivery": delivery})
         by_key = {g["key"]: g for g in out_groups}
@@ -393,7 +420,9 @@ def list_designs():
         if not out_groups and not refs:
             continue
         stamps = [g["updated"] for g in out_groups] + [p["mtime"] for p in refs]
-        projects.append({"name": name, "updated": max(stamps), "groups": out_groups, "refs": refs})
+        states = read_json(os.path.join(pdir, "_topics.json")).get("states")
+        projects.append({"name": name, "updated": max(stamps), "groups": out_groups, "refs": refs,
+                         "states": states if isinstance(states, dict) else {}})
     projects.sort(key=lambda p: p["updated"], reverse=True)
     _thumb_signal.set()
     return {"root": ROOT, "generated_at": now, "pending_days": PENDING_DAYS, "projects": projects}
@@ -508,7 +537,36 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(200, read_json(choices_path(html)).get("latest") or {})
         return super().do_GET()
 
+    def set_direction_state(self):
+        """POST /direction {"project", "name", "state"}: a direction (topic name, or the key of a
+        design group outside any topic) is active / done / paused; kept in <project>/_topics.json."""
+        try:
+            data = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+        except ValueError:
+            return self._json(400, {"ok": False, "error": "bad json"})
+        proj, name, state = (data.get(k) if isinstance(data, dict) else None for k in ("project", "name", "state"))
+        if not (isinstance(proj, str) and isinstance(name, str) and name and state in DIRECTION_STATES):
+            return self._json(400, {"ok": False, "error": "need project, name and state in " + "/".join(DIRECTION_STATES)})
+        pdir = os.path.realpath(os.path.join(ROOT, proj))
+        if os.path.dirname(pdir) != ROOT or not os.path.isdir(pdir):
+            return self._json(400, {"ok": False, "error": "unknown project"})
+        out = os.path.join(pdir, "_topics.json")
+        doc = read_json(out)
+        states = doc.get("states") if isinstance(doc.get("states"), dict) else {}
+        if state == "active":
+            states.pop(name, None)
+        else:
+            states[name] = state
+        doc["states"] = states
+        tmp = out + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, out)
+        return self._json(200, {"ok": True, "states": states})
+
     def do_POST(self):
+        if urlparse(self.path).path == "/direction":
+            return self.set_direction_state()
         if urlparse(self.path).path != "/submit":
             return self._json(404, {"ok": False, "error": "not found"})
         try:

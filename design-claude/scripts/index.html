@@ -45,7 +45,12 @@ button { font: inherit; color: inherit; }
 .none { font-size: 12.5px; color: var(--t38); padding: 2px 0; }
 
 .app { display: grid; grid-template-columns: 272px minmax(0, 1fr) 320px; height: 100vh; }
-.app.detail { grid-template-columns: 272px minmax(0, 1fr) 340px; }
+.app.detail { grid-template-columns: 272px minmax(0, 1fr); }
+.app.detail #right { display: none; }
+.app.detail .a-mid { padding: 0; overflow: hidden; position: relative; }
+.stage { position: absolute; inset: 0; overflow: hidden; background: #fff; }
+.stage iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #fff; }
+.app.detail .msg, .app.detail .err { margin: 24px 32px; }
 .app.compare { grid-template-columns: 272px minmax(0, 1fr); }
 .app.compare #right { display: none; }
 
@@ -102,6 +107,51 @@ button { font: inherit; color: inherit; }
 .vit .rv { font-variant-numeric: tabular-nums; }
 .vit .rv.picked::after { content: ""; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--ok); margin-left: 3px; vertical-align: 2px; }
 .vit .vm { color: var(--t38); font-size: 11.5px; }
+.tp { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; align-items: center; column-gap: 8px; min-height: 30px; padding: 0 6px 0 10px; border-radius: 7px; color: var(--t90); font-weight: 500; user-select: none; }
+.tp:hover { background: var(--wash); }
+.tp.on { background: var(--wash2); color: var(--ink); }
+.tp .i { width: 11px; height: 11px; stroke-width: 2.4; color: var(--t38); transition: transform .12s; justify-self: center; }
+.tp.open .i { transform: rotate(90deg); }
+.tp .n { font-size: 11px; color: var(--t38); font-variant-numeric: tabular-nums; }
+.gi.nest .it { margin-left: 16px; }
+.gi.nest .vit { margin-left: 44px; }
+.ds { margin-left: 6px; font-size: 10.5px; font-weight: 500; color: var(--t38); }
+.ds.done { color: color-mix(in srgb, var(--ok) 75%, var(--bg)); }
+.dirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px 28px; margin: 0 0 36px; }
+.dir-p { min-width: 0; }
+.dir-ph { display: flex; align-items: baseline; gap: 8px; padding: 0 0 6px; border-bottom: 1px solid var(--line); margin-bottom: 2px; }
+.dir-ph b { font-size: 13px; color: var(--ink); }
+.dir-ph .n { font-size: 11.5px; color: var(--t38); }
+.dir { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: 12px; min-height: 34px; border-bottom: 1px solid var(--line2); }
+.dir .dn { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t90); }
+.dir .dn:hover { color: var(--accent); }
+.dir .dm { font-size: 11.5px; color: var(--t38); white-space: nowrap; }
+.dir.paused .dn, .dir.done .dn { color: var(--t45); }
+.dseg { display: inline-flex; gap: 1px; padding: 2px; border-radius: 7px; background: var(--wash); }
+.dseg a { height: 20px; padding: 0 7px; border-radius: 5px; font-size: 11.5px; line-height: 20px; color: var(--t45); white-space: nowrap; }
+.dseg a:hover { color: var(--ink); }
+.dseg a.on { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 12%, transparent); }
+.dseg a.done.on { color: var(--ok); }
+.dseg a.paused.on { color: var(--t70); }
+/* picks: the draft's choice-kit panel, moved out of the draft into the sidebar */
+.pk { flex: none; display: flex; flex-direction: column; max-height: 45%; border-top: 1px solid var(--line); background: var(--bg); }
+.pk-h { display: flex; align-items: center; gap: 8px; padding: 10px 16px 8px 20px; cursor: pointer; user-select: none; }
+.pk-h b { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.pk-h .n { font-size: 11.5px; color: var(--t45); font-variant-numeric: tabular-nums; }
+.pk-h .i { width: 12px; height: 12px; stroke-width: 2.2; color: var(--t38); margin-left: auto; transition: transform .12s; }
+.pk.shut .pk-h .i { transform: rotate(180deg); }
+.pk-rows { overflow: auto; padding: 0 10px; min-height: 0; }
+.pk.shut .pk-rows, .pk.shut .pk-note { display: none; }
+.pk-r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: var(--t70); cursor: pointer; }
+.pk-r:hover { background: var(--wash); color: var(--ink); }
+.pk-r b { font-weight: 500; color: var(--accent); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-r.no b { color: var(--t20); font-weight: 400; }
+.pk-note { width: calc(100% - 32px); margin: 8px 16px 0 16px; min-height: 44px; max-height: 120px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: 12.5px/1.45 inherit; color: var(--ink); background: var(--bg); outline: 0; }
+.pk-note:focus { border-color: color-mix(in srgb, var(--accent) 40%, var(--bg)); }
+.pk-f { display: flex; align-items: center; gap: 8px; padding: 8px 16px 12px 20px; }
+.pk-f .msg2 { flex: 1; min-width: 0; font-size: 11.5px; color: var(--t45); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-f button { border: 0; border-radius: 7px; background: var(--accent); color: #fff; height: 26px; padding: 0 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.pk-f button:disabled { opacity: .45; cursor: default; }
 .more { display: block; padding: 4px 0 2px 28px; font-size: 12px; color: var(--t38); }
 .more:hover { color: var(--t70); }
 .sb-empty { padding: 24px 10px; font-size: 12.5px; color: var(--t38); text-align: center; }
@@ -294,6 +344,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       <div class="grp" id="grp"></div>
     </div>
     <div class="sb-list" id="sbl"></div>
+    <section class="pk" id="pk" hidden></section>
     <div class="sb-foot" id="foot"><span class="live off"></span>连接中…</div>
   </aside>
   <main class="a-mid" id="mid"></main>
@@ -320,6 +371,8 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     home: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
     back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>'
   };
+  var DSTATE = { active: "进行中", done: "完成", paused: "搁置" };
+  function dsTag(st) { return st && st !== "active" ? '<span class="ds ' + st + '">' + DSTATE[st] + "</span>" : ""; }
   function ic(n, cls) { return '<svg class="i' + (cls ? " " + cls : "") + '" viewBox="0 0 24 24">' + IC[n] + "</svg>"; }
 
   function esc(s) {
@@ -413,7 +466,8 @@ details.refs[open] summary .i { transform: rotate(90deg); }
         if (!g.versions || !g.versions.length) return;
         g.versions.forEach(function (v) { v.date = normIso(v.date) || isoOf(v.mtime); });
         var latest = g.versions[0];
-        var o = { proj: p.name, key: g.key, id: p.name + "/" + g.key, g: g, vs: g.versions, latest: latest,
+        var dir = g.topic || g.key, ds = (p.states || {})[dir];
+        var o = { proj: p.name, key: g.key, id: p.name + "/" + g.key, topic: g.topic || "", dir: dir, dstate: DSTATE[ds] ? ds : "active", g: g, vs: g.versions, latest: latest,
           t: g.updated || latest.mtime, date: normIso(g.date) || latest.date, name: cleanTitle(latest),
           st: /^(pending|submitted|delivered|idle)$/.test(g.status || "") ? g.status : statusOf({ versions: g.versions, delivery: g.delivery }, now, days), n: g.versions.length, tint: tint(p.name), ids: versionIds(g.versions),
           delivery: g.delivery || null };
@@ -444,7 +498,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   /* ---- list filtering & grouping ---- */
   function matches(o, q) {
     if (!q) return true;
-    var hay = [o.proj, o.key, o.name].concat(o.vs.map(function (v) { return (v.title || "") + " " + v.file; })).join(" ").toLowerCase();
+    var hay = [o.proj, o.topic, o.key, o.name].concat(o.vs.map(function (v) { return (v.title || "") + " " + v.file; })).join(" ").toLowerCase();
     return q.toLowerCase().split(/\s+/).every(function (w) { return !w || hay.indexOf(w) >= 0; });
   }
   function counts(G) {
@@ -474,7 +528,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       G.forEach(function (o) { if (!by[o.proj]) { by[o.proj] = []; order.push(o.proj); } by[o.proj].push(o); });
       order.forEach(function (p) {
         by[p].sort(function (a, b) { return b.t - a.t; });
-        out.push({ id: "p:" + p, label: p, items: by[p], lim: 3, proj: p });
+        out.push({ id: "p:" + p, label: p, items: by[p], lim: 10, proj: p });
       });
     }
     return out;
@@ -488,8 +542,8 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     var open = opt.open[o.id] != null ? opt.open[o.id] : on;
     var two = opt.mode === "time";
     var sub = two ? '<span class="t2">' + esc(o.proj + " · " + o.ids[0].label) + "</span>" : "";
-    var h = '<div class="gi"><a class="it' + (on ? " on" : "") + (two ? " two" : "") + '" href="' + esc(gHref(o)) + '" data-nav title="' + esc(o.name + "\n" + o.proj + "/" + o.latest.file) + '">' +
-      '<i class="dot ' + o.st + '"></i><span class="tt ell">' + esc(o.name) + sub + "</span>" +
+    var h = '<div class="gi' + (opt.nest ? " nest" : "") + '"><a class="it' + (on ? " on" : "") + (two ? " two" : "") + '" href="' + esc(gHref(o)) + '" data-nav title="' + esc(o.name + "\n" + o.proj + "/" + o.latest.file) + '">' +
+      '<i class="dot ' + o.st + '"></i><span class="tt ell">' + esc(o.name) + (opt.nest ? "" : dsTag(o.dstate)) + sub + "</span>" +
       '<span class="r"><span class="vn' + (open ? " open" : "") + '" data-tog="' + esc(o.id) + '" title="' + (open ? "收起版本" : "展开版本") + '">' + o.n + " 版" + ic("chev") + "</span>" +
       dtag(o.date, opt.now) + "</span></a>";
     if (open) {
@@ -517,14 +571,31 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       h += '<div class="sb-lab tog' + (shut ? " shut" : "") + '" data-shut="' + esc(s.id) + '">' + ic("down") +
         (s.dot ? '<i class="dot ' + s.dot + '"></i>' : "") + '<span class="ell">' + esc(s.label) + '</span><span class="n">' + s.items.length + "</span></div>";
       if (shut) return;
-      var all = narrowed || opt.projOpen[s.id], vis = all ? s.items : s.items.slice(0, s.lim);
+      // project mode: groups that share a topic sit under one second-level row
+      var ents = [], tps = Object.create(null);
+      s.items.forEach(function (o) {
+        if (!s.proj || !o.topic) { ents.push({ o: o }); return; }
+        var e = tps[o.topic];
+        if (!e) { e = tps[o.topic] = { tp: o.topic, id: "tp:" + s.proj + "/" + o.topic, items: [] }; ents.push(e); }
+        e.items.push(o);
+      });
+      var hasCur = function (e) { return !!opt.cur && (e.o ? e.o.id === opt.cur.id : e.items.some(function (o) { return o.id === opt.cur.id; })); };
+      var all = narrowed || opt.projOpen[s.id], vis = all ? ents : ents.slice(0, s.lim);
       if (!all && opt.cur) {
-        var hit = s.items.filter(function (o) { return o.id === opt.cur.id; })[0];
+        var hit = ents.filter(hasCur)[0];
         if (hit && vis.indexOf(hit) < 0) vis = vis.concat(hit);
       }
-      h += vis.map(function (o) { return rowHTML(o, { cur: opt.cur, open: opt.open, mode: opt.mode, now: now }); }).join("");
-      if (vis.length < s.items.length) h += '<a class="more" data-more="' + esc(s.id) + '">其余 ' + (s.items.length - vis.length) + " 组</a>";
-      else if (!narrowed && opt.projOpen[s.id] && s.items.length > s.lim) h += '<a class="more" data-less="' + esc(s.id) + '">收起</a>';
+      h += vis.map(function (e) {
+        if (e.o) return rowHTML(e.o, { cur: opt.cur, open: opt.open, mode: opt.mode, now: now });
+        var open = narrowed || (opt.open[e.id] != null ? opt.open[e.id] : hasCur(e));
+        var n = e.items.reduce(function (a, o) { return a + o.n; }, 0);
+        var r = '<a class="tp' + (open ? " open" : "") + (hasCur(e) && !open ? " on" : "") + '" data-tp="' + esc(e.id) + '">' + ic("chev") +
+          '<span class="ell">' + esc(e.tp) + dsTag(e.items[0].dstate) + '</span><span class="n">' + n + " 版</span>" + dtag(isoOf(e.items[0].t), now) + "</a>";
+        if (open) r += e.items.map(function (o) { return rowHTML(o, { cur: opt.cur, open: opt.open, mode: opt.mode, now: now, nest: true }); }).join("");
+        return r;
+      }).join("");
+      if (vis.length < ents.length) h += '<a class="more" data-more="' + esc(s.id) + '">其余 ' + (ents.length - vis.length) + " 项</a>";
+      else if (!narrowed && opt.projOpen[s.id] && ents.length > s.lim) h += '<a class="more" data-less="' + esc(s.id) + '">收起</a>';
     });
     return h;
   }
@@ -558,6 +629,33 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     if (d && d.file) for (i = 0; i < o.vs.length; i++) if (o.vs[i].file === d.file) return i;
     return 0;
   }
+  // directions: a topic, or a design group outside any topic; each carries active / done / paused
+  function dirsHTML(G, now) {
+    var projs = [], by = Object.create(null);
+    G.forEach(function (o) {
+      var pd = by[o.proj] || (by[o.proj] = (projs.push(o.proj), Object.create(null)));
+      var d = pd[o.dir] || (pd[o.dir] = { proj: o.proj, name: o.dir, label: o.topic || o.name, st: o.dstate, items: [], n: 0, t: 0 });
+      d.items.push(o); d.n += o.n; d.t = Math.max(d.t, o.t);
+    });
+    var rank = { active: 0, paused: 1, done: 2 }, cnt = { active: 0, done: 0, paused: 0 }, total = 0;
+    var body = projs.map(function (p) {
+      var ds = Object.keys(by[p]).map(function (k) { return by[p][k]; });
+      ds.sort(function (a, b) { return rank[a.st] - rank[b.st] || b.t - a.t; });
+      return '<div class="dir-p"><div class="dir-ph"><b>' + esc(p) + '</b><span class="n">' + ds.length + " 个方向</span></div>" + ds.map(function (d) {
+        cnt[d.st]++; total++;
+        d.items.sort(function (a, b) { return b.t - a.t; });
+        var o = d.items[0];
+        return '<div class="dir ' + d.st + '"><a class="dn ell" href="' + esc(gHref(o)) + '" data-nav title="' + esc(d.items.map(function (x) { return x.name; }).join("\n")) + '">' +
+          '<i class="dot ' + o.st + '"></i>' + esc(d.label) + '</a><span class="dm num">' + (d.items.length > 1 ? d.items.length + " 组 · " : "") + d.n + " 版 · " + esc(ft(d.t, now)) + "</span>" +
+          '<span class="dseg">' + ["active", "done", "paused"].map(function (k) {
+            return '<a class="' + k + (d.st === k ? " on" : "") + '" data-dstate="' + k + '" data-dp="' + esc(p) + '" data-dn="' + esc(d.name) + '">' + DSTATE[k] + "</a>";
+          }).join("") + "</span></div>";
+      }).join("") + "</div>";
+    }).join("");
+    return '<div class="h-sec"><h3>方向</h3><span class="n">' + total + " 个 · 进行中 " + cnt.active + " · 完成 " + cnt.done + " · 搁置 " + cnt.paused + "</span></div>" +
+      (body ? '<div class="dirs">' + body + "</div>" : '<p class="none" style="margin:0 0 32px">还没有项目。</p>');
+  }
+
   function homeHTML(M, now) {
     var G = M.G, c = counts(G);
     var byT = function (a, b) { return b.t - a.t; };
@@ -573,14 +671,6 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       return '<a class="a-card" href="' + esc(gHref(o)) + '" data-nav title="' + esc(o.proj + "/" + o.latest.file) + '">' + th(o) +
         '<div class="t ell">' + esc(o.name) + '</div><div class="m"><span class="ell">' + esc(o.proj) + "</span>·<span>" + esc(o.ids[0].label) +
         "</span>·<span class=\"num\">" + esc(ft(o.t, now)) + "</span></div></a>";
-    }).join("");
-    var pcards = projs.map(function (p) {
-      var gs = pg[p].slice().sort(byT), g0 = gs[0];
-      var v = gs.reduce(function (s, o) { return s + o.n; }, 0);
-      var np = gs.filter(function (o) { return o.st === "pending"; }).length;
-      return '<a class="pcard" data-proj="' + esc(p) + '" title="在左侧列表展开 ' + esc(p) + '"><div class="stack">' + th(gs[2] || g0) + th(gs[1] || g0) + th(g0) +
-        '</div><div class="ell"><b class="ell">' + esc(p) + '</b><div class="m num">' + gs.length + " 组 · " + v + ' 版</div><div class="m2"><span class="num">' +
-        esc(ft(g0.t, now)) + "</span>" + (np ? stChip("pending", np + " 待评审") : "") + "</div></div></a>";
     }).join("");
     var trs = dlv.map(function (o) {
       var d = o.delivery, vi = deliveredVi(o), state = String(d.state || "");
@@ -600,8 +690,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       '<div class="h-sec"><h3>待我评审</h3><span class="n">' + (pend.length ? pend.length + " 组有新稿还没提交" : "") + "</span>" +
       (pend.length ? '<a class="go" data-act="filter-pending">全部 ' + pend.length + " →</a>" : "") + "</div>" +
       (cards ? '<div class="a-cards">' + cards + "</div>" : '<p class="none" style="margin:0 0 32px">没有待评审的稿。</p>') +
-      '<div class="h-sec"><h3>按项目</h3><span class="n">' + projs.length + " 个</span></div>" +
-      (pcards ? '<div class="a-proj">' + pcards + "</div>" : '<p class="none" style="margin:0 0 32px">还没有项目。</p>') +
+      dirsHTML(G, now) +
       '<div class="h-sec"><h3>已定稿交付</h3><span class="n">' + dlv.length + "</span></div>" +
       (trs ? '<table class="tbl"><tr><th>设计</th><th>项目</th><th>定稿版</th><th>交给</th><th>Task</th><th>状态</th><th class="r">交出</th></tr>' + trs + "</table>"
         : '<p class="none">还没有交付记录。交付时在稿旁写 &lt;file&gt;.delivery.json 就会出现在这里。</p>');
@@ -810,6 +899,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       S.mounted = "";
       return;
     }
+    if (r.view !== "detail") { $("pk").hidden = true; if (PK.mo) { PK.mo.disconnect(); PK.mo = null; } PK.doc = null; }
     if (r.view === "home") {
       setLayout("home"); S.mounted = "home";
       document.title = "UI-hub";
@@ -825,35 +915,30 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       right.className = "insp"; right.innerHTML = "";
       return;
     }
-    document.title = c.o.name + " · UI-hub";
+    document.title = c.o.name + " " + (c.vi >= 0 ? c.o.ids[c.vi].label : "") + " · UI-hub";
     if (c.missing) {
       setLayout("detail"); S.mounted = "";
       var miss = c.vi < 0 ? r.v : r.cmp;
-      mid.innerHTML = '<div class="a-bar">' + H.detailBarHTML(c.o, 0, S.M.root) + '</div><div class="a-title">' + H.detailTitleHTML(c.o, now()) + "</div>" +
-        '<div class="vtabs">' + H.tabsHTML(c.o, -1, now()) + "</div>" +
-        '<div class="err">版本「' + esc(miss) + '」不存在。<a href="' + esc(H.vHref(c.o, 0)) + '" data-nav style="color:inherit;text-decoration:underline">打开最新版 ' + esc(c.o.ids[0].label) + " →</a></div>";
-      right.className = "insp";
-      right.innerHTML = '<div class="a-bar"><div class="crumb"><b>这组设计</b></div></div><div class="insp-sec"><p class="none">先在左边选一版。</p></div>';
+      mid.innerHTML = '<div class="err">版本「' + esc(miss) + '」不存在。<a href="' + esc(H.vHref(c.o, 0)) + '" data-nav style="color:inherit;text-decoration:underline">打开最新版 ' + esc(c.o.ids[0].label) + " →</a></div>";
+      right.innerHTML = "";
       return;
     }
     if (r.view === "compare") return renderCompare(c);
     setLayout("detail");
+    // the draft is the whole right side: no bars, captions or inspector around it
     if (S.mounted !== "detail") {
-      mid.innerHTML = '<div class="a-bar" id="d-bar"></div><div class="a-title" id="d-title"></div><div class="vtabs" id="d-tabs"></div>' +
-        '<div class="embed" id="d-embed"><div class="artbox" id="d-box"><iframe id="d-frame" title="设计稿"></iframe></div><div class="embed-cap" id="d-cap"></div></div>' +
-        '<div class="frames" id="d-frames"></div>';
+      mid.innerHTML = '<div class="stage" id="d-box"><iframe id="d-frame" title="设计稿"></iframe></div>';
+      if (window.ResizeObserver) new ResizeObserver(function () { fit(); }).observe($("d-box"));
+      right.innerHTML = "";
       S.mounted = "detail";
     }
     var o = c.o, v = o.vs[c.vi], src = vsrc(v);
     var fr = $("d-frame");
     // reload only when the file (path) or its content (mtime) changed
-    if (fr.getAttribute("data-key") !== vkey(v)) { fr.setAttribute("data-key", vkey(v)); fr.setAttribute("data-src", src); fr.src = src; S.frame = -1; }
-    $("d-bar").innerHTML = H.detailBarHTML(o, c.vi, S.M.root);
-    $("d-title").innerHTML = H.detailTitleHTML(o, now());
-    $("d-tabs").innerHTML = H.tabsHTML(o, c.vi, now());
-    $("d-frames").innerHTML = H.framesHTML(v, S.frame);
-    right.className = "insp";
-    right.innerHTML = H.inspectorHTML(o, c.vi, S.M, now());
+    if (fr.getAttribute("data-key") !== vkey(v)) {
+      fr.setAttribute("data-key", vkey(v)); fr.setAttribute("data-src", src);
+      $("pk").hidden = true; fr.onload = function () { attachPicks(fr); }; fr.src = src; S.frame = -1;
+    }
     fit();
   }
   function renderCompare(c) {
@@ -883,7 +968,14 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   // The draft fills the whole stage: as wide as the column and as tall as what is left of the window.
   // Below 1280px wide the page is laid out at 1280 and scaled down, so desktop layouts never reflow.
   function fit() {
-    var mid = $("mid"), mr = mid.getBoundingClientRect();
+    var mid = $("mid"), mr = mid.getBoundingClientRect(), st = $("d-box");
+    if (st && st.className === "stage") {
+      var sw = st.clientWidth, sh = st.clientHeight, ss = Math.max(0.1, Math.min(1, sw / 1280)), sf = $("d-frame");
+      sf.style.width = Math.round(sw / ss) + "px";
+      sf.style.height = Math.round(sh / ss) + "px";
+      sf.style.transform = ss < 1 ? "scale(" + ss + ")" : "";
+      return;
+    }
     [].forEach.call(document.querySelectorAll("#mid .artbox"), function (bx) {
       var wrap = bx.parentNode, cs = getComputedStyle(wrap);
       var w = Math.floor(wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
@@ -910,6 +1002,55 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       }
     });
   }
+
+  /* ---- picks: mirror the draft's hidden choice-kit panel in the sidebar ---- */
+  var PK = { doc: null, mo: null, shut: false };
+  try { PK.shut = localStorage.getItem("dc-hub-picks") === "shut"; } catch (e) {}
+  function pkPanel() { return PK.doc && PK.doc.querySelector(".dc-panel"); }
+  function attachPicks(fr) {
+    if (PK.mo) { PK.mo.disconnect(); PK.mo = null; }
+    PK.doc = null;
+    var doc;
+    try { doc = fr.contentDocument; } catch (e) { doc = null; }
+    if (!doc || !doc.querySelector(".dc-panel")) { $("pk").hidden = true; return; }
+    var st = doc.createElement("style");
+    st.textContent = ".dc-panel{display:none!important}";
+    doc.head.appendChild(st);
+    PK.doc = doc;
+    PK.mo = new MutationObserver(function () { renderPicks(false); });
+    PK.mo.observe(doc.querySelector(".dc-panel"), { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["disabled"] });
+    renderPicks(true);
+  }
+  function renderPicks(fresh) {
+    var panel = pkPanel(), box = $("pk");
+    if (!panel) { box.hidden = true; return; }
+    var rows = [].map.call(panel.querySelectorAll(".dc-row"), function (r) {
+      return [r.firstChild ? r.firstChild.textContent : "", r.lastChild ? r.lastChild.textContent : ""];
+    });
+    var done = rows.filter(function (r) { return r[1] && r[1] !== "未选"; }).length;
+    var send = panel.querySelector(".dc-send, button:not(.dc-min)"), msg = panel.querySelector(".dc-msg"), inote = panel.querySelector("textarea");
+    if (fresh || !box.querySelector(".pk-note")) {
+      box.innerHTML = '<div class="pk-h" data-pk="tog"><b>本稿选择</b><span class="n" id="pk-n"></span>' + H.ic("down") + "</div>" +
+        '<div class="pk-rows" id="pk-rows"></div><textarea class="pk-note" id="pk-note" placeholder="补充意见（可选）"></textarea>' +
+        '<div class="pk-f"><span class="msg2" id="pk-msg"></span><button id="pk-send" data-pk="send">提交</button></div>';
+    }
+    box.hidden = false;
+    box.classList.toggle("shut", PK.shut);
+    $("pk-n").textContent = done + " / " + rows.length;
+    $("pk-rows").innerHTML = rows.map(function (r, i) {
+      var no = !r[1] || r[1] === "未选";
+      return '<div class="pk-r' + (no ? " no" : "") + '" data-pki="' + i + '" title="' + esc(r[0] + "：" + r[1]) + '"><span class="ell">' + esc(r[0]) + "</span><b>" + esc(r[1] || "未选") + "</b></div>";
+    }).join("");
+    var hn = $("pk-note");
+    if (inote && document.activeElement !== hn && hn.value !== inote.value) hn.value = inote.value;
+    $("pk-msg").textContent = msg ? msg.textContent : "";
+    $("pk-send").disabled = !!(send && send.disabled);
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target.id !== "pk-note") return;
+    var p = pkPanel(), ta = p && p.querySelector("textarea");
+    if (ta) ta.value = e.target.value;
+  });
 
   function render(routeChanged) {
     pinVersion();
@@ -999,6 +1140,43 @@ details.refs[open] summary .i { transform: rotate(90deg); }
       var id = tog.getAttribute("data-tog"), c = cur();
       var isOpen = S.open[id] != null ? S.open[id] : !!(c && c.o.id === id);
       S.open[id] = !isOpen;
+      renderSide();
+      return;
+    }
+    var pk = t.closest("[data-pk]");
+    if (pk) {
+      var act2 = pk.getAttribute("data-pk");
+      if (act2 === "tog") {
+        PK.shut = !PK.shut; $("pk").classList.toggle("shut", PK.shut);
+        try { localStorage.setItem("dc-hub-picks", PK.shut ? "shut" : "open"); } catch (err) {}
+      } else if (act2 === "send") {
+        var pp = pkPanel(), sb = pp && pp.querySelector(".dc-send, button:not(.dc-min)"), ta2 = pp && pp.querySelector("textarea");
+        if (ta2) ta2.value = $("pk-note").value;
+        if (sb) sb.click();
+      }
+      return;
+    }
+    var pki = t.closest("[data-pki]");
+    if (pki && PK.doc) {
+      var gs = PK.doc.querySelectorAll("[data-choice-group]"), g = gs[+pki.getAttribute("data-pki")];
+      if (g) g.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    var dsel = t.closest("[data-dstate]");
+    if (dsel) {
+      e.preventDefault();
+      if (dsel.classList.contains("on")) return;
+      [].forEach.call(dsel.parentNode.children, function (x) { x.classList.toggle("on", x === dsel); });
+      fetch("/direction", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project: dsel.getAttribute("data-dp"), name: dsel.getAttribute("data-dn"), state: dsel.getAttribute("data-dstate") }) })
+        .then(function () { return load(true); }, function () { return load(true); });
+      return;
+    }
+    var tp = t.closest("[data-tp]");
+    if (tp) {
+      e.preventDefault();
+      var tid = tp.getAttribute("data-tp");
+      S.open[tid] = !tp.classList.contains("open");
       renderSide();
       return;
     }

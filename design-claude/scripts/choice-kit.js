@@ -22,7 +22,12 @@
     ".dc-panel{position:fixed;right:16px;bottom:16px;z-index:99999;width:280px;max-width:calc(100vw - 32px);" +
     "background:#fff;color:#1f2328;border:1px solid rgba(0,0,0,.1);border-radius:12px;" +
     "box-shadow:0 8px 28px rgba(0,0,0,.12);font:13px/1.45 -apple-system,'PingFang SC',sans-serif;padding:12px}" +
-    ".dc-panel h4{margin:0 0 8px;font-size:13px;font-weight:600}" +
+    ".dc-panel h4{margin:0 0 8px;font-size:13px;font-weight:600;cursor:pointer;padding-right:24px}" +
+    ".dc-panel h4 span{font-weight:400;color:#8c959f;margin-left:6px}" +
+    ".dc-rows{max-height:45vh;overflow:auto}" +
+    ".dc-panel.dc-shut{width:auto;padding:8px 12px}.dc-panel.dc-shut h4{margin:0;display:inline-block}" +
+    ".dc-panel.dc-shut .dc-rows,.dc-panel.dc-shut textarea,.dc-panel.dc-shut .dc-msg{display:none}" +
+    ".dc-panel.dc-shut .dc-foot{display:inline-flex;margin-left:10px}" +
     ".dc-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;color:#57606a}" +
     ".dc-row b{color:#1f2328;font-weight:500;text-align:right}" +
     ".dc-panel textarea{width:100%;box-sizing:border-box;margin:8px 0;min-height:52px;resize:vertical;" +
@@ -39,20 +44,24 @@
   function label(o) { return o.getAttribute("data-choice-label") || o.getAttribute("data-choice"); }
 
   var panel = document.createElement("div");
-  panel.className = "dc-panel";
+  // starts folded to one line (title, count, submit) so it never covers the draft
+  panel.className = "dc-panel dc-shut";
   panel.innerHTML = '<h4>你的选择</h4><button class="dc-min" title="收起">–</button><div class="dc-rows"></div>' +
     '<textarea placeholder="补充意见（可选）"></textarea>' +
     '<div class="dc-foot"><span class="dc-msg"></span><button class="dc-send">提交</button></div>';
   document.body.appendChild(panel);
   var rows = panel.querySelector(".dc-rows"), note = panel.querySelector("textarea"),
       msg = panel.querySelector(".dc-msg"), send = panel.querySelector(".dc-send");
-  panel.querySelector(".dc-min").onclick = function () {
-    var hide = rows.style.display !== "none";
-    [rows, note].forEach(function (el) { el.style.display = hide ? "none" : ""; });
-  };
+  var head = panel.querySelector("h4"), min = panel.querySelector(".dc-min");
+  function fold() { panel.classList.toggle("dc-shut"); min.textContent = panel.classList.contains("dc-shut") ? "+" : "–"; }
+  min.textContent = "+";
+  min.onclick = fold;
+  head.onclick = fold;
 
   function render() {
     rows.innerHTML = "";
+    var done = groups.filter(function (g) { return (state[g.getAttribute("data-choice-group")] || []).length; }).length;
+    head.innerHTML = "你的选择<span>" + done + " / " + groups.length + "</span>";
     groups.forEach(function (g) {
       var id = g.getAttribute("data-choice-group"), picked = state[id] || [];
       [].forEach.call(g.querySelectorAll("[data-choice]"), function (o) {
