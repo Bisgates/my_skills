@@ -101,6 +101,29 @@ button { font: inherit; color: inherit; }
 .vn.open .i { transform: rotate(90deg); }
 .dtag { display: inline-flex; align-items: center; height: 16px; padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); font-size: 10.5px; line-height: 1; color: var(--t38); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .vs { margin: 1px 0 4px; }
+.it, .vit { position: relative; }
+.acts { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: none; gap: 2px; padding-left: 6px; background: color-mix(in srgb, var(--ink) 4%, var(--side)); border-radius: 6px; }
+.it.on .acts { background: color-mix(in srgb, var(--ink) 7%, var(--side)); }
+.it:hover .acts, .vit:hover .acts { display: inline-flex; }
+.acts b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; color: var(--t45); cursor: pointer; }
+.acts b:hover { background: var(--bg); color: var(--ink); }
+.acts b.del:hover { color: #b42318; }
+.acts .i { width: 13px; height: 13px; }
+.it .nt { white-space: nowrap; color: var(--t45); }
+.vit .vm.nt { color: var(--t45); }
+.dlg-bg { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: color-mix(in srgb, var(--ink) 18%, transparent); }
+.dlg-bg[hidden] { display: none; }
+.dlg { width: 420px; max-width: calc(100vw - 32px); padding: 18px 18px 14px; border-radius: 12px; background: var(--bg); box-shadow: 0 12px 40px rgba(0,0,0,.18); }
+.dlg h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.dlg p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--t45); word-break: break-all; }
+.dlg textarea { display: block; width: 100%; height: 96px; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px; line-height: 1.5; color: var(--ink); background: var(--bg); resize: vertical; outline: none; }
+.dlg textarea:focus { border-color: color-mix(in srgb, var(--ink) 30%, var(--bg)); }
+.dlg .bt { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.dlg .btn.pri { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.dlg .btn.danger { background: #b42318; border-color: #b42318; color: #fff; }
+.toast { position: fixed; left: 14px; bottom: 14px; z-index: 40; display: flex; align-items: center; gap: 12px; max-width: 360px; padding: 9px 12px; border-radius: 9px; background: var(--ink); color: var(--bg); font-size: 12.5px; box-shadow: 0 6px 24px rgba(0,0,0,.2); }
+.toast[hidden] { display: none; }
+.toast a { color: #9ec5ff; cursor: pointer; white-space: nowrap; }
 .vit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 6px; height: 24px; margin-left: 28px; padding: 0 6px; border-radius: 6px; font-size: 12px; color: var(--t45); }
 .vit:hover { background: var(--wash); color: var(--t90); }
 .vit.on { color: var(--ink); background: var(--wash); }
@@ -346,6 +369,8 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     <div class="sb-list" id="sbl"></div>
     <section class="pk" id="pk" hidden></section>
     <div class="sb-foot" id="foot"><span class="live off"></span>连接中…</div>
+    <div class="dlg-bg" id="dlg" hidden></div>
+    <div class="toast" id="toast" hidden></div>
   </aside>
   <main class="a-mid" id="mid"></main>
   <aside id="right"></aside>
@@ -369,7 +394,9 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     send: '<path d="M7 17 17 7"/><path d="M7 7h10v10"/>',
     copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
     home: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
-    back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>'
+    back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    note: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/>'
   };
   var DSTATE = { active: "进行中", done: "完成", paused: "搁置" };
   function dsTag(st) { return st && st !== "active" ? '<span class="ds ' + st + '">' + DSTATE[st] + "</span>" : ""; }
@@ -498,7 +525,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   /* ---- list filtering & grouping ---- */
   function matches(o, q) {
     if (!q) return true;
-    var hay = [o.proj, o.topic, o.key, o.name].concat(o.vs.map(function (v) { return (v.title || "") + " " + v.file; })).join(" ").toLowerCase();
+    var hay = [o.proj, o.topic, o.key, o.name, o.g.note || ""].concat(o.vs.map(function (v) { return (v.title || "") + " " + v.file + " " + (v.note || ""); })).join(" ").toLowerCase();
     return q.toLowerCase().split(/\s+/).every(function (w) { return !w || hay.indexOf(w) >= 0; });
   }
   function counts(G) {
@@ -542,16 +569,22 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     var open = opt.open[o.id] != null ? opt.open[o.id] : on;
     var two = opt.mode === "time";
     var sub = two ? '<span class="t2">' + esc(o.proj + " · " + o.ids[0].label) + "</span>" : "";
+    if (o.g.note) sub += '<span class="t2 nt" title="' + esc(o.g.note) + '">' + esc(o.g.note) + "</span>";
+    var acts = function (f) {
+      var at = ' data-ap="' + esc(o.proj) + '" data-ak="' + esc(o.key) + '"' + (f ? ' data-af="' + esc(f) + '"' : "");
+      return '<span class="acts"><b data-act2="note"' + at + ' title="备注">' + ic("note") + '</b><b class="del" data-act2="del"' + at + ' title="删除">' + ic("trash") + "</b></span>";
+    };
     var h = '<div class="gi' + (opt.nest ? " nest" : "") + '"><a class="it' + (on ? " on" : "") + (two ? " two" : "") + '" href="' + esc(gHref(o)) + '" data-nav title="' + esc(o.name + "\n" + o.proj + "/" + o.latest.file) + '">' +
       '<i class="dot ' + o.st + '"></i><span class="tt ell">' + esc(o.name) + (opt.nest ? "" : dsTag(o.dstate)) + sub + "</span>" +
       '<span class="r"><span class="vn' + (open ? " open" : "") + '" data-tog="' + esc(o.id) + '" title="' + (open ? "收起版本" : "展开版本") + '">' + o.n + " 版" + ic("chev") + "</span>" +
-      dtag(o.date, opt.now) + "</span></a>";
+      dtag(o.date, opt.now) + "</span>" + acts("") + "</a>";
     if (open) {
       h += '<div class="vs">' + o.vs.map(function (v, i) {
         var vo = on && cur.vi === i;
-        return '<a class="vit' + (vo ? " on" : "") + '" href="' + esc(vHref(o, i)) + '" data-nav title="' + esc(v.file) + '">' +
+        return '<a class="vit' + (vo ? " on" : "") + '" href="' + esc(vHref(o, i)) + '" data-nav title="' + esc(v.file + (v.note ? "\n" + v.note : "")) + '">' +
           '<span class="rv' + (v.choices ? " picked" : "") + '">' + esc(o.ids[i].rev) + "</span>" +
-          '<span class="vm ell">' + esc(v.model || "") + "</span>" + dtag(v.date, opt.now) + "</a>";
+          (v.note ? '<span class="vm nt ell">' + esc(v.note) + "</span>" : '<span class="vm ell">' + esc(v.model || "") + "</span>") +
+          dtag(v.date, opt.now) + acts(v.file) + "</a>";
       }).join("") + "</div>";
     }
     return h + "</div>";
@@ -937,7 +970,7 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     // reload only when the file (path) or its content (mtime) changed
     if (fr.getAttribute("data-key") !== vkey(v)) {
       fr.setAttribute("data-key", vkey(v)); fr.setAttribute("data-src", src);
-      $("pk").hidden = true; fr.onload = function () { attachPicks(fr); }; fr.src = src; S.frame = -1;
+      $("pk").hidden = true; fr.onload = function () { measure(fr); fit(); attachPicks(fr); }; fr.src = src; S.frame = -1;
     }
     fit();
   }
@@ -965,15 +998,17 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     document.querySelector('[data-lab="1"]').innerHTML = lab(b);
     fit();
   }
-  // The draft fills the whole stage: as wide as the column and as tall as what is left of the window.
-  // Below 1280px wide the page is laid out at 1280 and scaled down, so desktop layouts never reflow.
+  // The draft fills the whole stage: exactly as wide as the column (no sideways scroll), scrolling only vertically.
+  // A fluid draft below 1280px wide is laid out at 1280 and scaled down, so desktop layouts never reflow.
   function fit() {
     var mid = $("mid"), mr = mid.getBoundingClientRect(), st = $("d-box");
     if (st && st.className === "stage") {
-      var sw = st.clientWidth, sh = st.clientHeight, ss = Math.max(0.1, Math.min(1, sw / 1280)), sf = $("d-frame");
-      sf.style.width = Math.round(sw / ss) + "px";
+      var sf = $("d-frame"), sw = st.clientWidth, sh = st.clientHeight, nat = sf._nat || 0;
+      // a fixed-width draft is scaled to exactly the stage width; a fluid one is laid out at the stage width
+      var ss = nat ? sw / nat : Math.max(0.1, Math.min(1, sw / 1280));
+      sf.style.width = (nat || Math.round(sw / ss)) + "px";
       sf.style.height = Math.round(sh / ss) + "px";
-      sf.style.transform = ss < 1 ? "scale(" + ss + ")" : "";
+      sf.style.transform = ss !== 1 ? "scale(" + ss + ")" : "";
       return;
     }
     [].forEach.call(document.querySelectorAll("#mid .artbox"), function (bx) {
@@ -1007,6 +1042,20 @@ details.refs[open] summary .i { transform: rotate(90deg); }
   var PK = { doc: null, mo: null, shut: false };
   try { PK.shut = localStorage.getItem("dc-hub-picks") === "shut"; } catch (e) {}
   function pkPanel() { return PK.doc && PK.doc.querySelector(".dc-panel"); }
+  // Find the draft's own layout width: lay it out narrow and see how wide it stays.
+  // Wider than the probe = fixed width (e.g. a 1328px canvas), 0 = fluid. Horizontal overflow is clipped.
+  function measure(fr) {
+    fr._nat = 0;
+    var doc;
+    try { doc = fr.contentDocument; } catch (e) { doc = null; }
+    if (!doc || !doc.documentElement) return;
+    fr.style.transform = ""; fr.style.width = "960px";
+    var w = Math.max(doc.documentElement.scrollWidth, doc.body ? doc.body.scrollWidth : 0);
+    if (w > 964) fr._nat = w;
+    var st = doc.createElement("style");
+    st.textContent = "html{overflow-x:hidden!important}";
+    (doc.head || doc.documentElement).appendChild(st);
+  }
   function attachPicks(fr) {
     if (PK.mo) { PK.mo.disconnect(); PK.mo = null; }
     PK.doc = null;
@@ -1132,8 +1181,88 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     }
   }
 
+  /* ---- notes & delete ---- */
+  function post(url, body) {
+    return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!j.ok) throw new Error(j.error || r.status); return j; }); });
+  }
+  function closeDlg() { $("dlg").hidden = true; $("dlg").innerHTML = ""; }
+  var toastTimer = 0;
+  function toast(html, ms) {
+    var el = $("toast");
+    el.innerHTML = html; el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, ms || 4000);
+  }
+  function actTarget(el) {
+    var o = S.M && S.M.BY[el.getAttribute("data-ap") + "/" + el.getAttribute("data-ak")];
+    if (!o) return null;
+    var f = el.getAttribute("data-af"), i = -1;
+    if (f) o.vs.forEach(function (v, j) { if (v.file === f) i = j; });
+    return { o: o, i: i, v: i >= 0 ? o.vs[i] : null };
+  }
+  function openNote(x) {
+    var label = x.o.name + (x.v ? " · " + x.o.ids[x.i].rev : "");
+    $("dlg").innerHTML = '<div class="dlg"><h3>备注</h3><p>' + esc(label) + (x.v ? "（只记在这一版上）" : "（记在整个设计上）") + "</p>" +
+      '<textarea id="dlg-t" placeholder="写点什么，留空即删除备注"></textarea>' +
+      '<div class="bt"><button class="btn" data-dlg="cancel">取消</button><button class="btn pri" data-dlg="save">保存</button></div></div>';
+    $("dlg-t").value = (x.v ? x.v.note : x.o.g.note) || "";
+    $("dlg").hidden = false;
+    S.dlg = { kind: "note", x: x };
+    $("dlg-t").focus();
+  }
+  function openDel(x) {
+    var whole = !x.v || x.o.n === 1;
+    var what = whole ? "「" + x.o.name + "」" + (x.o.n > 1 ? "全部 " + x.o.n + " 版" : "") : "「" + x.o.name + "」的 " + x.o.ids[x.i].rev;
+    $("dlg").innerHTML = '<div class="dlg"><h3>删除' + esc(what) + "？</h3><p>文件会移到 " + esc(x.o.proj) + "/.trash/，删除后几秒内可撤销。</p>" +
+      '<div class="bt"><button class="btn" data-dlg="cancel">取消</button><button class="btn danger" data-dlg="del">删除</button></div></div>';
+    $("dlg").hidden = false;
+    S.dlg = { kind: "del", x: x, whole: whole, what: what };
+    $("dlg").querySelector('[data-dlg="del"]').focus();
+  }
+  function dlgAct(act) {
+    var d = S.dlg;
+    if (!d || act === "cancel") { closeDlg(); S.dlg = null; return; }
+    var x = d.x;
+    if (d.kind === "note" && act === "save") {
+      post("/note", { project: x.o.proj, target: x.v ? x.v.file : x.o.key, text: $("dlg-t").value })
+        .then(function () { closeDlg(); S.dlg = null; return load(true); }, function (err) { toast("备注没存上：" + esc(err.message)); });
+    } else if (d.kind === "del" && act === "del") {
+      var body = d.whole ? { project: x.o.proj, key: x.o.key } : { project: x.o.proj, file: x.v.file };
+      post("/delete", body).then(function (j) {
+        closeDlg(); S.dlg = null;
+        var c = cur();
+        if (c && c.o.id === x.o.id) go(d.whole ? "/" : H.gHref(x.o), true);
+        load(true);
+        S.undo = { project: x.o.proj, batch: j.batch };
+        toast("已删除" + esc(d.what) + '<a data-undo="1">撤销</a>', 10000);
+      }, function (err) { toast("删除失败：" + esc(err.message)); });
+    }
+  }
+  $("dlg").addEventListener("click", function (e) {
+    if (e.target === this) return dlgAct("cancel");
+    var b = e.target.closest("[data-dlg]");
+    if (b) dlgAct(b.getAttribute("data-dlg"));
+  });
+  $("dlg").addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.preventDefault(); dlgAct("cancel"); }
+    else if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && S.dlg && S.dlg.kind === "note") { e.preventDefault(); dlgAct("save"); }
+  });
+  $("toast").addEventListener("click", function (e) {
+    if (!e.target.closest("[data-undo]") || !S.undo) return;
+    var u = S.undo; S.undo = null;
+    post("/restore", u).then(function () { toast("已恢复"); load(true); }, function (err) { toast("恢复失败：" + esc(err.message)); });
+  });
+
   document.addEventListener("click", function (e) {
     var t = e.target;
+    var ab = t.closest("[data-act2]");
+    if (ab) {
+      e.preventDefault(); e.stopPropagation();
+      var x = actTarget(ab);
+      if (x) (ab.getAttribute("data-act2") === "note" ? openNote : openDel)(x);
+      return;
+    }
     var tog = t.closest("[data-tog]");
     if (tog) {
       e.preventDefault(); e.stopPropagation();

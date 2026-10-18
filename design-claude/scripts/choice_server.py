@@ -9,6 +9,11 @@ GET  /d/<project>/<key>              design index page (SPA; HEAD also supported
 GET  /<project>/<file>.html          static file (raw page; show users /d/... instead)
 Optional <project>/_topics.json groups a project's designs into second-level topics.
 POST /direction {"project", "name", "state": active|done|paused} sets a direction's state there.
+POST /note   {"project", "target": <group key or version file>, "text"} keeps a note in
+     <project>/_notes.json (empty text removes it); groups and versions carry it as "note".
+POST /delete {"project", "key"} or {"project", "file"} moves a whole design (every version) or one
+     version, with its thumb / choices / delivery / _parts, into <project>/.trash/<batch>/.
+POST /restore {"project", "batch"} moves a deleted batch back.
 GET  /ping                           health check; idle_left_min is measured before this ping
 GET  /choices?page=<project>/<file>  latest submission for that page (or {})
 POST /submit  {"page": "<project>/<file>.html", "choices": {...}, "note": "..."}
@@ -339,6 +344,26 @@ def load_topics(pdir):
     return out
 
 
+def load_notes(pdir):
+    """<project>/_notes.json: {"notes": {"<group key>": "...", "<version file>.html": "..."}}."""
+    notes = read_json(os.path.join(pdir, "_notes.json")).get("notes")
+    return {k: v for k, v in notes.items() if isinstance(v, str)} if isinstance(notes, dict) else {}
+
+
+def write_json(path, doc):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+def version_files(pdir, html_name):
+    """A version's html plus everything named after it: thumb, choices, delivery and the _parts dir."""
+    stem = html_name[:-len(".html")]
+    names = [html_name] + [stem + suf for suf in (".thumb.png", ".choices.json", ".delivery.json", "_parts")]
+    return [n for n in names if os.path.exists(os.path.join(pdir, n))]
+
+
 def topic_of(key, topics):
     for name, pats in topics:
         if any(fnmatch.fnmatchcase(key, pat) for pat in pats):
@@ -379,7 +404,10 @@ def list_designs():
             groups.setdefault(key, []).append(item)
         out_groups = []
         topics = load_topics(pdir)
+        notes = load_notes(pdir)
         for key, versions in groups.items():
+            for v in versions:
+                v["note"] = notes.get(v["file"], "")
             versions.sort(key=version_sort_key, reverse=True)
             delivery, delivery_mtime = None, float("-inf")
             for i, v in enumerate(versions):
@@ -408,7 +436,8 @@ def list_designs():
                 status = "pending"
             else:
                 status = "idle"
-            out_groups.append({"key": key, "topic": topic_of(key, topics), "versions": versions, "attachments": [],
+            out_groups.append({"key": key, "topic": topic_of(key, topics), "note": notes.get(key, ""),
+                               "versions": versions, "attachments": [],
                                "updated": max(v["mtime"] for v in versions),
                                "date": latest["date"], "status": status, "delivery": delivery})
         by_key = {g["key"]: g for g in out_groups}
@@ -564,9 +593,99 @@ class Handler(SimpleHTTPRequestHandler):
         os.replace(tmp, out)
         return self._json(200, {"ok": True, "states": states})
 
+    def _body(self):
+        try:
+            data = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+        except ValueError:
+            return None
+        return data if isinstance(data, dict) else None
+
+    def _same_origin(self):
+        # writes that change files are only taken from the hub itself (no Origin = curl / same tab)
+        origin = self.headers.get("Origin")
+        return not origin or urlparse(origin).hostname in ("127.0.0.1", "localhost")
+
+    def _project(self, data):
+        proj = data.get("project")
+        if not isinstance(proj, str) or not proj or proj.startswith("."):
+            return None
+        pdir = os.path.realpath(os.path.join(ROOT, proj))
+        return pdir if os.path.dirname(pdir) == ROOT and os.path.isdir(pdir) else None
+
+    def set_note(self):
+        data = self._body()
+        if data is None:
+            return self._json(400, {"ok": False, "error": "bad json"})
+        pdir, target, text = self._project(data), data.get("target"), data.get("text")
+        if not pdir or not (isinstance(target, str) and target and "/" not in target and isinstance(text, str)):
+            return self._json(400, {"ok": False, "error": "need project, target and text"})
+        out = os.path.join(pdir, "_notes.json")
+        doc = read_json(out)
+        notes = doc.get("notes") if isinstance(doc.get("notes"), dict) else {}
+        if text.strip():
+            notes[target] = text.strip()
+        else:
+            notes.pop(target, None)
+        doc["notes"] = notes
+        write_json(out, doc)
+        return self._json(200, {"ok": True})
+
+    def delete_design(self):
+        data = self._body()
+        if data is None:
+            return self._json(400, {"ok": False, "error": "bad json"})
+        pdir, key, file = self._project(data), data.get("key"), data.get("file")
+        if not pdir:
+            return self._json(400, {"ok": False, "error": "unknown project"})
+        htmls = sorted(fn for fn in os.listdir(pdir) if fn.lower().endswith(".html") and not fn.startswith(".")
+                       and os.path.isfile(os.path.join(pdir, fn)))
+        if isinstance(file, str) and file:
+            picked = [file] if file in htmls else []
+        elif isinstance(key, str) and key:
+            picked = [fn for fn in htmls if parse_name(fn[:-len(".html")])[0] == key]
+        else:
+            picked = []
+        if not picked:
+            return self._json(400, {"ok": False, "error": "need key or file of an existing design"})
+        batch = time.strftime("%y%m%d-%H%M%S") + "-" + (key or file[:-len(".html")])[:40].replace("/", "_")
+        dest = os.path.join(pdir, ".trash", batch)
+        os.makedirs(dest, exist_ok=True)
+        moved = []
+        for fn in picked:
+            for n in version_files(pdir, fn):
+                os.replace(os.path.join(pdir, n), os.path.join(dest, n))
+                moved.append(n)
+        return self._json(200, {"ok": True, "batch": batch, "moved": moved})
+
+    def restore_design(self):
+        data = self._body()
+        if data is None:
+            return self._json(400, {"ok": False, "error": "bad json"})
+        pdir, batch = self._project(data), data.get("batch")
+        src = os.path.join(pdir or "", ".trash", batch) if isinstance(batch, str) else ""
+        if not pdir or not batch or "/" in batch or batch.startswith(".") or not os.path.isdir(src):
+            return self._json(400, {"ok": False, "error": "unknown batch"})
+        names = os.listdir(src)
+        clash = [n for n in names if os.path.exists(os.path.join(pdir, n))]
+        if clash:
+            return self._json(409, {"ok": False, "error": "already exists: " + ", ".join(clash)})
+        for n in names:
+            os.replace(os.path.join(src, n), os.path.join(pdir, n))
+        os.rmdir(src)
+        return self._json(200, {"ok": True, "restored": names})
+
     def do_POST(self):
-        if urlparse(self.path).path == "/direction":
+        route = urlparse(self.path).path
+        if route in ("/direction", "/note", "/delete", "/restore") and not self._same_origin():
+            return self._json(403, {"ok": False, "error": "cross-origin write refused"})
+        if route == "/direction":
             return self.set_direction_state()
+        if route == "/note":
+            return self.set_note()
+        if route == "/delete":
+            return self.delete_design()
+        if route == "/restore":
+            return self.restore_design()
         if urlparse(self.path).path != "/submit":
             return self._json(404, {"ok": False, "error": "not found"})
         try:
