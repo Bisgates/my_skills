@@ -998,16 +998,19 @@ details.refs[open] summary .i { transform: rotate(90deg); }
     document.querySelector('[data-lab="1"]').innerHTML = lab(b);
     fit();
   }
-  // The draft fills the whole stage: exactly as wide as the column (no sideways scroll), scrolling only vertically.
-  // A fluid draft below 1280px wide is laid out at 1280 and scaled down, so desktop layouts never reflow.
+  // The draft scrolls only vertically and is never enlarged: on a wide screen it stays at its real size, centered,
+  // so a 1280×820 app window looks like 1280×820. A narrower stage scales it down to fit.
+  // A fluid draft is laid out between 1280 and FLUID_MAX px wide (below 1280 it is laid out at 1280 and scaled down).
+  var FLUID_MAX = 1440;
   function fit() {
     var mid = $("mid"), mr = mid.getBoundingClientRect(), st = $("d-box");
     if (st && st.className === "stage") {
       var sf = $("d-frame"), sw = st.clientWidth, sh = st.clientHeight, nat = sf._nat || 0;
-      // a fixed-width draft is scaled to exactly the stage width; a fluid one is laid out at the stage width
-      var ss = nat ? sw / nat : Math.max(0.1, Math.min(1, sw / 1280));
-      sf.style.width = (nat || Math.round(sw / ss)) + "px";
+      var lw = nat || Math.max(1280, Math.min(sw, FLUID_MAX));
+      var ss = Math.max(0.1, Math.min(1, sw / lw));
+      sf.style.width = lw + "px";
       sf.style.height = Math.round(sh / ss) + "px";
+      sf.style.left = Math.max(0, Math.round((sw - lw * ss) / 2)) + "px";
       sf.style.transform = ss !== 1 ? "scale(" + ss + ")" : "";
       return;
     }
