@@ -58,6 +58,15 @@ and re-derive every guard when any term changes — a style layer that hides ico
 (text column = left edge) needs its own pinned values, or a base-layer change will
 silently break it.
 
+## Let the layout do the explaining
+
+Avoid unnecessary secondary labels and descriptions. Every subtitle, helper line, or
+caption under a heading is one more thing to read before the user can act, and it
+usually restates what grouping, order, alignment, or a control's own state already
+shows. Before adding text, ask whether position, grouping, or the control itself can
+carry the meaning. Write a label only when the layout truly cannot carry it: a
+non-obvious consequence, a unit, or a destructive action.
+
 ## Typography
 
 - **One size, one rhythm.** All primary rows share one size (14px/400 is the refined
