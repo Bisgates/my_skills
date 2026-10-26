@@ -1,6 +1,6 @@
 # Worker roster — what was dispatched in arc 260820a (18 h, 22 workers) and how each did
 
-Default worker set for a fabu-agent-team campaign. "Perf" is the manager's after-action grade.
+Default worker set for a fabu-agent-team campaign. The Model column records the ids used in that 2026-08 arc; dispatch today's newest model of the same family instead. "Perf" is the manager's after-action grade.
 
 | # | Worker | Model | Job | Deliverable | Perf / notes |
 |---|---|---|---|---|---|
@@ -36,6 +36,6 @@ Default worker set for a fabu-agent-team campaign. "Perf" is the manager's after
 
 - k3: **user's first choice for execution/infra/eval workers** whenever the backend serves it. One backend 503 death observed (after it had already written a working script) — always pair it with the qwen fallback rule below.
 - qwen3.8-max: fallback for the same worker types; 11 tasks, 0 crashes, best at following file-scope rules. Re-dispatch a dead k3 worker here with "resume from existing artifacts".
-- gpt-5.6-sol: best writing/research depth; give it a time box and progress file, it will otherwise run to `timeout`.
-- gpt-5.6-terra: use for review; it recomputes rather than paraphrases.
+- sol (newest; omit `-m` on the user's codex account): best writing/research depth; give it a time box and progress file, it will otherwise run to `timeout`.
+- terra (newest): use for review; it recomputes rather than paraphrases.
 - Backend 503 is transient; a re-dispatch with "resume from artifacts" lost ~15 min, not the work.
