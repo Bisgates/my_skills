@@ -125,4 +125,4 @@ is the headless form. The TUI `/model` picker reads the fabu catalog from
 To test the wrapper without a network preflight, use
 `FABUX_SKIP_PREFLIGHT=1`. To test the off-network branch without changing
 configuration, set `FABUX_PREFLIGHT_HOST` to an unreachable host; rc=3 means
-switch workers to plain `codex exec` with no `-m` (config default = newest sol).
+switch workers to `xagent codex exec -m sol` (the family name resolves to the newest version).
