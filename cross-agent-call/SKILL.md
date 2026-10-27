@@ -1,6 +1,6 @@
 ---
 name: cross-agent-call
-description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke astra/sol/luna (codex) or grok (grok CLI); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→astra/sol/luna use codex's Agent tool; grok→its native models use grok's Agent tool. Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
+description: Dispatch a model from a *different* harness as a headless sub-agent by shelling out to its CLI. Use when the user requests a model the current harness does not serve — e.g., from Claude Code invoke astra/sol/luna (codex) or grok (grok CLI); from codex invoke opus/fable (claude) or grok (grok CLI). Do NOT use for native models: claude→opus/sonnet/fable use the Agent tool; codex→astra/sol/luna use codex's Agent tool; grok→its native models use grok's Agent tool. Also use it for any model added in Vantage's model settings (API subscriptions such as DeepSeek, Kimi or a relay), called by its full name or the alias the user gave it (`xagent models` lists them). Supports pipelines and parallel jobs like "用 opus 调研后派 luna 实现, 然后 grok 和 sol 并行测试".
 ---
 
 # Cross-agent call
@@ -39,6 +39,23 @@ What it adds on top of the plain CLI:
 - Stdin, stderr and the exit code pass through unchanged; SIGINT / SIGTERM / SIGHUP are forwarded to the child. A signal already ignored when the wrapper starts (SIGHUP under `nohup`, SIGINT for a `&` job in a script) stays ignored, and the child inherits that. Nested calls record their parent through `XAGENT_PARENT_RUN_ID`.
 
 Raw CLI calls without the wrapper still work, but Vantage cannot track them.
+
+## Models added in Vantage
+
+Every model added under Vantage's model settings (Claude official, a personal OpenAI login, and API subscriptions such as DeepSeek, Kimi or a self-hosted relay) can be called by name, also when it is not one of the harness's own models:
+
+```bash
+~/.claude/skills/cross-agent-call/scripts/xagent models            # names, aliases, harness, effort levels
+~/.claude/skills/cross-agent-call/scripts/xagent models --json
+~/.claude/skills/cross-agent-call/scripts/xagent <name> -p '<prompt>' --effort high          # a claude-harness model
+~/.claude/skills/cross-agent-call/scripts/xagent <name> exec -c model_reasoning_effort=high '<prompt>'   # a codex-harness model
+```
+
+- A name is either the full `<subscription>/<model id>` shown by `xagent models` (for example `Relay/qwen-max`; quote it if the subscription name has a space) or the short alias the user set for that model in Vantage's model settings. Both are case-blind.
+- The name picks the harness and the model. Pass that harness's own CLI args (the `HARNESS` column says which), without `--model` / `-m`; the effort must be one the `EFFORTS` column lists (`-` means not declared, `none` means the model takes no effort option).
+- xagent launches it the way Vantage does: the subscription's base URL and key reach the child through its own shell from Vantage's local key file, never through the command line, stderr or the registry. The run is registered like any other xagent call, so it shows up in the calling Vantage session.
+- An unknown name exits 2 and lists every available name. A model whose key is missing on this machine, a deleted subscription, or a missing model list (`~/.vantage/xagent_models.json`, written by Vantage on start and whenever model settings change) also exits 2 at once with the reason.
+- `xagent claude|codex|grok ...` keep their meaning; harness names and built-in family names cannot be aliases.
 
 ## Quick reference
 

@@ -2,10 +2,13 @@
 """xagent: run another harness's headless CLI and register the child session.
 
 Usage:  xagent <claude|codex|grok> <the CLI's own args...>
+        xagent <model name|alias> <that model's CLI args...>
+        xagent models [--json]
 
     xagent claude -p --effort high 'prompt'
     xagent codex exec -m "$CODEX_MODEL" -c model_reasoning_effort=high 'prompt'
     xagent grok -p 'prompt' -m "$GROK_MODEL" --output-format plain
+    xagent Relay/qwen-max exec 'prompt'      # a model added in Vantage's model settings
 
 The CLI runs exactly as it would without the wrapper (same stdin, stderr,
 stdout text and exit code). On top of that the wrapper:
@@ -30,6 +33,13 @@ Per harness:
                 gpt-<version>-<family> slug found in Vantage's latest cache or
                 codex's models_cache.json, whichever is higher; a full slug
                 passes through. No match: exit 2 before codex starts.
+
+Named models: every model added under Vantage's model settings has a full name
+"<subscription>/<model id>" and optionally a short alias. Vantage exports them,
+with how to launch each one, to ~/.vantage/xagent_models.json (paths and
+non-secret values only; credentials stay in Vantage's key files and are read
+by the child's own shell). The name picks the harness (claude or codex) and the
+model; pass that CLI's own args, without --model / -m. `xagent models` lists them.
 
 Privacy flags (claude --no-session-persistence, codex exec --ephemeral) pass
 through unchanged: the run is still registered, with no session id.
@@ -100,6 +110,7 @@ FALLBACK_BIN = {"claude": "~/.local/bin/claude", "grok": "~/.grok/bin/grok"}
 # codex `-m <family>` is resolved to the newest gpt-<version>-<family> slug.
 CODEX_FAMILIES = {"astra": "astra", "sol": "sol", "luna": "luna", "tuna": "luna", "terra": "terra"}
 VANTAGE_LATEST = "~/.vantage/cache/latest_models.json"
+VANTAGE_MODELS = "~/.vantage/xagent_models.json"
 
 
 # ---------------------------------------------------------------- arg scanning
@@ -330,10 +341,11 @@ def plan_claude_or_grok(harness, args):
     return plan
 
 
-def plan_codex(args):
+def plan_codex(args, resolve_families=True):
     plan = Plan("codex", args)
     args = list(args)
-    resolve_codex_aliases(args, scan(args, CODEX_OPTS), plan)
+    if resolve_families:
+        resolve_codex_aliases(args, scan(args, CODEX_OPTS), plan)
     plan.args = list(args)
     opts = scan(args, CODEX_OPTS)
     plan.model = last_value(opts, "-m", "--model") or config_value(opts, "model")
@@ -391,6 +403,145 @@ def plan_codex(args):
     inject = [] if plan.json_passthrough else ["--json"]
     plan.args = args[:idx + 1] + inject + args[idx + 1:]
     return plan
+
+
+# ---------------------------------------------------------------- named models
+
+class CallError(Exception):
+    """A named-model call that must not start (exit 2)."""
+
+
+def load_models():
+    """Vantage's exported model list; raises CallError with a readable reason."""
+    path = os.path.expanduser(VANTAGE_MODELS)
+    try:
+        with open(path) as fh:
+            data = json.load(fh)
+    except FileNotFoundError:
+        raise CallError("no model list at %s: open Vantage once (it writes the list "
+                         "on start and whenever model settings change)" % path)
+    except (OSError, ValueError) as exc:
+        raise CallError("cannot read %s: %s" % (path, getattr(exc, "strerror", None) or exc))
+    models = data.get("models") if isinstance(data, dict) and data.get("v") == 1 else None
+    if not isinstance(models, list):
+        raise CallError("%s has an unknown format; update Vantage" % path)
+    return [m for m in models if well_formed(m)]
+
+
+def well_formed(m):
+    """Only complete entries count: a half-written one must never launch the default account."""
+    def str_list(value):
+        return isinstance(value, list) and all(isinstance(a, str) for a in value)
+    if not isinstance(m, dict) or m.get("harness") not in ("claude", "codex"):
+        return False
+    if not (isinstance(m.get("name"), str) and m["name"] and isinstance(m.get("cli_id"), str)):
+        return False
+    if not (m.get("alias") is None or isinstance(m.get("alias"), str)):
+        return False
+    if isinstance(m.get("error"), str):
+        return True                       # unusable here; kept so the call reports why
+    if not (m.get("efforts") is None or str_list(m.get("efforts"))):
+        return False
+    if not (m.get("exe") is None or isinstance(m.get("exe"), str)):
+        return False
+    return all(str_list(m.get(key)) for key in ("prefix", "top", "sub", "requires"))
+
+
+def find_model(name, models):
+    """Alias or full name ``<subscription>/<model id>`` (also ``<subscription id>/<model id>``), case-blind."""
+    key = name.strip().casefold()
+    hits = [m for m in models if (m.get("alias") or "").casefold() == key]
+    if not hits:
+        hits = [m for m in models if key in (m["name"].casefold(),
+                ("%s/%s" % (m.get("subscription_id") or "", m.get("cli_id") or "")).casefold())]
+    if len(hits) > 1:
+        raise CallError("%r matches %s; use the full name" % (name, ", ".join(m["name"] for m in hits)))
+    return hits[0] if hits else None
+
+
+def model_names(models):
+    return ", ".join((m["alias"] + " (" + m["name"] + ")") if m.get("alias") else m["name"]
+                     for m in models)
+
+
+def list_models(as_json):
+    try:
+        models = load_models()
+    except CallError as exc:
+        say(str(exc))
+        return 2
+    if as_json:
+        keys = ("name", "alias", "harness", "subscription", "cli_id", "label", "efforts", "enabled", "error")
+        sys.stdout.write(json.dumps([{k: m.get(k) for k in keys} for m in models],
+                                    ensure_ascii=False, indent=1) + "\n")
+        return 0
+    rows = [("NAME", "ALIAS", "HARNESS", "EFFORTS", "NOTE")]
+    for m in models:
+        efforts = m.get("efforts")
+        rows.append((m["name"], m.get("alias") or "-", m["harness"],
+                     "-" if efforts is None else ("none" if not efforts else "/".join(efforts)),
+                     m.get("error") or ("" if m.get("enabled", True) else "not selected in Vantage")))
+    import unicodedata
+
+    def width(text):
+        return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
+
+    widths = [max(width(r[i]) for r in rows) for i in range(4)]
+    out = ["  ".join(r[i] + " " * (widths[i] - width(r[i])) for i in range(4))
+           + ("  " + r[4] if r[4] else "") for r in rows]
+    out += ["", "Call: xagent <name or alias> <that harness CLI's own args, no --model/-m>",
+            "  claude:  xagent <name> -p '<prompt>' [--effort <e>]",
+            "  codex:   xagent <name> exec [-c model_reasoning_effort=<e>] '<prompt>'"]
+    sys.stdout.write("\n".join(line.rstrip() for line in out) + "\n")
+    return 0
+
+
+def effort_check(model, effort):
+    allowed = model.get("efforts")
+    if effort is None or not isinstance(allowed, list):
+        return
+    if not allowed:
+        raise CallError("%s has no effort levels; drop the effort option" % model["name"])
+    if effort not in allowed:
+        raise CallError("%s supports effort %s, got %r" % (model["name"], "/".join(allowed), effort))
+
+
+def named_command(model, args):
+    """``(argv, plan)`` for a named model: Vantage's launch prefix, then the harness CLI."""
+    if model.get("error"):
+        raise CallError("%s: %s" % (model["name"], model["error"]))
+    harness = model["harness"]
+    for need in model.get("requires") or []:
+        if not (isinstance(need, str) and os.path.exists(need)):
+            raise CallError("%s: its key or launcher is gone from this machine (subscription deleted, "
+                             "or its key not set here); check Vantage's model settings" % model["name"])
+    harness_bin = resolve_binary(harness)
+    if not harness_bin:
+        raise CallError("%s: command not found" % harness)
+    exe = model.get("exe") or harness_bin
+    strs = lambda key: [str(a) for a in (model.get(key) or [])]     # noqa: E731
+    prefix = [a.replace("{bin}", harness_bin) for a in strs("prefix")]
+    cli_id = model.get("cli_id") or ""
+    args = list(args)
+    if harness == "claude":
+        opts = scan(args, CLAUDE_OPTS)
+        if has(opts, "--model"):
+            raise CallError("%s already picks the model; drop --model" % model["name"])
+        effort_check(model, last_value(opts, "--effort"))
+        plan = plan_claude_or_grok("claude", (["--model", cli_id] if cli_id else []) + args)
+        return prefix + [exe] + plan.args, plan
+    opts = scan(args, CODEX_OPTS)
+    if has(opts, "-m", "--model") or config_value(opts, "model") or config_value(opts, "model_provider"):
+        raise CallError("%s already picks the model and provider; drop -m / model overrides" % model["name"])
+    effort_check(model, config_value(opts, "model_reasoning_effort"))
+    model_opt = ["-m", cli_id] if cli_id else []
+    idx = first_positional(args, CODEX_OPTS)
+    if idx is not None and args[idx] in ("exec", "e"):
+        args = args[:idx + 1] + strs("sub") + model_opt + args[idx + 1:]
+    else:
+        args = model_opt + args
+    plan = plan_codex(strs("top") + args, resolve_families=False)
+    return prefix + [exe] + plan.args, plan
 
 
 # ---------------------------------------------------------------- registry
@@ -580,7 +731,8 @@ def emit_codex_last_message(plan):
 
 # ---------------------------------------------------------------- main
 
-USAGE = "usage: xagent <claude|codex|grok> <the CLI's own args...>\n"
+USAGE = ("usage: xagent <claude|codex|grok> <the CLI's own args...>\n"
+         "       xagent <model name|alias> <that model's CLI args...>   (list: xagent models)\n")
 
 
 def main(argv):
@@ -591,15 +743,32 @@ def main(argv):
         sys.stdout.write(__doc__)
         return 0
     harness, cli_args = argv[0], argv[1:]
-    if harness not in HARNESSES:
+    if harness == "models":
+        return list_models("--json" in cli_args)
+    if harness in HARNESSES:
+        binary = resolve_binary(harness)
+        if not binary:
+            say("%s: command not found" % harness)
+            return 127
+        plan = plan_codex(cli_args) if harness == "codex" else plan_claude_or_grok(harness, cli_args)
+        command = [binary] + plan.args
+    elif harness.startswith("-") or not harness.strip():
         sys.stderr.write(USAGE)
         return 2
-    binary = resolve_binary(harness)
-    if not binary:
-        say("%s: command not found" % harness)
-        return 127
-
-    plan = plan_codex(cli_args) if harness == "codex" else plan_claude_or_grok(harness, cli_args)
+    else:
+        # A model added in Vantage's model settings, by alias or full name.
+        try:
+            models = load_models()
+            model = find_model(harness, models)
+            if model is None:
+                raise CallError("unknown model %r. Available: %s (or claude / codex / grok)"
+                                 % (harness, model_names(models) or "none"))
+            command, plan = named_command(model, cli_args)
+        except CallError as exc:
+            say(str(exc))
+            return 2
+        say("model %s -> %s (%s)" % (harness, model["name"], model["harness"]))
+        harness, binary = model["harness"], command[0]
     for note in plan.notes:
         say(note)
     if plan.error:
@@ -611,7 +780,7 @@ def main(argv):
         # claim it finished. Hand the process over unchanged, register nothing.
         # (plan.args is the caller's argv, model aliases aside.)
         try:
-            os.execv(binary, [binary] + plan.args)
+            os.execvp(command[0], command)
         except OSError as exc:
             say("cannot run %s: %s" % (binary, exc.strerror or exc))
             return 127
@@ -674,7 +843,7 @@ def main(argv):
         stdin = subprocess.DEVNULL
         say("stdin is an idle pipe and the prompt is on argv: running with stdin=/dev/null")
     try:
-        proc = subprocess.Popen([binary] + plan.args, env=env, stdin=stdin,
+        proc = subprocess.Popen(command, env=env, stdin=stdin,
                                 stdout=subprocess.PIPE if plan.codex_exec else None)
     except OSError as exc:
         say("cannot run %s: %s" % (binary, exc.strerror or exc))
