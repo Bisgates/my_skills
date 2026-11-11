@@ -15,7 +15,7 @@ stdout text and exit code). On top of that the wrapper:
 
   * prints one stderr line `[xagent] run=<run_id> harness=<h> session=<id>`,
     so the caller can resume the child or read its transcript later;
-  * appends start / child / bind / end lines to $VANTAGE_XAGENT_LOG when
+  * appends start / child / bind / usage / end lines to $VANTAGE_XAGENT_LOG when
     that variable is set (Vantage's registry, contract v1:
     docs/design_doc/agent_design/2.3_xagent_registry.md in the Vantage repo).
 
@@ -28,7 +28,9 @@ Per harness:
                 bind line. Unless the caller asked for --json, stdout carries
                 only this run's final message, taken from the events. A
                 relative -o/--output-last-message path is made absolute
-                against the codex working dir (-C/--cd, else cwd).
+                against the codex working dir (-C/--cd, else cwd). Each
+                `turn.completed` adds a usage line (that turn's tokens), so a
+                run with no transcript (--ephemeral) can still be billed.
   codex -m      a family name (sol, astra, luna/tuna, terra) becomes the newest
                 gpt-<version>-<family> slug found in Vantage's latest cache or
                 codex's models_cache.json, whichever is higher; a full slug
@@ -295,6 +297,8 @@ class Plan(object):
         self.codex_exec = False
         self.argv_prompt = False        # prompt given on argv (not "-"): stdin is only optional context
         self.json_passthrough = False
+        self.provider = None            # codex model_provider this run uses (None: official default)
+        self.usage_lines = False        # codex exec: write turn.completed usage to the registry
         self.final_message = None       # last agent_message of this run's current turn
         self.last_read = 0.0            # monotonic time of the last stdout line (reader thread)
 
@@ -341,6 +345,48 @@ def plan_claude_or_grok(harness, args):
     return plan
 
 
+_TOML_PROVIDER_RE = re.compile(r'^\s*model_provider\s*=\s*["\']([^"\']+)["\']\s*(#.*)?$')
+
+
+def codex_provider(args, opts):
+    """The model_provider this codex run bills through, for the usage lines.
+
+    Explicit ``-c model_provider=`` wins; ``--oss`` / ``--local-provider`` mean a local
+    provider; a ``--profile`` may set its own provider, so it is reported as
+    ``profile:<name>`` (Vantage then leaves the cost unpriced instead of guessing).
+    Otherwise the top-level ``model_provider`` of $CODEX_HOME/config.toml (skipped with
+    --ignore-user-config); None means codex's built-in default (OpenAI)."""
+    value = config_value(opts, "model_provider")
+    if value:
+        return value
+    if "--oss" in args:
+        return "oss"
+    local = last_value(opts, "--local-provider")
+    if local:
+        return local
+    profile = last_value(opts, "-p", "--profile") or config_value(opts, "profile")
+    if profile:
+        return "profile:" + profile
+    if "--ignore-user-config" in args:
+        return None
+    home = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
+    try:
+        with open(os.path.join(home, "config.toml")) as fh:
+            for line in fh:
+                if line.lstrip().startswith("["):
+                    break                       # only top-level keys
+                m = _TOML_PROVIDER_RE.match(line)
+                if m:
+                    return m.group(1)
+                if line.strip().startswith("profile") and "=" in line:
+                    name = line.split("=", 1)[1].split("#", 1)[0].strip().strip("\"'")
+                    if name:
+                        return "profile:" + name
+    except (OSError, UnicodeDecodeError):
+        pass
+    return None
+
+
 def plan_codex(args, resolve_families=True):
     plan = Plan("codex", args)
     args = list(args)
@@ -351,6 +397,7 @@ def plan_codex(args, resolve_families=True):
     plan.model = last_value(opts, "-m", "--model") or config_value(opts, "model")
     plan.effort = config_value(opts, "model_reasoning_effort")
     plan.cwd = abs_dir(last_value(opts, "-C", "--cd"))
+    plan.provider = codex_provider(args, opts)
     idx = first_positional(args, CODEX_OPTS)
     if idx is not None and args[idx] == "cloud":
         sub = first_positional(args[idx + 1:], CODEX_OPTS)
@@ -364,6 +411,10 @@ def plan_codex(args, resolve_families=True):
 
     plan.codex_exec = True
     rest = args[idx + 1:]
+    sub = first_positional(rest, CODEX_OPTS)
+    # A resumed thread's turn.completed usage may include the turns before this run;
+    # only a fresh exec reports exactly this run's tokens.
+    plan.usage_lines = not (sub is not None and rest[sub] == "resume")
     plan.argv_prompt = first_positional(rest, CODEX_OPTS) is not None and "-" not in rest
     after = [o for o in opts if o.start > idx]
     if has(after, "--ephemeral"):
@@ -661,6 +712,27 @@ def codex_error_text(event):
     return None
 
 
+USAGE_KEYS = ("input_tokens", "cached_input_tokens", "cache_write_input_tokens",
+              "output_tokens", "reasoning_output_tokens")
+
+
+def codex_usage_event(event, plan, run_id):
+    """``turn.completed`` -> a registry usage line with this turn's tokens (None: no usage)."""
+    usage = event.get("usage")
+    if not isinstance(usage, dict):
+        return None
+    line = {"type": "usage", "run_id": run_id}
+    for key in USAGE_KEYS:
+        value = usage.get(key)
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+            line[key] = value
+    if "input_tokens" not in line and "output_tokens" not in line:
+        return None
+    if plan.provider:
+        line["provider"] = plan.provider
+    return line
+
+
 def pump_codex(proc, plan, registry, run_id):
     """Read codex --json stdout: bind on thread.started, pass through or hide."""
     out = getattr(sys.stdout, "buffer", sys.stdout)
@@ -696,6 +768,10 @@ def pump_codex(proc, plan, registry, run_id):
                 plan.session_id = thread_id
                 registry.write({"type": "bind", "run_id": run_id, "session_id": thread_id})
                 say("session=%s" % thread_id)
+        if kind == "turn.completed" and plan.usage_lines:
+            usage = codex_usage_event(event, plan, run_id)
+            if usage is not None:
+                registry.write(usage)
         if kind == "turn.started":
             plan.final_message = None       # anything earlier is not this turn's answer
         elif kind == "item.completed":

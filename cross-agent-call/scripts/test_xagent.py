@@ -31,6 +31,10 @@ KEYS = {
     "bind": {"v", "type", "run_id", "session_id", "at"},
     "end": {"v", "type", "run_id", "exit_code", "signal", "at"},
 }
+# usage lines (one per codex exec turn.completed): token fields as codex reports them, provider optional
+USAGE_REQUIRED = {"v", "type", "run_id", "at"}
+USAGE_OPTIONAL = {"input_tokens", "cached_input_tokens", "cache_write_input_tokens",
+                  "output_tokens", "reasoning_output_tokens", "provider"}
 
 
 def load_parse_line():
@@ -191,7 +195,8 @@ class XagentTestCase(unittest.TestCase):
         with open(self.record) as fh:
             return [json.loads(line) for line in fh if line.strip()]
 
-    def events(self, path=None):
+    def events(self, path=None, usage=False):
+        """Registry events; usage=False skips usage lines (lifecycle order checks only)."""
         path = path or self.log
         if not os.path.exists(path):
             return []
@@ -204,11 +209,15 @@ class XagentTestCase(unittest.TestCase):
                 continue
             self.assertLess(len(raw), 4096)
             event = json.loads(raw)
-            self.assertEqual(set(event), KEYS[event["type"]], event)
+            if event["type"] == "usage":
+                self.assertTrue(USAGE_REQUIRED <= set(event) <= USAGE_REQUIRED | USAGE_OPTIONAL, event)
+            else:
+                self.assertEqual(set(event), KEYS[event["type"]], event)
             self.assertEqual(event["v"], 1)
             if PARSE_LINE is not None:
                 self.assertIsNotNone(PARSE_LINE(raw), "parse_line rejected %r" % raw)
-            out.append(event)
+            if usage or event["type"] != "usage":
+                out.append(event)
         return out
 
     def one_run(self, expect_bind=False):
@@ -453,6 +462,39 @@ class CodexTests(XagentTestCase):
         self.assertTrue(self.start_line(r.stderr).endswith("session=pending"))
         self.assertIn(("[xagent] session=%s" % THREAD_ID).encode(), r.stderr)
         self.assertNotIn(b"thread.started", r.stdout + r.stderr)
+
+    def _usage_lines(self):
+        return [e for e in self.events(usage=True) if e["type"] == "usage"]
+
+    def test_ephemeral_exec_writes_turn_usage(self):
+        # --ephemeral writes no rollout: usage reaches the registry only via turn.completed
+        r = self.run_xagent("codex", "exec", "-m", "gpt-6-terra", "--ephemeral",
+                            "--ignore-user-config", "q")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        start, _child, end = self.events()
+        self.assertIsNone(start["session_id"])
+        (usage,) = self._usage_lines()
+        self.assertEqual(usage["run_id"], start["run_id"])
+        self.assertEqual((usage["input_tokens"], usage["output_tokens"]), (1, 1))
+        self.assertNotIn("provider", usage)                 # --ignore-user-config: official default
+        self.assertLessEqual(usage["at"], end["at"])
+
+    def test_usage_provider_from_override_profile_or_config(self):
+        self.run_xagent("codex", "exec", "--ephemeral", "-c", "model_provider=relay", "q")
+        self.assertEqual(self._usage_lines()[-1]["provider"], "relay")
+        self.run_xagent("codex", "exec", "--ephemeral", "-p", "work", "q")
+        self.assertEqual(self._usage_lines()[-1]["provider"], "profile:work")
+        os.makedirs(os.path.join(self.home, ".codex"), exist_ok=True)
+        with open(os.path.join(self.home, ".codex", "config.toml"), "w") as fh:
+            fh.write('model = "x"\nmodel_provider = "gw"\n[model_providers.gw]\nname = "gw"\n')
+        self.run_xagent("codex", "exec", "--ephemeral", "q")
+        self.assertEqual(self._usage_lines()[-1]["provider"], "gw")
+
+    def test_resume_writes_no_usage(self):
+        # a resumed thread may report earlier turns too: no usage line, the rollout is the record
+        r = self.run_xagent("codex", "exec", "resume", THREAD_ID, "q")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._usage_lines(), [])
 
     def test_late_answer_after_exit_is_still_read(self):
         # codex exits while a grandchild holding the pipe writes the answer later:
