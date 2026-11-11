@@ -34,7 +34,7 @@ KEYS = {
 # usage lines (one per codex exec turn.completed): token fields as codex reports them, provider optional
 USAGE_REQUIRED = {"v", "type", "run_id", "at"}
 USAGE_OPTIONAL = {"input_tokens", "cached_input_tokens", "cache_write_input_tokens",
-                  "output_tokens", "reasoning_output_tokens", "provider"}
+                  "output_tokens", "reasoning_output_tokens", "provider", "service_tier"}
 
 
 def load_parse_line():
@@ -489,6 +489,17 @@ class CodexTests(XagentTestCase):
             fh.write('model = "x"\nmodel_provider = "gw"\n[model_providers.gw]\nname = "gw"\n')
         self.run_xagent("codex", "exec", "--ephemeral", "q")
         self.assertEqual(self._usage_lines()[-1]["provider"], "gw")
+
+    def test_usage_records_service_tier(self):
+        self.run_xagent("codex", "exec", "--ephemeral", "-c", "service_tier=fast", "q")
+        self.assertEqual(self._usage_lines()[-1]["service_tier"], "fast")
+        os.makedirs(os.path.join(self.home, ".codex"), exist_ok=True)
+        with open(os.path.join(self.home, ".codex", "config.toml"), "w") as fh:
+            fh.write('service_tier = "priority"\n[profiles.x]\nservice_tier = "flex"\n')
+        self.run_xagent("codex", "exec", "--ephemeral", "q")
+        self.assertEqual(self._usage_lines()[-1]["service_tier"], "priority")
+        self.run_xagent("codex", "exec", "--ephemeral", "--ignore-user-config", "q")
+        self.assertNotIn("service_tier", self._usage_lines()[-1])
 
     def test_resume_writes_no_usage(self):
         # a resumed thread may report earlier turns too: no usage line, the rollout is the record

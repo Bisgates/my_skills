@@ -29,8 +29,9 @@ Per harness:
                 only this run's final message, taken from the events. A
                 relative -o/--output-last-message path is made absolute
                 against the codex working dir (-C/--cd, else cwd). Each
-                `turn.completed` adds a usage line (that turn's tokens), so a
-                run with no transcript (--ephemeral) can still be billed.
+                `turn.completed` adds a usage line (that turn's tokens, summed
+                over its model calls, plus the service tier), so a run with no
+                transcript (--ephemeral) can still be billed.
   codex -m      a family name (sol, astra, luna/tuna, terra) becomes the newest
                 gpt-<version>-<family> slug found in Vantage's latest cache or
                 codex's models_cache.json, whichever is higher; a full slug
@@ -299,6 +300,7 @@ class Plan(object):
         self.json_passthrough = False
         self.provider = None            # codex model_provider this run uses (None: official default)
         self.usage_lines = False        # codex exec: write turn.completed usage to the registry
+        self.service_tier = None        # codex service_tier this run asked for (fast / priority / ...)
         self.final_message = None       # last agent_message of this run's current turn
         self.last_read = 0.0            # monotonic time of the last stdout line (reader thread)
 
@@ -387,6 +389,33 @@ def codex_provider(args, opts):
     return None
 
 
+_TOML_TIER_RE = re.compile(r'^\s*service_tier\s*=\s*["\']([^"\']+)["\']\s*(#.*)?$')
+
+
+def codex_service_tier(args, opts):
+    """The service_tier this codex run uses: ``-c service_tier=`` wins, else the top-level
+    ``service_tier`` of $CODEX_HOME/config.toml (skipped with --ignore-user-config or a
+    --profile, which may set its own); None = codex's default tier."""
+    value = config_value(opts, "service_tier")
+    if value:
+        return value
+    if "--ignore-user-config" in args or last_value(opts, "-p", "--profile") \
+            or config_value(opts, "profile"):
+        return None
+    home = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
+    try:
+        with open(os.path.join(home, "config.toml")) as fh:
+            for line in fh:
+                if line.lstrip().startswith("["):
+                    break                       # only top-level keys
+                m = _TOML_TIER_RE.match(line)
+                if m:
+                    return m.group(1)
+    except (OSError, UnicodeDecodeError):
+        pass
+    return None
+
+
 def plan_codex(args, resolve_families=True):
     plan = Plan("codex", args)
     args = list(args)
@@ -398,6 +427,7 @@ def plan_codex(args, resolve_families=True):
     plan.effort = config_value(opts, "model_reasoning_effort")
     plan.cwd = abs_dir(last_value(opts, "-C", "--cd"))
     plan.provider = codex_provider(args, opts)
+    plan.service_tier = codex_service_tier(args, opts)
     idx = first_positional(args, CODEX_OPTS)
     if idx is not None and args[idx] == "cloud":
         sub = first_positional(args[idx + 1:], CODEX_OPTS)
@@ -730,6 +760,8 @@ def codex_usage_event(event, plan, run_id):
         return None
     if plan.provider:
         line["provider"] = plan.provider
+    if plan.service_tier:
+        line["service_tier"] = plan.service_tier
     return line
 
 
