@@ -1,6 +1,6 @@
 ---
-name: grill-me
-description: Stress-test a plan, decision, or idea through question waves saved to Markdown files and opened for the user to answer. Use when the user asks to be grilled, invokes grill-me or grilling, or requests a wave-based design interview. Do not use for ordinary factual questions or silently start an interview during implementation.
+name: grill-md
+description: Stress-test a plan, decision, or idea through question waves saved to Markdown files and opened for the user to answer. Use when the user asks to be grilled, invokes grill-md or grilling, or requests a wave-based design interview. Do not use for ordinary factual questions or silently start an interview during implementation.
 ---
 
 # Grilling in Markdown waves

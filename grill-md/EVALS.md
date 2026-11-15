@@ -6,7 +6,7 @@
 - “Wave 3 answered; continue implementing the agreed draft.” → Summarize, no fourth questionnaire. Apply execution authorization separately. “You may ask one more wave” explicitly permits wave 4 only.
 
 ## Trigger checks
-Should trigger: /grill-me; use grilling on this design; stress-test this plan with a question interview; interview me in waves; resume wave 2 of our grilling interview.
+Should trigger: /grill-md; use grilling on this design; stress-test this plan with a question interview; interview me in waves; resume wave 2 of our grilling interview.
 Should not trigger: explain a design term; fix this bug; open an existing Markdown note; compare two models factually; summarize a finished interview without new questions.
 
 ## Checks

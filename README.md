@@ -11,7 +11,7 @@ my_skills/
 ├── skill-mgmt/        ← self-managing tool: install, sync, adopt, new
 ├── write-a-skill/     ← template/process for authoring new skills
 ├── arc/               ← task management protocol
-├── grill-me/          ← clarification interview protocol
+├── grill-md/          ← clarification interview protocol
 ├── ...                ← other adopted skills
 ├── manifest.txt       ← list of skills (must include skill-mgmt as line 1)
 └── README.md

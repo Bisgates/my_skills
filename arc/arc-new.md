@@ -5,7 +5,7 @@ description: Create a new arc (task) and immediately run /arc-objective. Use whe
 
 # /arc-new — Create a task and lock the objective
 
-A two-step chain: (1) `arc new` builds the skeleton, (2) automatically enter `/arc-objective` to run grill-me.
+A two-step chain: (1) `arc new` builds the skeleton, (2) automatically enter `/arc-objective` to run grill-md.
 
 ## Steps for the agent
 
@@ -25,10 +25,10 @@ A two-step chain: (1) `arc new` builds the skeleton, (2) automatically enter `/a
    To start: cd $(arc cd 260430c)
    ```
 
-4. **Chain into `/arc-objective`.** Run the grill-me flow and write the result into `1_objective.md`, using `~/.claude/skills/arc/templates/1_objective.md` as the skeleton.
+4. **Chain into `/arc-objective`.** Run the grill-md flow and write the result into `1_objective.md`, using `~/.claude/skills/arc/templates/1_objective.md` as the skeleton.
 
 ## Important
 
-- Do not write `1_objective.md` yourself right after `arc new`. Chain into `/arc-objective` (grill-me style; **how many questions to ask is adaptive to task complexity** — see `arc-objective.md`).
+- Do not write `1_objective.md` yourself right after `arc new`. Chain into `/arc-objective` (grill-md style; **how many questions to ask is adaptive to task complexity** — see `arc-objective.md`).
 - Do not call `arc touch` after `arc new` — `arc new` already sets `last_active_at`.
-- If the user declines to continue with grill-me ("leave it, I'll write the objective later"), stop at step 3 and remind them that "`arc list` will show a `needs 1_objective.md` hint".
+- If the user declines to continue with grill-md ("leave it, I'll write the objective later"), stop at step 3 and remind them that "`arc list` will show a `needs 1_objective.md` hint".

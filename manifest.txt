@@ -1,7 +1,7 @@
 skill-mgmt
 write-a-skill
 arc
-grill-me
+grill-md
 zk
 improve-codebase-architecture
 grill-with-docs
